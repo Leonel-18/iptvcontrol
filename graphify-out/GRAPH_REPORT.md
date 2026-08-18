@@ -1,0 +1,432 @@
+# Graph Report - iptvcontrol-opencode  (2026-08-14)
+
+## Corpus Check
+- 188 files · ~104,824 words
+- Verdict: corpus is large enough that graph structure adds value.
+
+## Summary
+- 1702 nodes · 3880 edges · 104 communities (76 shown, 28 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.8)
+- Token cost: 0 input · 0 output
+
+## Community Hubs (Navigation)
+- RequestContextService
+- SensaAdapter
+- sensa.adapter.ts
+- devDependencies
+- dependencies
+- scripts
+- compilerOptions
+- IPTVControl — Esqueleto Técnico Inicial
+- IPTVControl — Reglas de Negocio
+- Auth0ManagementService
+- CryptoService
+- PaginationQueryDto
+- ProveedorAdapter
+- Entidades (modelo de datos)
+- IPTVControl — URL Structure / Routing Convention
+- migration.sql
+- migration.sql
+- decorators.ts
+- IPTVControl
+- IPTVControl — Decisiones Pendientes (consolidado)
+- exclude
+- IPTVControl — Instrucciones del Proyecto
+- instructions
+- nest-cli.json
+- Instructivo — Cargar IPTVControl en OpenCode
+- configuration.ts
+- csv.util.ts
+- docker-entrypoint.sh
+- 01-app-user.sh
+- ActualizarConexionProveedorDto
+- primitives.tsx
+- ColaProveedorService
+- CrearModalidadDto
+- revendedoras.service.ts
+- dependencies
+- Capacidad de una Cuenta
+- api
+- Integración con SENSA
+- compilerOptions
+- common.tsx
+- Dashboard.tsx
+- DispositivosController
+- ListarAuditoriaQueryDto
+- CustomerDetail.tsx
+- CommercialPlanList.tsx
+- SoloRevendedor
+- types.ts
+- app.module.ts
+- .transaction
+- Decisiones pendientes
+- CrearClienteDto
+- dispositivos.controller.ts
+- .consumo
+- Despliegue y operación
+- jest
+- LandingPage.tsx
+- Flujo — Alta de Cliente Final
+- HealthController
+- devDependencies
+- cuentas.mapper.ts
+- Registro de auditoría
+- RequestContextMiddleware
+- clientes.controller.ts
+- scripts
+- app.json
+- IPTVControl
+- package.json
+- package.json
+- IPTVControl — Índice del vault
+- seed-root.ts
+- Vault de Obsidian — IPTVControl
+- AuditModule
+- vite-env.d.ts
+- compression
+- ioredis
+- @nestjs/bullmq
+- @nestjs/common
+- @nestjs/config
+- @nestjs/swagger
+- @nestjs/throttler
+- passport-jwt
+- rxjs
+- eslint-plugin-react-hooks
+- eslint-plugin-react-refresh
+- globals
+- jsdom
+- postcss
+- @testing-library/jest-dom
+- @testing-library/react
+- @types/node
+- @types/react
+- typescript
+- vite
+- @vitejs/plugin-react
+- vitest
+- TOPE_POR_CATEGORIA
+
+## God Nodes (most connected - your core abstractions)
+1. `PrismaService` - 53 edges
+2. `api()` - 53 edges
+3. `RequestContextService` - 49 edges
+4. `cn()` - 39 edges
+5. `traducir()` - 35 edges
+6. `useSesion()` - 33 edges
+7. `ProveedorService` - 32 edges
+8. `SensaAdapter` - 31 edges
+9. `PaginationQueryDto` - 26 edges
+10. `Button` - 24 edges
+
+## Surprising Connections (you probably didn't know these)
+- `ReassignDialog()` --calls--> `api()`  [EXTRACTED]
+  frontend/src/features/devices/DeviceDetail.tsx → frontend/src/lib/api.ts
+- `bootstrap()` --indirect_call--> `AppModule`  [INFERRED]
+  backend/src/main.ts → backend/src/app.module.ts
+- `ListarClientesQueryDto` --inherits--> `PaginationQueryDto`  [EXTRACTED]
+  backend/src/modules/clientes/dto/listar-clientes.query.ts → backend/src/common/dto/pagination.dto.ts
+- `ListarCuentasQueryDto` --inherits--> `PaginationQueryDto`  [EXTRACTED]
+  backend/src/modules/cuentas/dto/listar-cuentas.query.ts → backend/src/common/dto/pagination.dto.ts
+- `ListarDispositivosQueryDto` --inherits--> `PaginationQueryDto`  [EXTRACTED]
+  backend/src/modules/dispositivos/dto/listar-dispositivos.query.ts → backend/src/common/dto/pagination.dto.ts
+
+## Import Cycles
+- None detected.
+
+## Communities (104 total, 28 thin omitted)
+
+### Community 0 - "RequestContextService"
+Cohesion: 0.10
+Nodes (15): AuditService, RegistroAuditoria, Injectable, RequestContext, RequestContextService, Injectable, PrismaService, Injectable (+7 more)
+
+### Community 1 - "SensaAdapter"
+Cohesion: 0.10
+Nodes (10): ConfiguracionProveedorResuelta, ActivarDispositivoParams, ActualizarCapacidadParams, LicenciasProveedor, PROVEEDOR_ADAPTERS, ProveedorAdapter, ServiciosCuenta, ProveedorService (+2 more)
+
+### Community 2 - "sensa.adapter.ts"
+Cohesion: 0.06
+Nodes (30): DniRepetidoError, EmailRepetidoError, ProveedorNoDisponibleError, ProveedorValidacionError, ReintentosDniAgotadosError, CrearCuentaParams, CredencialesProveedor, CuentaProveedor (+22 more)
+
+### Community 3 - "devDependencies"
+Cohesion: 0.04
+Nodes (45): devDependencies, eslint, eslint-config-prettier, eslint-plugin-prettier, jest, @nestjs/cli, @nestjs/schematics, @nestjs/testing (+37 more)
+
+### Community 4 - "dependencies"
+Cohesion: 0.09
+Nodes (23): auth0, dependencies, auth0, bullmq, class-transformer, class-validator, helmet, jwks-rsa (+15 more)
+
+### Community 5 - "scripts"
+Cohesion: 0.12
+Nodes (17): scripts, build, format, lint, lint:fix, prisma:generate, prisma:migrate, prisma:migrate:dev (+9 more)
+
+### Community 6 - "compilerOptions"
+Cohesion: 0.07
+Nodes (30): compilerOptions, allowSyntheticDefaultImports, baseUrl, declaration, emitDecoratorMetadata, esModuleInterop, experimentalDecorators, forceConsistentCasingInFileNames (+22 more)
+
+### Community 7 - "IPTVControl — Esqueleto Técnico Inicial"
+Cohesion: 0.08
+Nodes (25): 1. Entidades principales (borrador de modelo de datos), 2.1. Stack técnico confirmado, 2.2. Relaciones entre entidades, 2. Relaciones clave, 3.1. Identificadores requeridos por SENSA, 3. Integración con el Proveedor (SENSA) — patrón de conector desacoplado, 4.1. Alta de Cliente Final — dos métodos, 4.2. Baja definitiva de Cliente Final (+17 more)
+
+### Community 8 - "IPTVControl — Reglas de Negocio"
+Cohesion: 0.08
+Nodes (24): 10. Sobre el documento de tareas de Federico, 11. Registro de auditoría (Audit Log), 12. Alerta de Cuenta cerca del tope de capacidad, 13. Exportación de datos propios a CSV, 14. Datos registrados de la Empresa Revendedora, 1.1. Al menudeo (sin obligación de ventas mensuales), 1.2. Con obligación de ventas mensuales (escala creciente, ej. X5 / X10), 1.3. Precios (+16 more)
+
+### Community 9 - "Auth0ManagementService"
+Cohesion: 0.05
+Nodes (32): Auth0ManagementService, InvitacionTeamMember, Injectable, AuthModule, Module, JwtPayload, JwtStrategy, Injectable (+24 more)
+
+### Community 10 - "CryptoService"
+Cohesion: 0.09
+Nodes (11): CryptoService, Injectable, TransactionClient, CrearCuentaOpciones, CuentasProvisioningService, SinCapacidadEnCuentaError, Injectable, IdentificadoresService (+3 more)
+
+### Community 11 - "PaginationQueryDto"
+Cohesion: 0.11
+Nodes (16): PaginationQueryDto, ApiPropertyOptional, IsInt, IsOptional, IsString, Max, Min, Type (+8 more)
+
+### Community 12 - "ProveedorAdapter"
+Cohesion: 0.17
+Nodes (10): ProveedoresController, ApiOperation, ApiTags, Controller, Get, Param, Post, SoloOperador (+2 more)
+
+### Community 13 - "Entidades (modelo de datos)"
+Cohesion: 0.14
+Nodes (13): Actores (roles de negocio), Cliente Final, Cuenta (Cuenta SENSA), Dispositivo, Empresa Revendedora, Entidades (modelo de datos), IPTVControl — Glosario de Actores y Entidades, Modalidad Comercial (+5 more)
+
+### Community 14 - "IPTVControl — URL Structure / Routing Convention"
+Cohesion: 0.14
+Nodes (13): 1. Principios aplicados, 2. Tabla de rutas, 3. Ejemplos de rutas anidadas resueltas por query param (no por segmento), 4.1. Convención de nombres de componentes, 4.2. Dónde vive el mapeo español↔inglés en el código, 4.3. `/users` → `/team-members`: por qué el cambio de nombre, 4.4. Excepción a la ruta `/team-members`: el primer Team Member root, 4. Decisión confirmada por Bruno: inglés en URLs y en componentes de UI (+5 more)
+
+### Community 15 - "migration.sql"
+Cohesion: 0.15
+Nodes (9): "audit_log", "cliente_final", "configuracion_proveedor", "cuenta", "dispositivo", "empresa_revendedora", "llamada_proveedor", "modalidad_comercial" (+1 more)
+
+### Community 16 - "migration.sql"
+Cohesion: 0.44
+Nodes (11): "audit_log", "cliente_final", "configuracion_proveedor", "cuenta", "dispositivo", "empresa_revendedora", "llamada_proveedor", "modalidad_comercial" (+3 more)
+
+### Community 18 - "IPTVControl"
+Cohesion: 0.17
+Nodes (11): Decisiones pendientes / a confirmar, Documentación relacionada, Equipo, Estructura del repositorio (implementada), Fuente descartada, Herramientas de contexto: Graphify y el vault de Obsidian, Identidad visual, IPTVControl (+3 more)
+
+### Community 19 - "IPTVControl — Decisiones Pendientes (consolidado)"
+Cohesion: 0.20
+Nodes (9): 1. Comercial / negocio, 2. Autenticación y provisioning (Auth0), 3. Seguridad de datos sensibles, 4. Integración SENSA — casos límite, 5. Parametrización — umbrales y validaciones, 6. Menú de Parametrización — conexión SENSA (`04_Esqueleto_Tecnico_Inicial.md`, sección 9), 7. Documentación / infraestructura de trabajo, 8. Fuente descartada — recordatorio (+1 more)
+
+### Community 20 - "exclude"
+Cohesion: 0.22
+Nodes (8): exclude, extends, dist, node_modules, test, prisma/seed-root.ts, **/*spec.ts, ./tsconfig.json
+
+### Community 21 - "IPTVControl — Instrucciones del Proyecto"
+Cohesion: 0.22
+Nodes (8): Alcance del MVP (primera etapa), Cómo quiero que Claude me responda en este Proyecto, Datos de la empresa (para cotizaciones, informes o material formal derivado de este proyecto), Documentos que forman parte de este Proyecto, Infraestructura y equipo de desarrollo, IPTVControl — Instrucciones del Proyecto, Qué es este proyecto, Stack tecnológico
+
+### Community 22 - "instructions"
+Cohesion: 0.22
+Nodes (8): instructions, $schema, docs/01_Instrucciones_del_Proyecto.md, docs/02_Glosario_de_Actores_y_Entidades.md, docs/03_Reglas_de_Negocio.md, docs/04_Esqueleto_Tecnico_Inicial.md, docs/05_Decisiones_Pendientes.md, docs/IPTVControl_URL_Routing_Convention.md
+
+### Community 23 - "nest-cli.json"
+Cohesion: 0.25
+Nodes (7): collection, compilerOptions, deleteOutDir, plugins, tsConfigPath, $schema, sourceRoot
+
+### Community 24 - "Instructivo — Cargar IPTVControl en OpenCode"
+Cohesion: 0.29
+Nodes (6): 1. Qué contiene el paquete, 2. Dónde va cada cosa en tu repo, 3. Cómo funciona la carga de contexto (para que entiendas qué está pasando), 4. Pasos concretos, 5. Qué **no** incluí, a propósito, Instructivo — Cargar IPTVControl en OpenCode
+
+### Community 25 - "configuration.ts"
+Cohesion: 0.67
+Nodes (3): CryptoModule, Global, Module
+
+### Community 26 - "csv.util.ts"
+Cohesion: 0.27
+Nodes (6): CurrentUser, Roles(), SoloOperador(), generarCsv(), responderCsv(), Fila
+
+### Community 30 - "ActualizarConexionProveedorDto"
+Cohesion: 0.09
+Nodes (26): ConfiguracionController, ApiOperation, ApiTags, Body, Controller, Get, Patch, Post (+18 more)
+
+### Community 31 - "primitives.tsx"
+Cohesion: 0.13
+Nodes (27): ConfirmDialog(), DialogContent(), Select(), Alert(), BadgeProps, badgeVariants, BotonProps, botonVariants (+19 more)
+
+### Community 32 - "ColaProveedorService"
+Cohesion: 0.08
+Nodes (23): DashboardController, ApiOperation, ApiTags, Controller, Get, Post, SoloOperador, DashboardService (+15 more)
+
+### Community 33 - "CrearModalidadDto"
+Cohesion: 0.08
+Nodes (31): ActualizarModalidadDto, CrearModalidadDto, ListarModalidadesQueryDto, ApiProperty, ApiPropertyOptional, IsDateString, IsEnum, IsInt (+23 more)
+
+### Community 34 - "revendedoras.service.ts"
+Cohesion: 0.10
+Nodes (29): ActualizarRevendedoraDto, CambiarModalidadDto, CrearRevendedoraDto, ListarRevendedorasQueryDto, ApiProperty, ApiPropertyOptional, IsEmail, IsEnum (+21 more)
+
+### Community 35 - "dependencies"
+Cohesion: 0.04
+Nodes (45): @auth0/auth0-react, class-variance-authority, clsx, date-fns, dependencies, @auth0/auth0-react, class-variance-authority, clsx (+37 more)
+
+### Community 36 - "Capacidad de una Cuenta"
+Cohesion: 0.05
+Nodes (36): Alerta de "cerca del tope", Baja: la lógica inversa exacta, Capacidad de una Cuenta, Cómo se decide dónde entra un alta, Cómo se ve en el panel, Los tres números que hay que distinguir, Ver también, Baja individual de un Dispositivo (+28 more)
+
+### Community 37 - "api"
+Cohesion: 0.09
+Nodes (49): TeamMemberStatusBadge(), AppLayout(), ItemMenu, ITEMS, MenuUsuario(), NavItems(), NotFound(), RequiereSesion() (+41 more)
+
+### Community 38 - "Integración con SENSA"
+Cohesion: 0.06
+Nodes (32): Aislamiento multi-tenant, Cómo se activa el contexto, Dos capas de defensa, Qué ve el Operador Principal (tabla normativa), Ver también, Verificación, Casos especiales, Cola de reintentos (BullMQ) (+24 more)
+
+### Community 39 - "compilerOptions"
+Cohesion: 0.07
+Nodes (29): compilerOptions, allowImportingTsExtensions, baseUrl, isolatedModules, jsx, lib, module, moduleDetection (+21 more)
+
+### Community 41 - "common.tsx"
+Cohesion: 0.18
+Nodes (21): CustomerStatusBadge(), DeviceStatusBadge(), DeviceTypeBadge(), ExportCsvButton(), ResellerStatusBadge(), tonoPorEstado, EmptyState(), Paginacion() (+13 more)
+
+### Community 42 - "Dashboard.tsx"
+Cohesion: 0.39
+Nodes (7): AuditLogEntry(), DetalleItem(), formatearValor(), humanizar(), auditEntityLabels, roleLabels, AuditEntry
+
+### Community 43 - "DispositivosController"
+Cohesion: 0.14
+Nodes (14): DispositivosController, ApiOperation, ApiTags, Body, Controller, Delete, Get, Param (+6 more)
+
+### Community 44 - "ListarAuditoriaQueryDto"
+Cohesion: 0.15
+Nodes (11): AuditoriaController, ApiOperation, ApiTags, Controller, Get, Query, Res, AuditoriaModule (+3 more)
+
+### Community 45 - "CustomerDetail.tsx"
+Cohesion: 0.13
+Nodes (19): Barras(), CapacityCategory(), CapacityMeter(), OcupacionCategoria, AccountStatusBadge(), HealthBadge(), DropdownMenuContent(), DropdownMenuItem() (+11 more)
+
+### Community 46 - "CommercialPlanList.tsx"
+Cohesion: 0.24
+Nodes (26): CopyableId(), DetailRow(), Metric(), PageHeader(), SecretValue(), Badge(), Card(), CardContent() (+18 more)
+
+### Community 48 - "SoloRevendedor"
+Cohesion: 0.22
+Nodes (11): SoloRevendedor(), ClientesController, ApiOperation, ApiQuery, ApiTags, Controller, Get, Param (+3 more)
+
+### Community 49 - "types.ts"
+Cohesion: 0.07
+Nodes (29): CardFooter(), CustomerForm(), EstadoFormulario, INICIAL, MetodoAlta, PASOS, TipoDispositivo, SettingsView() (+21 more)
+
+### Community 50 - "app.module.ts"
+Cohesion: 0.07
+Nodes (31): AuditModule, Global, Module, JwtAuthGuard, Injectable, AppConfig, configuration(), toInt() (+23 more)
+
+### Community 51 - ".transaction"
+Cohesion: 0.18
+Nodes (4): ClientesService, Injectable, DispositivosService, Injectable
+
+### Community 52 - "Decisiones pendientes"
+Cohesion: 0.11
+Nodes (17): 1 · Comercial, 2 · Autenticación y provisioning (Auth0), 3 · Seguridad de datos sensibles, 4 · Integración SENSA — casos límite, 5 · Parametrización — umbrales y validaciones, 6 · Menú de Parametrización, 7 · Documentación, Decisiones pendientes (+9 more)
+
+### Community 53 - "CrearClienteDto"
+Cohesion: 0.18
+Nodes (15): CrearClienteDto, DispositivoAltaDto, ApiProperty, ApiPropertyOptional, IsBoolean, IsEmail, IsEnum, IsHexadecimal (+7 more)
+
+### Community 54 - "dispositivos.controller.ts"
+Cohesion: 0.29
+Nodes (14): CsvDispositivo, ActualizarDispositivoDto, CrearDispositivoDto, ListarDispositivosQueryDto, ReasignarDispositivoDto, ApiProperty, ApiPropertyOptional, IsEnum (+6 more)
+
+### Community 55 - ".consumo"
+Cohesion: 0.17
+Nodes (11): ReportesController, ApiOperation, ApiQuery, ApiTags, Controller, Get, Query, Res (+3 more)
+
+### Community 56 - "Despliegue y operación"
+Cohesion: 0.12
+Nodes (15): Arranque en frío y seed, El problema del huevo y la gallina, El seed, Invitación del resto del equipo, Salvaguarda del último administrador, Ver también, Backups, Despliegue y operación (+7 more)
+
+### Community 57 - "jest"
+Cohesion: 0.13
+Nodes (15): jest, collectCoverageFrom, coverageDirectory, moduleFileExtensions, moduleNameMapper, rootDir, testEnvironment, testRegex (+7 more)
+
+### Community 58 - "LandingPage.tsx"
+Cohesion: 0.16
+Nodes (10): ThemeToggle(), capabilities, LandingPage(), steps, ThemeToggle(), ContextoTema, ProveedorDeTema(), Tema (+2 more)
+
+### Community 59 - "Flujo — Alta de Cliente Final"
+Cohesion: 0.14
+Nodes (12): El caso de la MAC, El identificador tipo DNI, Flujo — Alta de Cliente Final, Los cuatro pasos del asistente, Los dos métodos de alta, Si el Proveedor falla, Ver también, Flujo — Dispositivo adicional y migración de Cuenta (+4 more)
+
+### Community 60 - "HealthController"
+Cohesion: 0.19
+Nodes (9): ApiExcludeEndpoint, Public(), HealthController, ApiOperation, ApiTags, Controller, Get, HealthModule (+1 more)
+
+### Community 61 - "devDependencies"
+Cohesion: 0.15
+Nodes (13): autoprefixer, @eslint/js, devDependencies, autoprefixer, eslint, @eslint/js, tailwindcss, @types/react-dom (+5 more)
+
+### Community 63 - "cuentas.mapper.ts"
+Cohesion: 0.05
+Nodes (47): AppModule, Module, crearProteccionSwagger(), iguales(), logger, OpcionesSwagger, PaginatedResponse, bootstrap() (+39 more)
+
+### Community 65 - "Registro de auditoría"
+Cohesion: 0.15
+Nodes (11): Lo que no incluye el MVP, Quién consulta qué, Qué se registra, Registro de auditoría, Regla de oro para escribir en el log, Ver también, Exportación a CSV, La pregunta que responde (+3 more)
+
+### Community 67 - "RequestContextMiddleware"
+Cohesion: 0.12
+Nodes (4): TeamMemberGuard, Injectable, HttpExceptionFilter, Catch
+
+### Community 68 - "clientes.controller.ts"
+Cohesion: 0.19
+Nodes (11): ColumnaCsv, CsvCliente, Body, Patch, ActualizarClienteDto, ListarClientesQueryDto, ApiPropertyOptional, IsEnum (+3 more)
+
+### Community 70 - "scripts"
+Cohesion: 0.22
+Nodes (9): scripts, build, dev, lint, lint:fix, preview, test, test:watch (+1 more)
+
+### Community 71 - "app.json"
+Cohesion: 0.22
+Nodes (8): alwaysUpdateLinks, attachmentFolderPath, defaultViewMode, newLinkFormat, readableLineLength, showLineNumber, strictLineBreaks, useMarkdownLinks
+
+### Community 72 - "IPTVControl"
+Cohesion: 0.25
+Nodes (7): Convenciones que conviene conocer antes de tocar código, Desarrollo, Documentación, Estructura del repositorio, IPTVControl, Puesta en marcha, Verificar el aislamiento multi-tenant
+
+### Community 73 - "package.json"
+Cohesion: 0.33
+Nodes (5): description, license, name, private, version
+
+### Community 74 - "package.json"
+Cohesion: 0.33
+Nodes (5): description, name, private, type, version
+
+### Community 75 - "IPTVControl — Índice del vault"
+Cohesion: 0.33
+Nodes (5): Convenciones de este vault, IPTVControl — Índice del vault, Las cinco reglas que más se consultan, Mapa del sistema, Por dónde empezar
+
+### Community 76 - "seed-root.ts"
+Cohesion: 0.60
+Nodes (4): cifrar(), crearUsuarioAuth0(), main(), prisma
+
+### Community 78 - "Vault de Obsidian — IPTVControl"
+Cohesion: 0.40
+Nodes (4): Cómo abrirlo, Estructura, Relación con `docs/`, Vault de Obsidian — IPTVControl
+
+## Knowledge Gaps
+- **469 isolated node(s):** `docker-entrypoint.sh script`, `$schema`, `collection`, `sourceRoot`, `deleteOutDir` (+464 more)
+  These have ≤1 connection - possible missing edges or undocumented components.
+- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+
+## Suggested Questions
+_Questions this graph is uniquely positioned to answer:_
+
+- **Why does `PrismaService` connect `RequestContextService` to `ColaProveedorService`, `SensaAdapter`, `revendedoras.service.ts`, `RequestContextMiddleware`, `CryptoService`, `app.module.ts`, `.transaction`, `HealthController`, `cuentas.mapper.ts`?**
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `ProveedorAdapter` connect `SensaAdapter` to `sensa.adapter.ts`?**
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `SensaAdapter` connect `sensa.adapter.ts` to `RequestContextService`, `SensaAdapter`, `app.module.ts`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **What connects `docker-entrypoint.sh script`, `$schema`, `collection` to the rest of the system?**
+  _469 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `RequestContextService` be split into smaller, more focused modules?**
+  _Cohesion score 0.09724238026124818 - nodes in this community are weakly interconnected._
+- **Should `SensaAdapter` be split into smaller, more focused modules?**
+  _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
+- **Should `sensa.adapter.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.06050228310502283 - nodes in this community are weakly interconnected._

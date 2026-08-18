@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/logo_iptvcontrol.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F4F8FC" />
+    <meta
+      name="description"
+      content="IPTVControl centraliza la gestión de cuentas, clientes y dispositivos para operar servicios de televisión con mayor claridad y control."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="application-name" content="IPTVControl" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:title" content="IPTVControl | Gestión de servicios de televisión" />
+    <meta
+      property="og:description"
+      content="Cuentas, clientes y dispositivos en un único centro de control operativo."
+    />
+    <meta property="og:image" content="/logo_iptvcontrol.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="IPTVControl | Gestión de servicios de televisión" />
+    <meta
+      name="twitter:description"
+      content="Cuentas, clientes y dispositivos en un único centro de control operativo."
+    />
+    <title>IPTVControl | Gestión de servicios de televisión</title>
+
+    <!-- Tipografías del sistema de diseño. `display=swap` para que el panel
+         sea usable incluso si las fuentes tardan (o no cargan). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // Se aplica el tema antes de pintar, para que no haya un destello blanco
+      // al entrar en modo oscuro.
+      (function () {
+        try {
+          var guardado = localStorage.getItem('iptvcontrol:theme');
+          var oscuro =
+            guardado === 'dark' ||
+            (!guardado && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (oscuro) document.documentElement.classList.add('dark');
+        } catch (e) {
+          /* sin localStorage: queda el modo claro */
+        }
+      })();
+    </script>
+  </head>
+  <body class="h-full">
+    <div id="root" class="h-full"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

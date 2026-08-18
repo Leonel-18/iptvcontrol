@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "docs/01_Instrucciones_del_Proyecto.md",
+    "docs/02_Glosario_de_Actores_y_Entidades.md",
+    "docs/03_Reglas_de_Negocio.md",
+    "docs/04_Esqueleto_Tecnico_Inicial.md",
+    "docs/IPTVControl_URL_Routing_Convention.md",
+    "docs/05_Decisiones_Pendientes.md"
+  ]
+}

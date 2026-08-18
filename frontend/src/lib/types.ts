@@ -1,0 +1,374 @@
+/**
+ * Tipos de las respuestas del backend.
+ *
+ * Se escriben a mano en lugar de generarlos del OpenAPI para no meter un paso de
+ * build extra en un equipo de un solo desarrollador. Si el contrato crece mucho,
+ * el camino natural es generarlos desde `/api/docs-json`.
+ *
+ * Nota de nomenclatura: las CLAVES respetan lo que devuelve el backend (español,
+ * snake_case), mientras que los NOMBRES de los tipos van en inglés genérico, como
+ * el resto del frontend.
+ */
+
+export interface CapacityCategory {
+  habilitados: number;
+  ocupados: number;
+  libres: number;
+  tope: number;
+  cerca_del_tope: boolean;
+  resumen: string;
+}
+
+export interface Account {
+  id: string;
+  proveedor_cuenta_id: string | null;
+  estado: 'activa' | 'cerrada';
+  es_exclusiva: boolean;
+  empresa_revendedora_id: string;
+  fijos: CapacityCategory;
+  moviles: CapacityCategory;
+  creado_en: string;
+  // Sólo llegan al panel de la Empresa Revendedora (regla de negocio 4.2).
+  usuario?: string;
+  password?: string | null;
+  pin?: string | null;
+  email_contacto?: string;
+  servicios?: string;
+  servicios_nombres?: string[];
+}
+
+export interface AccountDevice {
+  id: string;
+  cuenta_id: string;
+  proveedor_device_id: string | null;
+  tipo: 'fijo' | 'movil';
+  estado: 'activo' | 'bloqueado_por_suspension' | 'disponible' | 'dado_de_baja';
+  creado_en: string;
+  cliente_final_id?: string | null;
+  cliente_final?: { id: string; numero_cliente: number; nombre: string } | null;
+  mac?: string | null;
+  nota_descriptiva?: string | null;
+  proveedor_cuenta_id?: string | null;
+}
+
+export interface AccountDetail extends Account {
+  dispositivos: AccountDevice[];
+  clientes_finales?: { id: string; numero_cliente: number; nombre: string; dispositivos: number }[];
+}
+
+export interface AccountCredentials {
+  usuario: string;
+  password: string | null;
+  pin: string | null;
+  email_contacto: string;
+}
+
+export interface CapacityAlert {
+  cuenta_id: string;
+  proveedor_cuenta_id: string | null;
+  fijos: string;
+  moviles: string;
+  completa: boolean;
+  mensaje: string;
+}
+
+export interface Customer {
+  id: string;
+  numero_cliente: number;
+  id_gestion_externo: string | null;
+  nombre: string;
+  apellido: string | null;
+  nombre_completo: string;
+  telefono: string | null;
+  email: string | null;
+  direccion: string | null;
+  tipo_alta: 'cuenta_exclusiva' | 'dispositivo_compartido';
+  estado: 'activo' | 'suspendido' | 'dado_de_baja';
+  empresa_revendedora_id: string;
+  cantidad_dispositivos: number;
+  cuenta_ids: string[];
+  suspendido_en: string | null;
+  dado_de_baja_en: string | null;
+  creado_en: string;
+}
+
+export interface CustomerDetail extends Customer {
+  cuenta: {
+    id: string;
+    proveedor_cuenta_id: string | null;
+    usuario: string;
+    password: string | null;
+    pin: string | null;
+    email_contacto: string;
+    servicios: string;
+    servicios_nombres: string[];
+    es_exclusiva: boolean;
+    fijos: string | null;
+    moviles: string | null;
+    cerca_del_tope: boolean;
+  } | null;
+  dispositivos: AccountDevice[];
+}
+
+/** Vista recortada del Cliente Final para el Operador Principal (regla 4.2). */
+export interface CustomerOperatorView {
+  id: string;
+  numero_cliente: number;
+  empresa_revendedora_id: string;
+  estado: string;
+  tipo_alta: string;
+  creado_en: string;
+  dispositivos: AccountDevice[];
+}
+
+export interface ExternalIdMatch {
+  id: string;
+  numero_cliente: number;
+  nombre: string;
+  estado: string;
+  dispositivos: number;
+}
+
+export interface Reseller {
+  id: string;
+  razon_social: string;
+  cuit: string;
+  email_contacto: string;
+  telefono_contacto: string;
+  contacto: string;
+  sitio_web: string | null;
+  estado: 'activa' | 'suspendida';
+  modalidad_comercial: {
+    id: string;
+    tipo: string;
+    escala: string;
+    precio_por_cuenta: number;
+  } | null;
+  cantidad_cuentas: number;
+  cantidad_clientes: number;
+  creado_en: string;
+}
+
+export interface ResellerDetail {
+  id: string;
+  razon_social: string;
+  cuit: string;
+  direccion: string;
+  nombre_contacto: string;
+  apellido_contacto: string;
+  telefono_contacto: string;
+  email_contacto: string;
+  sitio_web: string | null;
+  estado: 'activa' | 'suspendida';
+  modalidad_comercial: {
+    id: string;
+    tipo: string;
+    escala: string;
+    precio_por_cuenta: number;
+    ritmo_incremento: number | null;
+    tope_cuentas_activas: number | null;
+  } | null;
+  team_members: {
+    id: string;
+    email: string;
+    rol: string;
+    estado: string;
+    ultimo_acceso_en: string | null;
+  }[];
+  resumen: {
+    cuentas_activas: number;
+    cuentas_cerradas: number;
+    dispositivos_activos: number;
+    dispositivos_bloqueados: number;
+    dispositivos_disponibles: number;
+    clientes_activos: number;
+  };
+  creado_en: string;
+}
+
+export interface CommercialPlan {
+  id: string;
+  tipo: 'menudeo' | 'obligacion_mensual';
+  escala: string;
+  precio_por_cuenta: number;
+  ritmo_incremento: number | null;
+  tope_cuentas_activas: number | null;
+  vigente_desde: string;
+  vigente_hasta: string | null;
+  cantidad_empresas?: number;
+}
+
+export interface MyPricing {
+  modalidad: CommercialPlan | null;
+  cuentas_activas?: number;
+  compromiso_del_mes?: number | null;
+  cuentas_facturables?: number;
+  importe_estimado?: number;
+  nota?: string;
+  mensaje?: string;
+}
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  nombre: string | null;
+  rol: 'operator_admin' | 'operator_staff' | 'reseller_admin' | 'reseller_staff';
+  estado: 'invitado' | 'activo' | 'inactivo';
+  empresa_revendedora: { id: string; razon_social: string } | null;
+  es_del_operador: boolean;
+  ultimo_acceso_en: string | null;
+  creado_en: string;
+}
+
+export interface InvitationResult {
+  enviada: boolean;
+  team_member_id?: string;
+  url_invitacion?: string;
+  expira_en_segundos?: number;
+  motivo?: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  accion: string;
+  accion_etiqueta: string;
+  entidad: string;
+  entidad_id: string | null;
+  empresa_revendedora: { id: string; razon_social: string } | null;
+  ejecutado_por: { id: string; email: string; nombre: string | null; rol: string } | null;
+  detalle: Record<string, unknown> | null;
+  creado_en: string;
+}
+
+export interface IntegrationHealth {
+  ventana: string;
+  llamadas_exitosas: number;
+  llamadas_fallidas: number;
+  tasa_exito: number | null;
+  ultima_exitosa: { operacion: string; duracion_ms: number; fecha: string } | null;
+  ultimas_fallidas: {
+    operacion: string;
+    codigo: number | null;
+    mensaje: string | null;
+    duracion_ms: number;
+    fecha: string;
+  }[];
+  cola_reintentos: {
+    pendientes: number;
+    activos: number;
+    fallidos: number;
+    demorados: number;
+    disponible: boolean;
+  };
+  estado_general: 'ok' | 'atencion' | 'critico';
+}
+
+export interface OperatorDashboard {
+  rol: 'operator';
+  cuentas: { total: number; vendidas: number; disponibles: number; bloqueadas: number };
+  dispositivos: { activos: number; bloqueados: number; disponibles: number };
+  empresas_revendedoras: { activas: number; suspendidas: number };
+  clientes_finales: { activos: number; suspendidos: number; dados_de_baja: number };
+  salud_integracion: IntegrationHealth;
+}
+
+export interface ResellerDashboard {
+  rol: 'reseller';
+  cuentas: { activas: number; cerradas: number };
+  dispositivos: {
+    activos: number;
+    activos_fijos: number;
+    activos_moviles: number;
+    bloqueados: number;
+    disponibles: number;
+  };
+  clientes_finales: { activos: number; suspendidos: number; dados_de_baja: number };
+  modalidad_comercial: { tipo: string; escala: string; precio_por_cuenta: number } | null;
+  alertas_capacidad: CapacityAlert[];
+}
+
+export type Dashboard = OperatorDashboard | ResellerDashboard;
+
+export interface ProviderSettings {
+  configurada: boolean;
+  server: string | null;
+  port: number | null;
+  usuario: string | null;
+  token_cargado: boolean;
+  token_pista: string | null;
+  proveedor: string | null;
+  ciudad_por_defecto: string | null;
+  servicios_por_defecto: string | null;
+  dni_inicial_sensa: number;
+  dni_actual_sensa: number;
+  umbral_alerta_capacidad: number;
+  max_reintentos_dni: number;
+  url_base: string | null;
+}
+
+export interface ConnectionTest {
+  ok: boolean;
+  mensaje: string;
+  latencia_ms: number;
+  codigo: number | null;
+  probado_en: string;
+}
+
+export interface Provider {
+  id: string;
+  nombre: string;
+  tipo_conector: string;
+  activo: boolean;
+  configurado: boolean;
+}
+
+export interface ServiceCatalogItem {
+  codigo: string;
+  nombre: string;
+  obligatorio: boolean;
+  nota?: string;
+}
+
+export interface LicenseReport {
+  disponible: boolean;
+  motivo?: string;
+  consultado_en?: string;
+  detalle?: {
+    codigo: string;
+    paquete: string;
+    compradas: number;
+    usadas: number;
+    disponibles: number;
+  }[];
+}
+
+export interface ConsumptionReport {
+  generado_en: string;
+  nota: string;
+  filas: {
+    empresa_revendedora_id: string;
+    razon_social: string;
+    cuit: string;
+    estado: string;
+    modalidad: string | null;
+    escala: string | null;
+    precio_por_cuenta: number | null;
+    meses_vigencia: number;
+    cuentas_activas: number;
+    cuentas_en_uso: number;
+    cuentas_comprometidas: number | null;
+    cuentas_facturables: number;
+    importe_estimado: number | null;
+    dispositivos_activos: number;
+    clientes_activos: number;
+    cuentas_sin_usar: number | null;
+  }[];
+  totales: {
+    cuentas_activas: number;
+    cuentas_en_uso: number;
+    cuentas_facturables: number;
+    importe_estimado: number;
+    dispositivos_activos: number;
+    clientes_activos: number;
+  };
+}

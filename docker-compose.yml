@@ -1,0 +1,147 @@
+# =============================================================================
+# IPTVControl — orquestación local / VPS (sin Kubernetes, ver AGENTS.md)
+# =============================================================================
+# Levanta: PostgreSQL (con RLS), Redis (BullMQ), backend NestJS y frontend
+# servido por Nginx. Pensado para un VPS de ~4 vCPU / 8GB RAM.
+#
+#   docker compose up -d --build
+#
+# El primer arranque del backend corre las migraciones de Prisma. El seed del
+# primer Team Member root se ejecuta aparte y una sola vez:
+#   docker compose exec backend npm run seed:root
+# (variante "script manual" — la alternativa de seed automático sigue pendiente
+#  de definición con Federico, ver docs/05_Decisiones_Pendientes.md sección 2)
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: iptvcontrol-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-iptvcontrol}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es obligatoria}
+      POSTGRES_DB: ${POSTGRES_DB:-iptvcontrol}
+      # Se pasan al script de init para crear el usuario de aplicación sin
+      # BYPASSRLS (necesario para que Row-Level Security aplique de verdad)
+      APP_DB_USER: ${APP_DB_USER:-iptvcontrol_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD es obligatoria}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-iptvcontrol} -d ${POSTGRES_DB:-iptvcontrol}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: iptvcontrol-redis
+    restart: unless-stopped
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+               exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD";
+             else
+               exec redis-server --appendonly yes;
+             fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: iptvcontrol-pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL es obligatoria (definila en .env)}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD es obligatoria (definila en .env)}
+      # Modo monousuario: simple para desarrollo local
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - '127.0.0.1:${PGADMIN_PORT:-5050}:80'
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: iptvcontrol-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      DATABASE_URL: postgresql://${APP_DB_USER:-iptvcontrol_app}:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-iptvcontrol}?schema=public
+      DATABASE_URL_MIGRATIONS: postgresql://${POSTGRES_USER:-iptvcontrol}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-iptvcontrol}?schema=public
+      APP_DB_USER: ${APP_DB_USER:-iptvcontrol_app}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?ENCRYPTION_MASTER_KEY es obligatoria}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_ISSUER_URL: ${AUTH0_ISSUER_URL}
+      AUTH0_MGMT_CLIENT_ID: ${AUTH0_MGMT_CLIENT_ID:-}
+      AUTH0_MGMT_CLIENT_SECRET: ${AUTH0_MGMT_CLIENT_SECRET:-}
+      AUTH0_DB_CONNECTION: ${AUTH0_DB_CONNECTION:-Username-Password-Authentication}
+      AUTH0_INVITATION_TTL_SEC: ${AUTH0_INVITATION_TTL_SEC:-259200}
+      SWAGGER_USER: ${SWAGGER_USER:-}
+      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
+      SENSA_RATE_LIMIT_PER_MINUTE: ${SENSA_RATE_LIMIT_PER_MINUTE:-60}
+      SENSA_REQUEST_TIMEOUT_MS: ${SENSA_REQUEST_TIMEOUT_MS:-15000}
+      SENSA_DNI_MAX_RETRIES: ${SENSA_DNI_MAX_RETRIES:-25}
+      SEED_OPERADOR_NOMBRE: ${SEED_OPERADOR_NOMBRE:-TECNOLOGIA ACTIVA S.A.S.}
+      SEED_ROOT_EMAIL: ${SEED_ROOT_EMAIL:-}
+      SEED_ROOT_AUTH0_USER_ID: ${SEED_ROOT_AUTH0_USER_ID:-}
+      SEED_DNI_INICIAL_SENSA: ${SEED_DNI_INICIAL_SENSA:-30000000}
+    ports:
+      - '${BACKEND_PORT:-3000}:3000'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3000/api/v1/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+        VITE_AUTH0_DOMAIN: ${VITE_AUTH0_DOMAIN}
+        VITE_AUTH0_CLIENT_ID: ${VITE_AUTH0_CLIENT_ID}
+        VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE}
+    container_name: iptvcontrol-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '${FRONTEND_PORT:-8080}:80'
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:

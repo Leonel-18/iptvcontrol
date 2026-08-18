@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Variables de superficie, para no repetir la pareja claro/oscuro en cada clase.
+ * Modo claro y modo oscuro son requisito transversal de interfaz
+ * (docs/03_Reglas_de_Negocio.md, sección 9).
+ */
+@layer base {
+  :root {
+    --superficie: 255 255 255;
+    --superficie-2: 247 249 251;
+    --borde: 226 232 240;
+    --tinta: 15 27 45;
+    --tinta-suave: 91 107 127;
+  }
+
+  .dark {
+    --superficie: 15 27 45;
+    --superficie-2: 10 18 32;
+    --borde: 34 49 74;
+    --tinta: 232 238 245;
+    --tinta-suave: 158 172 195;
+  }
+
+  * {
+    border-color: rgb(var(--borde));
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    background-color: rgb(var(--superficie-2));
+    color: rgb(var(--tinta));
+  }
+
+  /* Foco visible siempre: el panel se opera mucho con teclado (altas repetidas). */
+  :focus-visible {
+    @apply outline-none ring-2 ring-azure-500 ring-offset-2;
+    --tw-ring-offset-color: rgb(var(--superficie));
+  }
+
+  /* Cifras tabulares en todo dato numérico, para que las columnas se alineen. */
+  .font-mono,
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Superficies reutilizables */
+  .superficie {
+    background-color: rgb(var(--superficie));
+  }
+
+  .superficie-2 {
+    background-color: rgb(var(--superficie-2));
+  }
+
+  .texto-suave {
+    color: rgb(var(--tinta-suave));
+  }
+
+  /**
+   * Etiqueta "eyebrow": mono, mayúsculas, tracking amplio. Se usa para rotular
+   * dato técnico (ID en proveedor, DNI de alta) y encabezados de sección.
+   */
+  .eyebrow {
+    @apply font-mono text-2xs uppercase tracking-[0.12em] texto-suave;
+  }
+
+  /** Identificador técnico: se lee en voz alta y se copia y pega. */
+  .id-tecnico {
+    @apply font-mono text-[0.8125rem] tracking-tight;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar-thumb {
+    @apply rounded bg-navy-200 dark:bg-navy-700;
+  }
+}

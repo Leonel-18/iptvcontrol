@@ -1,0 +1,525 @@
+// =============================================================================
+// IPTVControl — modelo de datos (PostgreSQL + Prisma)
+// =============================================================================
+// Nomenclatura en ESPAÑOL, siguiendo el glosario oficial del negocio
+// (docs/02_Glosario_de_Actores_y_Entidades.md). La traducción a inglés ocurre
+// solo en la capa de presentación del frontend (docs/IPTVControl_URL_Routing_
+// Convention.md). No usar la palabra "slot": el nombre oficial es "Dispositivo".
+//
+// El aislamiento multi-tenant tiene DOS capas:
+//   1. Scope por tenant en la capa de aplicación (middleware NestJS).
+//   2. Row-Level Security nativo de Postgres (ver migración 0002_rls),
+//      apoyado en el ajuste de sesión `app.current_tenant`.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+/// Esquema bajo el cual una Empresa Revendedora compra Cuentas al Operador
+/// Principal (docs/03_Reglas_de_Negocio.md, sección 1).
+enum ModalidadComercialTipo {
+  menudeo
+  obligacion_mensual
+}
+
+enum EstadoEmpresaRevendedora {
+  activa
+  suspendida
+}
+
+/// Los dos métodos de alta de Cliente Final (reglas de negocio, sección 2.1).
+enum TipoAltaClienteFinal {
+  cuenta_exclusiva
+  dispositivo_compartido
+}
+
+enum EstadoClienteFinal {
+  activo
+  suspendido
+  dado_de_baja
+}
+
+enum EstadoCuenta {
+  activa
+  cerrada
+}
+
+/// Categorías con tope independiente de 3 cada una dentro de la misma Cuenta.
+/// Mapeo hacia SENSA: fijo -> auto_provision_count_stationary,
+/// movil -> auto_provision_count_mobile.
+enum TipoDispositivo {
+  fijo
+  movil
+}
+
+/// `bloqueado_por_suspension`: liberado en SENSA pero reservado, no reasignable
+/// mientras el Cliente Final titular siga suspendido (reglas de negocio, 3).
+enum EstadoDispositivo {
+  activo
+  bloqueado_por_suspension
+  disponible
+  dado_de_baja
+}
+
+/// En el MVP solo se usan `operator_admin` y `reseller_admin`; los otros dos
+/// quedan reservados a futuro (glosario, "Team Member").
+enum RolTeamMember {
+  operator_admin
+  operator_staff
+  reseller_admin
+  reseller_staff
+}
+
+enum EstadoTeamMember {
+  invitado
+  activo
+  inactivo
+}
+
+/// Acciones trazadas en el Audit Log (reglas de negocio, sección 11).
+enum AccionAuditoria {
+  alta_cliente
+  suspension_cliente
+  reactivacion_cliente
+  baja_cliente
+  reasignacion_dispositivo
+  alta_dispositivo
+  baja_dispositivo
+  migracion_cuenta
+  alta_cuenta
+  cierre_cuenta
+  cambio_modalidad_comercial
+  cambio_precio
+  alta_empresa_revendedora
+  baja_empresa_revendedora
+  cambio_configuracion_proveedor
+  alta_team_member
+  reenvio_invitacion_team_member
+  baja_team_member
+}
+
+enum EntidadAuditada {
+  ClienteFinal
+  Dispositivo
+  Cuenta
+  EmpresaRevendedora
+  ModalidadComercial
+  ConfiguracionProveedor
+  TeamMember
+}
+
+enum EstadoLlamadaProveedor {
+  exitosa
+  fallida
+}
+
+// -----------------------------------------------------------------------------
+// Actores
+// -----------------------------------------------------------------------------
+
+/// Empresa responsable de la infraestructura y titular del contrato con el
+/// Proveedor. Tecnología Activa es el primer Operador Principal, pero el modelo
+/// admite varios (cada distribuidor que adopte IPTVControl).
+model OperadorPrincipal {
+  id     String @id @default(uuid()) @db.Uuid
+  nombre String @db.VarChar(160)
+
+  /// Proveedor activo (hoy siempre SENSA).
+  proveedorActivoId String?    @map("proveedor_activo_id") @db.Uuid
+  proveedorActivo   Proveedor? @relation(fields: [proveedorActivoId], references: [id], onDelete: SetNull)
+
+  /// Número inicial parametrizable para generar el identificador tipo DNI que
+  /// SENSA exige al crear una Cuenta (reglas de negocio, 2.3).
+  dniInicialSensa Int @map("dni_inicial_sensa")
+
+  /// Último DNI efectivamente utilizado. Se incrementa de a 1 por alta de
+  /// Cuenta, y también ante error de "DNI repetido" devuelto por SENSA.
+  dniActualSensa Int @map("dni_actual_sensa")
+
+  /// Umbral de la alerta de Cuenta cerca del tope (reglas de negocio, 12).
+  /// Valor inicial sugerido: 2 de 3. Se deja configurable para no tener que
+  /// tocar código si Federico decide otro valor.
+  umbralAlertaCapacidad Int @default(2) @map("umbral_alerta_capacidad")
+
+  /// Límite de reintentos ante "DNI repetido" antes de cortar y alertar
+  /// (caso límite pendiente de definición formal — docs/05, sección 4).
+  maxReintentosDni Int @default(25) @map("max_reintentos_dni")
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  empresasRevendedoras   EmpresaRevendedora[]
+  modalidadesComerciales ModalidadComercial[]
+  teamMembers            TeamMember[]
+  configuraciones        ConfiguracionProveedor[]
+  auditLogs              AuditLog[]
+  llamadasProveedor      LlamadaProveedor[]
+
+  @@map("operador_principal")
+}
+
+/// Plataforma de contenido IPTV sobre la que corre el servicio. Hoy SENSA.
+/// `tipoConector` referencia la implementación de ProveedorAdapter a usar.
+model Proveedor {
+  id           String @id @default(uuid()) @db.Uuid
+  nombre       String @unique @db.VarChar(80)
+  tipoConector String @map("tipo_conector") @db.VarChar(40)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  operadores      OperadorPrincipal[]
+  configuraciones ConfiguracionProveedor[]
+  cuentas         Cuenta[]
+
+  @@map("proveedor")
+}
+
+/// Credenciales y parámetros de conexión al Proveedor, por Operador Principal.
+/// Editable desde el Menú de Parametrización (docs/04, sección 9).
+/// El `token` se guarda cifrado con AES-256-GCM y nunca se devuelve en claro.
+model ConfiguracionProveedor {
+  id String @id @default(uuid()) @db.Uuid
+
+  operadorPrincipalId String            @map("operador_principal_id") @db.Uuid
+  operadorPrincipal   OperadorPrincipal @relation(fields: [operadorPrincipalId], references: [id], onDelete: Cascade)
+
+  proveedorId String    @map("proveedor_id") @db.Uuid
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+
+  /// Host de la API del Proveedor (ej. "api.sensa.com").
+  server       String @db.VarChar(200)
+  /// Puerto de conexión (ej. "443").
+  port         Int
+  /// Usuario de Basic Auth.
+  usuario      String @db.VarChar(120)
+  /// Token de Basic Auth, cifrado en base de datos.
+  tokenCifrado String @map("token_cifrado")
+
+  /// Parámetros técnicos que la API de SENSA exige al crear una Cuenta y que
+  /// no forman parte de los datos de negocio del Cliente Final.
+  /// `city` es obligatorio en Add User; `services` define la parametrización
+  /// de contenido inicial (ver Anexo de Servicios de la API).
+  ciudadPorDefecto    String @default("Mendoza") @map("ciudad_por_defecto") @db.VarChar(80)
+  serviciosPorDefecto String @default("1") @map("servicios_por_defecto") @db.VarChar(40)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@unique([operadorPrincipalId, proveedorId])
+  @@map("configuracion_proveedor")
+}
+
+/// Empresa (típicamente un ISP) que compra Cuentas al Operador Principal para
+/// revenderlas a sus Clientes Finales. Es el tenant del sistema.
+model EmpresaRevendedora {
+  id String @id @default(uuid()) @db.Uuid
+
+  operadorPrincipalId String            @map("operador_principal_id") @db.Uuid
+  operadorPrincipal   OperadorPrincipal @relation(fields: [operadorPrincipalId], references: [id], onDelete: Cascade)
+
+  // Datos administrativos/legales (reglas de negocio, sección 14).
+  // No se envían al Proveedor.
+  razonSocial      String  @map("razon_social") @db.VarChar(160)
+  /// CUIT como string de 11 dígitos sin guiones ni espacios, por consistencia
+  /// con el campo `cuit` de SENSA (pendiente de confirmar con Federico si se
+  /// aplica la misma validación — docs/05, sección 5).
+  cuit             String  @unique @db.VarChar(11)
+  direccion        String  @db.VarChar(200)
+  nombreContacto   String  @map("nombre_contacto") @db.VarChar(80)
+  apellidoContacto String  @map("apellido_contacto") @db.VarChar(80)
+  telefonoContacto String  @map("telefono_contacto") @db.VarChar(30)
+  /// Base para generar los correos de contacto de cada Cuenta (reglas 2.3).
+  emailContacto    String  @map("email_contacto") @db.VarChar(160)
+  sitioWeb         String? @map("sitio_web") @db.VarChar(200)
+
+  /// Modalidad vigente. Una Empresa Revendedora opera bajo una sola a la vez.
+  modalidadComercialId String?             @map("modalidad_comercial_id") @db.Uuid
+  modalidadComercial   ModalidadComercial? @relation(fields: [modalidadComercialId], references: [id], onDelete: SetNull)
+
+  estado EstadoEmpresaRevendedora @default(activa)
+
+  /// Correlativo interno para `numero_cliente` de Clientes Finales.
+  secuenciaNumeroCliente Int @default(0) @map("secuencia_numero_cliente")
+  /// Correlativo para el sufijo del email de contacto de cada Cuenta
+  /// (contacto1@isp.com, contacto2@isp.com, ...).
+  secuenciaEmailCuenta   Int @default(0) @map("secuencia_email_cuenta")
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  clientesFinales ClienteFinal[]
+  cuentas         Cuenta[]
+  dispositivos    Dispositivo[]
+  teamMembers     TeamMember[]
+  auditLogs       AuditLog[]
+
+  @@index([operadorPrincipalId])
+  @@map("empresa_revendedora")
+}
+
+/// Usuario que consume el servicio IPTV. No tiene acceso propio al sistema.
+model ClienteFinal {
+  id String @id @default(uuid()) @db.Uuid
+
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  /// Correlativo interno de IPTVControl, por Empresa Revendedora.
+  numeroCliente Int @map("numero_cliente")
+
+  /// ID del cliente en el sistema de gestión propio de la Empresa Revendedora
+  /// (CRM/facturación externa). Opcional; se valida contra duplicados dentro
+  /// de la misma Empresa Revendedora, sin bloquear el alta (reglas 2.4).
+  idGestionExterno String? @map("id_gestion_externo") @db.VarChar(40)
+
+  nombre    String  @db.VarChar(120)
+  apellido  String? @db.VarChar(120)
+  telefono  String? @db.VarChar(30)
+  email     String? @db.VarChar(160)
+  direccion String? @db.VarChar(200)
+
+  tipoAlta TipoAltaClienteFinal @map("tipo_alta")
+  estado   EstadoClienteFinal   @default(activo)
+
+  suspendidoEn DateTime? @map("suspendido_en")
+  dadoDeBajaEn DateTime? @map("dado_de_baja_en")
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  dispositivos Dispositivo[]
+
+  @@unique([empresaRevendedoraId, numeroCliente])
+  @@index([empresaRevendedoraId, estado])
+  @@index([empresaRevendedoraId, idGestionExterno])
+  @@map("cliente_final")
+}
+
+/// Unidad de contratación entre el Operador Principal y el Proveedor.
+/// Capacidad máxima: 3 dispositivos fijos + 3 móviles. Es la unidad que se
+/// factura del Operador Principal a la Empresa Revendedora.
+model Cuenta {
+  id String @id @default(uuid()) @db.Uuid
+
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  proveedorId String    @map("proveedor_id") @db.Uuid
+  proveedor   Proveedor @relation(fields: [proveedorId], references: [id])
+
+  /// ID de la Cuenta en el Proveedor. En SENSA es el `customer_id`, que
+  /// coincide con el DNI generado internamente.
+  proveedorCuentaId String? @map("proveedor_cuenta_id") @db.VarChar(60)
+
+  /// Identificador tipo DNI generado por IPTVControl para el alta en SENSA.
+  /// No es un DNI real de una persona física (reglas de negocio, 2.3).
+  dniAltaSensa String @unique @map("dni_alta_sensa") @db.VarChar(12)
+
+  usuario         String @db.VarChar(120)
+  /// Credenciales de la Cuenta en el Proveedor, cifradas con AES-256-GCM.
+  passwordCifrado String @map("password_cifrado")
+  pinCifrado      String @map("pin_cifrado")
+
+  /// Correo derivado del email de la Empresa Revendedora + número creciente.
+  emailContacto String @unique @map("email_contacto") @db.VarChar(180)
+
+  /// true si fue creada para un único Cliente Final vía "cuenta exclusiva".
+  esExclusiva Boolean @default(false) @map("es_exclusiva")
+
+  /// Parametrización de contenido vigente en el Proveedor (ej. "1|3|5").
+  servicios String @default("1") @db.VarChar(40)
+
+  /// Dispositivos habilitados en el Proveedor. Arrancan en 1 y 1, y se
+  /// actualizan de a uno por vez hasta el tope 3 + 3.
+  dispositivosFijosHabilitados   Int @default(1) @map("dispositivos_fijos_habilitados")
+  dispositivosMovilesHabilitados Int @default(1) @map("dispositivos_moviles_habilitados")
+
+  estado EstadoCuenta @default(activa)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  dispositivos Dispositivo[]
+
+  @@index([empresaRevendedoraId, estado])
+  @@map("cuenta")
+}
+
+/// Dispositivo físico (TV o móvil) vinculado a un Cliente Final dentro de una
+/// Cuenta. No tiene precio propio en el sistema.
+model Dispositivo {
+  id String @id @default(uuid()) @db.Uuid
+
+  cuentaId String @map("cuenta_id") @db.Uuid
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  /// Denormalizado desde la Cuenta para que las políticas de RLS y los
+  /// listados filtren por tenant sin joins.
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  /// null cuando el Dispositivo está `disponible` o `dado_de_baja`. En
+  /// `bloqueado_por_suspension` se conserva el titular suspendido, porque el
+  /// Dispositivo queda reservado para él.
+  clienteFinalId String?       @map("cliente_final_id") @db.Uuid
+  clienteFinal   ClienteFinal? @relation(fields: [clienteFinalId], references: [id], onDelete: SetNull)
+
+  /// ID que devuelve el Proveedor al activar. Puede quedar en null hasta que
+  /// el dispositivo se registre en SENSA por auto-provisión y el job de
+  /// reconciliación lo capture por polling (la API no tiene webhooks).
+  proveedorDeviceId String? @map("proveedor_device_id") @db.VarChar(60)
+
+  /// MAC informada por la Empresa Revendedora, si la tiene. Habilita el alta
+  /// explícita vía Create Device en lugar de esperar la auto-provisión.
+  mac String? @db.VarChar(12)
+
+  tipo   TipoDispositivo
+  estado EstadoDispositivo @default(activo)
+
+  /// Nota descriptiva libre de la Empresa Revendedora (ej. "TV living").
+  /// Dato interno de IPTVControl, NO se envía al Proveedor y NO se expone al
+  /// Operador Principal (reglas de negocio, 4.2).
+  notaDescriptiva String? @map("nota_descriptiva") @db.VarChar(200)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@index([empresaRevendedoraId, estado])
+  @@index([cuentaId, tipo, estado])
+  @@index([clienteFinalId])
+  @@map("dispositivo")
+}
+
+/// Login con permisos sobre alguno de los dos paneles. Pertenece a un único
+/// tenant: o al Operador Principal, o a una Empresa Revendedora, nunca a ambos.
+model TeamMember {
+  id String @id @default(uuid()) @db.Uuid
+
+  operadorPrincipalId String?            @map("operador_principal_id") @db.Uuid
+  operadorPrincipal   OperadorPrincipal? @relation(fields: [operadorPrincipalId], references: [id], onDelete: Cascade)
+
+  empresaRevendedoraId String?             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora? @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  /// Referencia al usuario en Auth0. La autenticación vive en Auth0; esta
+  /// tabla sólo mapea ese usuario a un tenant y un rol dentro de IPTVControl.
+  auth0UserId String? @unique @map("auth0_user_id") @db.VarChar(120)
+
+  email  String           @unique @db.VarChar(160)
+  nombre String?          @db.VarChar(120)
+  rol    RolTeamMember
+  estado EstadoTeamMember @default(invitado)
+
+  ultimoAccesoEn DateTime? @map("ultimo_acceso_en")
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  auditLogs AuditLog[]
+
+  @@index([empresaRevendedoraId])
+  @@index([operadorPrincipalId])
+  @@map("team_member")
+}
+
+/// Tabla de parametrización de modalidades y precios, gestionada por el
+/// Operador Principal (reglas de negocio, sección 1).
+model ModalidadComercial {
+  id String @id @default(uuid()) @db.Uuid
+
+  operadorPrincipalId String            @map("operador_principal_id") @db.Uuid
+  operadorPrincipal   OperadorPrincipal @relation(fields: [operadorPrincipalId], references: [id], onDelete: Cascade)
+
+  tipo ModalidadComercialTipo
+
+  /// Escala: "X5", "X10" para obligación mensual; rango de volumen para
+  /// menudeo (ej. "1-50").
+  escala String @db.VarChar(40)
+
+  /// Precio por Cuenta, parametrizable (sujeto a actualización por IPC).
+  precioPorCuenta Decimal @map("precio_por_cuenta") @db.Decimal(12, 2)
+
+  /// Para obligación mensual: cuánto crece el compromiso mensual acumulativo.
+  ritmoIncremento Int? @map("ritmo_incremento")
+
+  /// Tope de Cuentas activas habilitadas (parametrizable por el Operador
+  /// Principal; null = sin tope explícito).
+  topeCuentasActivas Int? @map("tope_cuentas_activas")
+
+  vigenteDesde DateTime  @map("vigente_desde")
+  vigenteHasta DateTime? @map("vigente_hasta")
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  empresasRevendedoras EmpresaRevendedora[]
+
+  @@index([operadorPrincipalId, tipo])
+  @@map("modalidad_comercial")
+}
+
+/// Registro de auditoría (reglas de negocio, sección 11).
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  teamMemberId String?     @map("team_member_id") @db.Uuid
+  teamMember   TeamMember? @relation(fields: [teamMemberId], references: [id], onDelete: SetNull)
+
+  /// Tenant del registro: permite que cada Empresa Revendedora vea sólo su
+  /// propio log, y el Operador Principal el completo.
+  empresaRevendedoraId String?             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora? @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  operadorPrincipalId String?            @map("operador_principal_id") @db.Uuid
+  operadorPrincipal   OperadorPrincipal? @relation(fields: [operadorPrincipalId], references: [id], onDelete: Cascade)
+
+  accion          AccionAuditoria
+  entidadAfectada EntidadAuditada @map("entidad_afectada")
+  entidadId       String?         @map("entidad_id") @db.VarChar(60)
+
+  /// Datos relevantes del cambio (ej. valores anterior/nuevo). Nunca debe
+  /// incluir credenciales ni datos de contacto de Clientes Finales.
+  detalle Json?
+
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  @@index([empresaRevendedoraId, creadoEn])
+  @@index([accion, creadoEn])
+  @@index([entidadAfectada, entidadId])
+  @@map("audit_log")
+}
+
+/// Traza de llamadas a la API del Proveedor, para el panel de salud de la
+/// integración del dashboard del Operador Principal (docs/04, sección 5).
+model LlamadaProveedor {
+  id String @id @default(uuid()) @db.Uuid
+
+  operadorPrincipalId String?            @map("operador_principal_id") @db.Uuid
+  operadorPrincipal   OperadorPrincipal? @relation(fields: [operadorPrincipalId], references: [id], onDelete: Cascade)
+
+  operacion  String                 @db.VarChar(60)
+  metodo     String                 @db.VarChar(10)
+  ruta       String                 @db.VarChar(200)
+  estado     EstadoLlamadaProveedor
+  codigo     Int?
+  duracionMs Int                    @map("duracion_ms")
+  /// Mensaje técnico del error, sin credenciales.
+  mensaje    String?                @db.VarChar(500)
+
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  @@index([creadoEn])
+  @@index([estado, creadoEn])
+  @@map("llamada_proveedor")
+}

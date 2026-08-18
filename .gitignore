@@ -1,0 +1,58 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Builds
+dist/
+build/
+*.tsbuildinfo
+
+# Variables de entorno / secretos (clave maestra AES fuera del repo)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Editores / SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Cache de herramientas
+.eslintcache
+.vite/
+.cache/
+
+# Volúmenes locales de Docker
+docker/data/
+
+# Graphify — knowledge graph del repo (memoria del agente entre sesiones).
+# Se versionan graph.json y GRAPH_REPORT.md porque son la memoria compartida;
+# la visualización y el cache se regeneran solos con `graphify update .`
+graphify-out/graph.html
+graphify-out/cache/
+graphify-out/memory/
+
+# Obsidian — estado local del editor (el vault en sí SÍ se versiona)
+vault/.obsidian/workspace.json
+vault/.obsidian/workspace-mobile.json
+vault/.obsidian/cache
+vault/.trash/
+
+# Instructivo de armado del paquete — no forma parte del repo (ver INSTRUCTIVO.md)
+INSTRUCTIVO.md

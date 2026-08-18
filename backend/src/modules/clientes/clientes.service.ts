@@ -1,0 +1,663 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  AccionAuditoria,
+  ClienteFinal,
+  EntidadAuditada,
+  EstadoClienteFinal,
+  EstadoDispositivo,
+  Prisma,
+  TipoAltaClienteFinal,
+} from '@prisma/client';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { AuditService } from '../../common/audit/audit.service';
+import { CryptoService } from '../../common/crypto/crypto.service';
+import { RequestContextService } from '../../common/context/request-context.service';
+import { PaginatedResponse } from '../../common/dto/pagination.dto';
+import { DispositivosService } from '../dispositivos/dispositivos.service';
+import { IdentificadoresService } from '../cuentas/identificadores.service';
+import { ColaProveedorService } from '../../queues/cola-proveedor.service';
+import { CrearClienteDto } from './dto/crear-cliente.dto';
+import { ActualizarClienteDto, ListarClientesQueryDto } from './dto/listar-clientes.query';
+import { calcularCapacidad } from '../cuentas/capacidad.util';
+import { nombresDeServicios } from '../cuentas/cuentas.mapper';
+
+/** Coincidencia de `id_gestion_externo` dentro de la misma Empresa Revendedora. */
+export interface CoincidenciaGestionExterna {
+  id: string;
+  numero_cliente: number;
+  nombre: string;
+  estado: EstadoClienteFinal;
+  dispositivos: number;
+}
+
+/**
+ * =============================================================================
+ * Ciclo de vida del Cliente Final
+ * =============================================================================
+ * Implementa las reglas de la sección 3 de docs/03_Reglas_de_Negocio.md:
+ *
+ *   alta ──> activo ──┬──> suspendido ──> baja definitiva ──> (dispositivo libre)
+ *                     └──> baja definitiva ──> (dispositivo libre)
+ *
+ * La diferencia clave entre suspensión y baja está en qué pasa con el
+ * Dispositivo: en la suspensión queda RESERVADO para el titular
+ * (`bloqueado_por_suspension`, no reasignable a nadie); en la baja definitiva
+ * queda LIBRE (`disponible`) y puede tomarlo un Cliente Final nuevo. La única vía
+ * para liberar un Dispositivo bloqueado es la transición explícita de suspendido
+ * a baja definitiva — no es un pendiente de roadmap, es una regla permanente.
+ * =============================================================================
+ */
+@Injectable()
+export class ClientesService {
+  private readonly logger = new Logger(ClientesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly crypto: CryptoService,
+    private readonly contexto: RequestContextService,
+    private readonly dispositivos: DispositivosService,
+    private readonly identificadores: IdentificadoresService,
+    private readonly cola: ColaProveedorService,
+  ) {}
+
+  // ---------------------------------------------------------------------------
+  // Consultas
+  // ---------------------------------------------------------------------------
+
+  async listar(query: ListarClientesQueryDto) {
+    const esOperador = this.contexto.esOperador;
+
+    const where: Prisma.ClienteFinalWhereInput = {
+      empresaRevendedoraId: query.reseller_id,
+      estado: query.status,
+      idGestionExterno: query.external_id,
+      dispositivos: query.account_id ? { some: { cuentaId: query.account_id } } : undefined,
+      // La búsqueda libre del Operador Principal NO puede tocar nombre, teléfono,
+      // correo ni dirección: aunque esos campos no se serialicen, poder filtrar
+      // por ellos permitiría confirmar su contenido por prueba y error, y sería
+      // la misma fuga por otra vía (regla de negocio 4.2).
+      OR: query.q
+        ? esOperador
+          ? [{ idGestionExterno: { contains: query.q, mode: 'insensitive' } }]
+          : [
+              { nombre: { contains: query.q, mode: 'insensitive' } },
+              { apellido: { contains: query.q, mode: 'insensitive' } },
+              { email: { contains: query.q, mode: 'insensitive' } },
+              { telefono: { contains: query.q } },
+              { idGestionExterno: { contains: query.q, mode: 'insensitive' } },
+            ]
+        : undefined,
+    };
+
+    const esCsv = query.esCsv;
+    const [total, clientes] = await Promise.all([
+      this.prisma.db.clienteFinal.count({ where }),
+      this.prisma.db.clienteFinal.findMany({
+        where,
+        include: {
+          dispositivos: {
+            select: { id: true, tipo: true, estado: true, cuentaId: true },
+          },
+        },
+        orderBy: { numeroCliente: 'desc' },
+        skip: esCsv ? undefined : query.skip,
+        take: esCsv ? undefined : query.take,
+      }),
+    ]);
+
+    // Para el Operador Principal se serializa la versión por ID, igual que en el
+    // detalle: nombre y datos de contacto no llegan al frontend (regla 4.2).
+    const data = clientes.map((cliente) =>
+      esOperador ? this.mapClienteParaOperador(cliente) : this.mapCliente(cliente),
+    );
+    return PaginatedResponse.build(data, total, query.page ?? 1, query.per_page ?? 25);
+  }
+
+  /**
+   * Vista por Cliente (reglas de negocio, sección 8): credenciales de la Cuenta a
+   * la que pertenece, parametrización de contenido, sus Dispositivos y el enlace
+   * a la vista completa de la Cuenta.
+   */
+  async obtener(id: string) {
+    const cliente = await this.prisma.db.clienteFinal.findUnique({
+      where: { id },
+      include: {
+        dispositivos: {
+          include: { cuenta: true },
+          orderBy: [{ tipo: 'asc' }, { creadoEn: 'asc' }],
+        },
+      },
+    });
+
+    if (!cliente) throw new NotFoundException('El cliente no existe o no está disponible.');
+
+    const esOperador = this.contexto.esOperador;
+
+    // Para el Operador Principal se devuelve la versión por ID: sin nombre, sin
+    // datos de contacto y sin nota descriptiva (regla 4.2).
+    if (esOperador) {
+      return {
+        id: cliente.id,
+        numero_cliente: cliente.numeroCliente,
+        empresa_revendedora_id: cliente.empresaRevendedoraId,
+        estado: cliente.estado,
+        tipo_alta: cliente.tipoAlta,
+        creado_en: cliente.creadoEn,
+        dispositivos: cliente.dispositivos.map((dispositivo) => ({
+          id: dispositivo.id,
+          cuenta_id: dispositivo.cuentaId,
+          proveedor_device_id: dispositivo.proveedorDeviceId,
+          tipo: dispositivo.tipo,
+          estado: dispositivo.estado,
+        })),
+      };
+    }
+
+    const cuentaPrincipal = cliente.dispositivos[0]?.cuenta ?? null;
+    const capacidad = cuentaPrincipal
+      ? calcularCapacidad({
+          ...cuentaPrincipal,
+          dispositivos: await this.prisma.db.dispositivo.findMany({
+            where: { cuentaId: cuentaPrincipal.id },
+            select: { tipo: true, estado: true },
+          }),
+        })
+      : null;
+
+    return {
+      ...this.mapCliente(cliente),
+      // Credenciales de la Cuenta del cliente: es lo que la Empresa Revendedora
+      // le pasa al Cliente Final para que use el servicio.
+      cuenta: cuentaPrincipal
+        ? {
+            id: cuentaPrincipal.id,
+            proveedor_cuenta_id: cuentaPrincipal.proveedorCuentaId,
+            usuario: cuentaPrincipal.usuario,
+            password: this.crypto.tryDecrypt(cuentaPrincipal.passwordCifrado),
+            pin: this.crypto.tryDecrypt(cuentaPrincipal.pinCifrado),
+            email_contacto: cuentaPrincipal.emailContacto,
+            servicios: cuentaPrincipal.servicios,
+            servicios_nombres: nombresDeServicios(cuentaPrincipal.servicios),
+            es_exclusiva: cuentaPrincipal.esExclusiva,
+            fijos: capacidad ? `${capacidad.fijo.ocupados} de 3` : null,
+            moviles: capacidad ? `${capacidad.movil.ocupados} de 3` : null,
+            cerca_del_tope: capacidad
+              ? capacidad.fijo.cercaDelTope || capacidad.movil.cercaDelTope
+              : false,
+          }
+        : null,
+      dispositivos: cliente.dispositivos.map((dispositivo) => ({
+        id: dispositivo.id,
+        cuenta_id: dispositivo.cuentaId,
+        proveedor_device_id: dispositivo.proveedorDeviceId,
+        tipo: dispositivo.tipo,
+        estado: dispositivo.estado,
+        mac: dispositivo.mac,
+        nota_descriptiva: dispositivo.notaDescriptiva,
+        creado_en: dispositivo.creadoEn,
+      })),
+    };
+  }
+
+  /**
+   * Validación de `id_gestion_externo` (regla 2.4).
+   *
+   * Nunca cruza datos con otras Empresas Revendedoras: la búsqueda está acotada
+   * al tenant por Row-Level Security, y además se filtra explícitamente.
+   */
+  async buscarCoincidenciasGestionExterna(valor: string): Promise<CoincidenciaGestionExterna[]> {
+    if (!valor?.trim()) return [];
+
+    const empresaRevendedoraId = this.contexto.empresaRevendedoraId;
+    if (!empresaRevendedoraId) {
+      throw new ForbiddenException(
+        'La validación de ID de gestión externa corresponde al panel de la Empresa Revendedora.',
+      );
+    }
+
+    const coincidencias = await this.prisma.db.clienteFinal.findMany({
+      where: {
+        empresaRevendedoraId,
+        idGestionExterno: valor.trim(),
+        // La regla habla de "otro Cliente Final activo" de la misma Empresa
+        // Revendedora: no tiene sentido advertir por uno dado de baja.
+        estado: { in: [EstadoClienteFinal.activo, EstadoClienteFinal.suspendido] },
+      },
+      include: { dispositivos: { select: { id: true } } },
+      orderBy: { numeroCliente: 'asc' },
+    });
+
+    return coincidencias.map((cliente) => ({
+      id: cliente.id,
+      numero_cliente: cliente.numeroCliente,
+      nombre: [cliente.nombre, cliente.apellido].filter(Boolean).join(' '),
+      estado: cliente.estado,
+      dispositivos: cliente.dispositivos.length,
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Alta (flujo 4.1)
+  // ---------------------------------------------------------------------------
+
+  async crear(dto: CrearClienteDto) {
+    const empresaRevendedoraId = this.contexto.empresaRevendedoraId;
+    if (!empresaRevendedoraId) {
+      throw new ForbiddenException(
+        'El alta de Clientes Finales la realiza la Empresa Revendedora desde su panel.',
+      );
+    }
+
+    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(empresaRevendedoraId);
+
+    // --- Validación de ID de gestión externo (regla 2.4) ---------------------
+    if (dto.id_gestion_externo && !dto.confirmar_duplicado && !dto.agrupar_en_cliente_id) {
+      const coincidencias = await this.buscarCoincidenciasGestionExterna(dto.id_gestion_externo);
+      if (coincidencias.length > 0) {
+        // No se bloquea el alta ni se agrupa solo: se devuelve la advertencia
+        // para que la Empresa Revendedora elija (agrupar o crear de todos modos).
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'IdGestionExternoDuplicado',
+          message:
+            'Ya existe un cliente con ese ID de gestión. Elija agrupar el dispositivo en ese ' +
+            'cliente o crear un cliente nuevo de todos modos.',
+          coincidencias,
+        });
+      }
+    }
+
+    // --- Opción "agrupar": deriva al alta de Dispositivo adicional (flujo 4.4) --
+    if (dto.agrupar_en_cliente_id) {
+      const resultado = await this.dispositivos.altaAdicional(
+        dto.agrupar_en_cliente_id,
+        dto.dispositivo.tipo,
+        {
+          mac: dto.dispositivo.mac,
+          notaDescriptiva: dto.dispositivo.nota_descriptiva,
+          operadorPrincipalId,
+        },
+      );
+
+      if (resultado.pendienteDeAutoprovision) {
+        await this.cola.encolarReconciliacion({
+          cuentaId: resultado.cuenta.id,
+          operadorPrincipalId,
+        });
+      }
+
+      return {
+        agrupado_en: dto.agrupar_en_cliente_id,
+        cliente: await this.obtener(dto.agrupar_en_cliente_id),
+        migro_de_cuenta: resultado.migro,
+        cuenta_creada: resultado.cuentaCreada,
+        dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
+      };
+    }
+
+    // --- Alta normal ---------------------------------------------------------
+    const cliente = await this.prisma.transaction(async (tx) => {
+      const numeroCliente = await this.identificadores.siguienteNumeroCliente(
+        tx,
+        empresaRevendedoraId,
+      );
+
+      return tx.clienteFinal.create({
+        data: {
+          empresaRevendedoraId,
+          numeroCliente,
+          idGestionExterno: dto.id_gestion_externo?.trim() || null,
+          nombre: dto.nombre.trim(),
+          apellido: dto.apellido?.trim() || null,
+          telefono: dto.telefono?.trim() || null,
+          email: dto.email?.trim() || null,
+          direccion: dto.direccion?.trim() || null,
+          tipoAlta: dto.tipo_alta,
+          estado: EstadoClienteFinal.activo,
+        },
+      });
+    });
+
+    try {
+      const resultado = await this.dispositivos.alta({
+        clienteFinal: cliente,
+        tipo: dto.dispositivo.tipo,
+        mac: dto.dispositivo.mac,
+        notaDescriptiva: dto.dispositivo.nota_descriptiva,
+        cuentaExclusiva: dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva,
+        operadorPrincipalId,
+      });
+
+      await this.audit.registrar({
+        accion: AccionAuditoria.alta_cliente,
+        entidad: EntidadAuditada.ClienteFinal,
+        entidadId: cliente.id,
+        empresaRevendedoraId,
+        detalle: {
+          numero_cliente: cliente.numeroCliente,
+          tipo_alta: dto.tipo_alta,
+          tipo_dispositivo: dto.dispositivo.tipo,
+          cuenta_id: resultado.cuenta.id,
+          cuenta_creada: resultado.cuentaCreada,
+          duplicado_confirmado: Boolean(dto.confirmar_duplicado),
+        },
+      });
+
+      if (resultado.pendienteDeAutoprovision) {
+        await this.cola.encolarReconciliacion({
+          cuentaId: resultado.cuenta.id,
+          operadorPrincipalId,
+        });
+      }
+
+      return {
+        cliente: await this.obtener(cliente.id),
+        cuenta_creada: resultado.cuentaCreada,
+        dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
+      };
+    } catch (error) {
+      // Compensación: si no se pudo activar el Dispositivo, no queda un Cliente
+      // Final "fantasma" sin servicio.
+      await this.prisma.db.clienteFinal
+        .delete({ where: { id: cliente.id } })
+        .catch((cause) =>
+          this.logger.error(
+            `No se pudo revertir el alta del Cliente Final ${cliente.id}: ${(cause as Error).message}`,
+          ),
+        );
+      throw error;
+    }
+  }
+
+  async actualizar(id: string, dto: ActualizarClienteDto): Promise<ClienteFinal> {
+    if (this.contexto.esOperador) {
+      throw new ForbiddenException(
+        'Los datos del Cliente Final los administra su Empresa Revendedora.',
+      );
+    }
+
+    return this.prisma.db.clienteFinal.update({
+      where: { id },
+      data: {
+        nombre: dto.nombre?.trim(),
+        apellido: dto.apellido?.trim(),
+        telefono: dto.telefono?.trim(),
+        email: dto.email?.trim(),
+        direccion: dto.direccion?.trim(),
+        idGestionExterno: dto.id_gestion_externo?.trim(),
+      },
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Suspensión, reactivación y baja (flujos 4.2 y 4.3)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Suspensión: se libera el Dispositivo en el Proveedor pero queda RESERVADO
+   * para el titular. Nadie más puede tomarlo mientras el cliente siga suspendido.
+   */
+  async suspender(id: string) {
+    const cliente = await this.obtenerParaTransicion(id);
+
+    if (cliente.estado === EstadoClienteFinal.suspendido) {
+      throw new BadRequestException('El cliente ya está suspendido.');
+    }
+    if (cliente.estado === EstadoClienteFinal.dado_de_baja) {
+      throw new BadRequestException(
+        'El cliente está dado de baja: no corresponde suspenderlo. Dé de alta un cliente nuevo.',
+      );
+    }
+
+    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(
+      cliente.empresaRevendedoraId,
+    );
+
+    for (const dispositivo of cliente.dispositivos) {
+      if (dispositivo.estado !== EstadoDispositivo.activo) continue;
+      await this.dispositivos.liberar(
+        dispositivo.id,
+        EstadoDispositivo.bloqueado_por_suspension,
+        operadorPrincipalId,
+        AccionAuditoria.suspension_cliente,
+      );
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.clienteFinal.update({
+        where: { id },
+        data: { estado: EstadoClienteFinal.suspendido, suspendidoEn: new Date() },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.suspension_cliente,
+        entidad: EntidadAuditada.ClienteFinal,
+        entidadId: id,
+        empresaRevendedoraId: cliente.empresaRevendedoraId,
+        detalle: {
+          numero_cliente: cliente.numeroCliente,
+          dispositivos_bloqueados: cliente.dispositivos.length,
+        },
+      });
+    });
+
+    return this.obtener(id);
+  }
+
+  /**
+   * Reactivación de un Cliente Final suspendido.
+   *
+   * Está contemplada en la propia justificación de la regla de suspensión: el
+   * Dispositivo se reserva justamente "mientras exista la posibilidad de que el
+   * suspendido vuelva a activarse". Se vuelve a habilitar el cupo en el Proveedor
+   * y se reactivan sus Dispositivos reservados, sin que hayan pasado por
+   * `disponible` en el medio (nadie más pudo tomarlos).
+   */
+  async reactivar(id: string) {
+    const cliente = await this.obtenerParaTransicion(id);
+
+    if (cliente.estado !== EstadoClienteFinal.suspendido) {
+      throw new BadRequestException('Sólo se puede reactivar un cliente suspendido.');
+    }
+
+    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(
+      cliente.empresaRevendedoraId,
+    );
+
+    const reservados = cliente.dispositivos.filter(
+      (dispositivo) => dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension,
+    );
+
+    for (const dispositivo of reservados) {
+      await this.dispositivos
+        .reasignar(
+          dispositivo.id,
+          id,
+          operadorPrincipalId,
+          // Se reutiliza la MAC conocida para que el equipo del cliente vuelva a
+          // quedar habilitado tal como estaba.
+          {
+            mac: dispositivo.mac ?? undefined,
+            notaDescriptiva: dispositivo.notaDescriptiva ?? undefined,
+          },
+        )
+        .catch(async (error) => {
+          // El Dispositivo estaba reservado, así que la reactivación es un alta
+          // sobre su propia Cuenta. Si el Proveedor falla, se informa y se corta.
+          this.logger.error(
+            `No se pudo reactivar el Dispositivo ${dispositivo.id} del Cliente Final ${id}: ` +
+              (error as Error).message,
+          );
+          throw error;
+        });
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.clienteFinal.update({
+        where: { id },
+        data: { estado: EstadoClienteFinal.activo, suspendidoEn: null },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.reactivacion_cliente,
+        entidad: EntidadAuditada.ClienteFinal,
+        entidadId: id,
+        empresaRevendedoraId: cliente.empresaRevendedoraId,
+        detalle: {
+          numero_cliente: cliente.numeroCliente,
+          dispositivos_reactivados: reservados.length,
+        },
+      });
+    });
+
+    return this.obtener(id);
+  }
+
+  /**
+   * Baja definitiva: lógica exactamente inversa al alta. Se eliminan los
+   * Dispositivos en el Proveedor, se resta la parametrización y los Dispositivos
+   * quedan `disponible`, listos para asignarse a un Cliente Final nuevo.
+   *
+   * También es la ÚNICA vía para liberar un Dispositivo bloqueado por suspensión.
+   */
+  async darDeBaja(id: string) {
+    const cliente = await this.obtenerParaTransicion(id);
+
+    if (cliente.estado === EstadoClienteFinal.dado_de_baja) {
+      throw new BadRequestException('El cliente ya está dado de baja.');
+    }
+
+    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(
+      cliente.empresaRevendedoraId,
+    );
+    const veniaDeSuspension = cliente.estado === EstadoClienteFinal.suspendido;
+
+    for (const dispositivo of cliente.dispositivos) {
+      if (
+        dispositivo.estado !== EstadoDispositivo.activo &&
+        dispositivo.estado !== EstadoDispositivo.bloqueado_por_suspension
+      ) {
+        continue;
+      }
+      await this.dispositivos.liberar(
+        dispositivo.id,
+        EstadoDispositivo.disponible,
+        operadorPrincipalId,
+        AccionAuditoria.baja_cliente,
+      );
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.clienteFinal.update({
+        where: { id },
+        data: {
+          estado: EstadoClienteFinal.dado_de_baja,
+          dadoDeBajaEn: new Date(),
+        },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.baja_cliente,
+        entidad: EntidadAuditada.ClienteFinal,
+        entidadId: id,
+        empresaRevendedoraId: cliente.empresaRevendedoraId,
+        detalle: {
+          numero_cliente: cliente.numeroCliente,
+          dispositivos_liberados: cliente.dispositivos.length,
+          transicion_desde_suspension: veniaDeSuspension,
+        },
+      });
+    });
+
+    return this.obtener(id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Auxiliares
+  // ---------------------------------------------------------------------------
+
+  private async obtenerParaTransicion(id: string) {
+    if (this.contexto.esOperador) {
+      throw new ForbiddenException(
+        'Las altas, suspensiones y bajas de Clientes Finales las ejecuta su Empresa Revendedora.',
+      );
+    }
+
+    const cliente = await this.prisma.db.clienteFinal.findUnique({
+      where: { id },
+      include: { dispositivos: true },
+    });
+    if (!cliente) throw new NotFoundException('El cliente no existe o no está disponible.');
+    return cliente;
+  }
+
+  /**
+   * Vista por ID para el panel del Operador Principal (regla de negocio 4.2).
+   *
+   * Devuelve exactamente los campos permitidos: número de cliente, estado, tipo
+   * de alta, conteo de dispositivos y las Cuentas involucradas. Sin nombre, sin
+   * teléfono, sin correo, sin dirección y sin el ID de gestión externa (que es un
+   * dato del CRM de la Empresa Revendedora, no del Operador).
+   */
+  private mapClienteParaOperador(
+    cliente: ClienteFinal & {
+      dispositivos: { id: string; tipo: string; estado: string; cuentaId: string }[];
+    },
+  ) {
+    return {
+      id: cliente.id,
+      numero_cliente: cliente.numeroCliente,
+      empresa_revendedora_id: cliente.empresaRevendedoraId,
+      estado: cliente.estado,
+      tipo_alta: cliente.tipoAlta,
+      cantidad_dispositivos: this.contarDispositivosOcupados(cliente.dispositivos),
+      cuenta_ids: [...new Set(cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId))],
+      suspendido_en: cliente.suspendidoEn,
+      dado_de_baja_en: cliente.dadoDeBajaEn,
+      creado_en: cliente.creadoEn,
+    };
+  }
+
+  private contarDispositivosOcupados(dispositivos: { estado: string }[]): number {
+    return dispositivos.filter(
+      (dispositivo) =>
+        dispositivo.estado === EstadoDispositivo.activo ||
+        dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension,
+    ).length;
+  }
+
+  private mapCliente(
+    cliente: ClienteFinal & {
+      dispositivos: { id: string; tipo: string; estado: string; cuentaId: string }[];
+    },
+  ) {
+    return {
+      id: cliente.id,
+      numero_cliente: cliente.numeroCliente,
+      id_gestion_externo: cliente.idGestionExterno,
+      nombre: cliente.nombre,
+      apellido: cliente.apellido,
+      nombre_completo: [cliente.nombre, cliente.apellido].filter(Boolean).join(' '),
+      telefono: cliente.telefono,
+      email: cliente.email,
+      direccion: cliente.direccion,
+      tipo_alta: cliente.tipoAlta,
+      estado: cliente.estado,
+      empresa_revendedora_id: cliente.empresaRevendedoraId,
+      cantidad_dispositivos: cliente.dispositivos.filter(
+        (dispositivo) =>
+          dispositivo.estado === EstadoDispositivo.activo ||
+          dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension,
+      ).length,
+      cuenta_ids: [...new Set(cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId))],
+      suspendido_en: cliente.suspendidoEn,
+      dado_de_baja_en: cliente.dadoDeBajaEn,
+      creado_en: cliente.creadoEn,
+    };
+  }
+}
