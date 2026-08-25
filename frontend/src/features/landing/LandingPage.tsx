@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTema } from '@/lib/theme';
+import { Cargando } from '@/components/layout/Gates';
 import './landing.css';
 
 const WHATSAPP_URL =
@@ -163,6 +164,15 @@ export const LandingPage = () => {
   useEffect(() => {
     if (isAuthenticated) navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
+
+  // Mientras Auth0 todavía está resolviendo el regreso del login (parseando el
+  // token en la URL), `isAuthenticated` todavía es `false` por un instante: si
+  // se dibuja la landing pública en ese momento, se ve un flash antes de que
+  // el efecto de arriba redirija a `/dashboard`. Se evita no renderizando el
+  // contenido público hasta que Auth0 termine de decidir.
+  if (isLoading || isAuthenticated) {
+    return <Cargando mensaje="Verificando su sesión…" />;
+  }
 
   const iniciarSesion = () => {
     if (isAuthenticated) {

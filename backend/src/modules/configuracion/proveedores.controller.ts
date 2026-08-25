@@ -9,11 +9,11 @@ import { SoloOperador } from '../../common/auth/decorators';
  */
 @ApiTags('providers')
 @Controller('providers')
-@SoloOperador()
 export class ProveedoresController {
   constructor(private readonly proveedores: ProveedoresService) {}
 
   @Get()
+  @SoloOperador()
   @ApiOperation({ summary: 'Lista los proveedores de contenido registrados.' })
   async listar() {
     return this.proveedores.listar();
@@ -24,11 +24,12 @@ export class ProveedoresController {
     summary: 'Catálogo de paquetes de contenido del proveedor.',
     description: 'Códigos del Anexo de Servicios. El paquete básico es obligatorio.',
   })
-  catalogo() {
-    return this.proveedores.catalogoServicios();
+  async catalogo() {
+    return this.proveedores.catalogoServiciosDisponibles();
   }
 
   @Get('licenses')
+  @SoloOperador()
   @ApiOperation({
     summary: 'Licencias contratadas vs. usadas.',
     description: 'Consulta en vivo al proveedor. Alimenta el reporte de consumo.',
@@ -38,6 +39,7 @@ export class ProveedoresController {
   }
 
   @Post(':id/activate')
+  @SoloOperador()
   @ApiOperation({ summary: 'Define el proveedor activo del Operador Principal.' })
   async activar(@Param('id', ParseUUIDPipe) id: string) {
     return this.proveedores.activar(id);

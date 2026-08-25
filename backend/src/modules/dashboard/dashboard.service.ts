@@ -9,6 +9,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { ColaProveedorService } from '../../queues/cola-proveedor.service';
 import { CuentasService } from '../cuentas/cuentas.service';
+import { calcularCapacidad } from '../cuentas/capacidad.util';
 
 /**
  * =============================================================================
@@ -27,7 +28,8 @@ import { CuentasService } from '../cuentas/cuentas.service';
  *
  * Definición de los tres números del Operador Principal:
  *   vendidas    → Cuentas activas con al menos un Dispositivo ocupando lugar.
- *   disponibles → Cuentas activas con capacidad libre para un alta.
+ *   disponibles → Cuentas activas con lugar para otra venta (compartida) o
+ *                 alguna categoría sin completar (exclusiva).
  *   bloqueadas  → Cuentas con al menos un Dispositivo bloqueado por suspensión.
  * =============================================================================
  */
@@ -50,9 +52,8 @@ export class DashboardService {
         where: { estado: EstadoCuenta.activa },
         select: {
           id: true,
-          dispositivosFijosHabilitados: true,
-          dispositivosMovilesHabilitados: true,
-          dispositivos: { select: { tipo: true, estado: true } },
+          esExclusiva: true,
+          dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
         },
       }),
       this.prisma.db.dispositivo.groupBy({ by: ['estado'], _count: { _all: true } }),
@@ -65,18 +66,13 @@ export class DashboardService {
     let bloqueadas = 0;
 
     for (const cuenta of cuentas) {
-      const ocupados = cuenta.dispositivos.filter(
-        (dispositivo) =>
-          dispositivo.estado === EstadoDispositivo.activo ||
-          dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension,
-      ).length;
+      const capacidad = calcularCapacidad(cuenta);
       const tieneBloqueados = cuenta.dispositivos.some(
         (dispositivo) => dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension,
       );
-      const capacidadTotal = 6; // 3 fijos + 3 móviles
 
-      if (ocupados > 0) vendidas += 1;
-      if (ocupados < capacidadTotal) disponibles += 1;
+      if (capacidad.ocupados > 0) vendidas += 1;
+      if (!capacidad.completa) disponibles += 1;
       if (tieneBloqueados) bloqueadas += 1;
     }
 

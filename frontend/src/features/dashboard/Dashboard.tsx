@@ -340,10 +340,7 @@ const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'resel
                   </Link>
                   <p className="text-xs texto-suave">{alerta.mensaje}</p>
                 </div>
-                <div className="flex items-center gap-3 font-mono text-2xs">
-                  <span>Fijos {alerta.fijos}</span>
-                  <span>Móviles {alerta.moviles}</span>
-                </div>
+                <span className="font-mono text-2xs">Dispositivos {alerta.dispositivos}</span>
               </li>
             ))}
           </ul>
@@ -368,7 +365,7 @@ const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'resel
       <Metric
         etiqueta="Dispositivos activos"
         valor={formatearNumero(data.dispositivos.activos)}
-        detalle={`${data.dispositivos.activos_fijos} fijos · ${data.dispositivos.activos_moviles} móviles`}
+        detalle="En todas sus cuentas"
         icono={<MonitorPlay className="size-4" />}
       />
       <Metric

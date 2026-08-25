@@ -46,26 +46,34 @@ export class ProveedorTelemetryService {
       );
     }
 
-    try {
-      // Se escribe con el cliente sin extensión de RLS y contexto explícito,
-      // porque también se usa desde jobs que corren fuera de un request.
-      await this.prisma.llamadaProveedor.create({
-        data: {
-          operadorPrincipalId,
-          operacion: registro.operacion,
-          metodo: registro.metodo,
-          ruta: registro.ruta.slice(0, 200),
-          estado: registro.estado,
-          codigo: registro.codigo,
-          duracionMs: registro.duracionMs,
-          mensaje: registro.mensaje?.slice(0, 500),
-        },
-      });
-    } catch (error) {
-      // La traza es un apoyo operativo: si falla, no debe romper la operación.
-      this.logger.error(
-        `No se pudo registrar la llamada al Proveedor: ${(error as Error).message}`,
-      );
+    // La tabla `llamada_proveedor` es multicuenta: se identifica por
+    // `operador_principal_id`. La política RLS exige el contexto de operador
+    // (la transección se abre con `app.is_operator=on` y `app.current_operador`).
+    // Prisma siempre emite `INSERT ... RETURNING`, y el `RETURNING` re-cae sobre
+    // el `USING` de la política: sin ese contexto, la escritura (que sí pasaría
+    // el `WITH CHECK`) se rechaza al devolverse la fila.
+    if (operadorPrincipalId) {
+      try {
+        await this.prisma.transactionComoOperador(operadorPrincipalId, (tx) =>
+          tx.llamadaProveedor.create({
+            data: {
+              operadorPrincipalId,
+              operacion: registro.operacion,
+              metodo: registro.metodo,
+              ruta: registro.ruta.slice(0, 200),
+              estado: registro.estado,
+              codigo: registro.codigo,
+              duracionMs: registro.duracionMs,
+              mensaje: registro.mensaje?.slice(0, 500),
+            },
+          }),
+        );
+      } catch (error) {
+        // La traza es un apoyo operativo: si falla, no debe romper la operación.
+        this.logger.error(
+          `No se pudo registrar la llamada al Proveedor: ${(error as Error).message}`,
+        );
+      }
     }
   }
 }

@@ -44,13 +44,13 @@ export class ConfiguracionService {
   async obtener(): Promise<ConfiguracionProveedorRespuestaDto> {
     const operadorPrincipalId = this.exigirOperador();
 
-    const operador = await this.prisma.operadorPrincipal.findUniqueOrThrow({
+    const operador = await this.prisma.db.operadorPrincipal.findUniqueOrThrow({
       where: { id: operadorPrincipalId },
       include: { proveedorActivo: true },
     });
 
     const configuracion = operador.proveedorActivoId
-      ? await this.prisma.configuracionProveedor.findUnique({
+      ? await this.prisma.db.configuracionProveedor.findUnique({
           where: {
             operadorPrincipalId_proveedorId: {
               operadorPrincipalId,
@@ -105,7 +105,7 @@ export class ConfiguracionService {
       });
     }
 
-    const existente = await this.prisma.configuracionProveedor.findUnique({
+    const existente = await this.prisma.db.configuracionProveedor.findUnique({
       where: { operadorPrincipalId_proveedorId: { operadorPrincipalId, proveedorId } },
     });
 

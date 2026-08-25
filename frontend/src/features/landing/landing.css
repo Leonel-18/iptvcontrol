@@ -257,7 +257,7 @@
     align-items: center;
     gap: 9px;
     color: var(--landing-blue-deep);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: Archivo, 'Segoe UI', sans-serif;
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.1em;
@@ -632,9 +632,9 @@
     gap: 12px;
     margin: 22px 0 0 32px;
     color: var(--landing-muted);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.03em;
+    font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.01em;
   }
 
   .landing-hero__caption span {
@@ -819,9 +819,10 @@
 
   .landing-step__number {
     color: var(--landing-blue);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .landing-step__line {

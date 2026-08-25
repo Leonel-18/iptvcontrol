@@ -76,7 +76,7 @@ describe('CryptoService', () => {
 
     it('el PIN es numérico de 4 a 8 dígitos', () => {
       const crypto = crearServicio();
-      expect(crypto.generarPinNumerico()).toMatch(/^\d{4}$/);
+      expect(crypto.generarPinNumerico()).toMatch(/^\d{6}$/);
       expect(crypto.generarPinNumerico(2)).toMatch(/^\d{4}$/);
       expect(crypto.generarPinNumerico(12)).toMatch(/^\d{8}$/);
     });

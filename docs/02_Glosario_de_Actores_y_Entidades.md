@@ -2,7 +2,8 @@
 
 Este documento define la nomenclatura oficial del proyecto. Usar siempre estos nombres en el
 código, la base de datos y la documentación, para evitar ambigüedad entre "cuenta", "usuario",
-"licencia", "dispositivo", etc. **No usar el término "slot"** — el nombre oficial es "Dispositivo".
+"licencia", "dispositivo" y "cupo". La unidad oficial es **Dispositivo**; para capacidad libre se
+usa **cupo**.
 
 ## Actores (roles de negocio)
 
@@ -32,7 +33,9 @@ Su registro como entidad legal/comercial incluye: **razón social**, **CUIT**, *
 la base para generar los correos de contacto de cada Cuenta — ver `03_Reglas_de_Negocio.md`,
 sección 2.3) y, opcionalmente, un **link a su sitio web**. Estos datos los carga el Operador
 Principal al dar de alta a la Empresa Revendedora, y son de uso administrativo/legal (facturación,
-contacto comercial) — no se envían al Proveedor (SENSA).
+contacto comercial). SENSA recibe el nombre y apellido de ese contacto para las Cuentas y usa los
+datos de la Empresa Revendedora como fallback de teléfono y dirección cuando el Cliente Final no
+los tiene cargados.
 
 ### Cliente Final
 Usuario que efectivamente consume el servicio IPTV. Es dado de alta por la Empresa Revendedora y
@@ -42,7 +45,7 @@ cliente** interno de IPTVControl y, opcionalmente, un **ID de cliente en el sist
 propio de la Empresa Revendedora** (para vincularlo con su CRM/facturación externa). Si la Empresa
 Revendedora carga ese ID y ya existe otro Cliente Final activo de esa misma Empresa Revendedora con
 el mismo valor, el sistema la avisa antes de confirmar el alta — ver `03_Reglas_de_Negocio.md`,
-sección 2.4.
+sección 2.5.
 
 ## Entidades (modelo de datos)
 
@@ -50,16 +53,21 @@ sección 2.4.
 Unidad de contratación entre el Operador Principal y el Proveedor. Cada Cuenta tiene **un usuario,
 una contraseña y un PIN únicos**, un identificador tipo **DNI** exigido por SENSA para el alta
 (generado internamente por el sistema, no un DNI real — ver `03_Reglas_de_Negocio.md`, sección 2),
-un **correo de contacto** derivado del correo de la Empresa Revendedora, y una capacidad máxima de
-**3 dispositivos fijos + 3 dispositivos móviles** (6 Dispositivos totales). Es la unidad que se
-**factura** del Operador Principal a la Empresa Revendedora, según la modalidad comercial vigente
-de esa Empresa Revendedora.
+un **correo de contacto** procedimental derivado del correo de la Empresa Revendedora, y una
+capacidad comercial que depende de su modo: **exclusiva** (hasta 3 fijos + 3 móviles para un único
+Cliente Final) o **compartida** (hasta 3 ventas, cada una con hasta 1 fijo + 1 móvil). La contraseña
+de la Cuenta tiene exactamente **8 dígitos numéricos** y el PIN, **6 dígitos numéricos**. Es la
+unidad que se **factura** del Operador Principal a la Empresa Revendedora, según la modalidad
+comercial vigente de esa Empresa Revendedora.
 
-Una Cuenta se crea en SENSA parametrizada inicialmente en **1 fijo + 1 móvil**, y se actualiza vía
-API de a un dispositivo por vez, a medida que la Empresa Revendedora da de alta Clientes Finales,
-hasta el tope de 3+3. Una Empresa Revendedora puede dar de alta un Cliente Final pidiendo una
-**Cuenta completa exclusiva** (sin compartir) o **solo un Dispositivo** dentro de una Cuenta
-compartida — ver `03_Reglas_de_Negocio.md`, sección 2.
+Una Empresa Revendedora puede dar de alta un Cliente Final mediante una **Cuenta completa
+exclusiva**, que pertenece a ese Cliente Final e incluye todos los servicios contratados, o mediante
+una **venta unitaria** (`dispositivo_compartido`) que autoriza hasta 1 Dispositivo fijo + 1 móvil.
+Las ventas unitarias comparten Cuenta únicamente cuando tienen idéntica firma de servicios, hasta 3
+ventas por Cuenta. La capacidad de cada modalidad la hace cumplir SENSA mismo, a través de sus
+contadores nativos `auto_provision_count_mobile`/`auto_provision_count_stationary`, que IPTVControl
+mantiene sincronizados con la cantidad de ventas activas (ver `03_Reglas_de_Negocio.md`,
+sección 2.2).
 
 ### Dispositivo
 Unidad de gestión interna de la Empresa Revendedora. Representa un dispositivo físico (TV o móvil)
@@ -67,23 +75,25 @@ vinculado a un Cliente Final específico, dentro de una Cuenta determinada. **No
 en el sistema** — es la Empresa Revendedora quien define, por fuera de IPTVControl, cuánto le cobra
 a cada Cliente Final por su Dispositivo.
 
-Cada Dispositivo se identifica mediante el **ID que devuelve SENSA** al momento de la activación
-(no es un dato libre cargado por la Empresa Revendedora). Sobre ese Dispositivo, la Empresa
-Revendedora puede agregar libremente una **nota descriptiva propia** (ej. "TV living") para
-identificarlo en su panel — es un dato interno de IPTVControl, no se envía a SENSA.
+El formulario de alta no pide tipo ni MAC. Al primer login, SENSA reporta el **ID**, la **MAC** y el
+**tipo** del equipo; IPTVControl detecta candidatos durante 10 minutos, con sondeo cada 30 segundos.
+En una venta unitaria se pueden vincular hasta 1 candidato fijo + 1 candidato móvil al mismo Cliente
+Final; en una Cuenta completa, hasta 3 fijos + 3 móviles al mismo Cliente Final. Un candidato que
+exceda el cupo de su categoría queda como incidencia pendiente de revisión manual (nunca se elimina
+solo). Sobre el Dispositivo vinculado, la Empresa Revendedora puede agregar una **nota descriptiva
+propia** (ej. "TV living"), dato interno que no se envía a SENSA.
 
 Un Dispositivo puede estar, entre otros, en estado **bloqueado por suspensión**: liberado de la
 Cuenta en SENSA pero reservado, sin poder asignarse a otro Cliente Final mientras el Cliente Final
 titular siga suspendido (ver `03_Reglas_de_Negocio.md`, sección 3).
 
 ### Relación Cuenta – Dispositivo – Cliente Final
-Una misma Cuenta (con un único usuario/contraseña) puede estar compartida por hasta 6 Clientes
-Finales distintos, cada uno con su propio Dispositivo dentro de esa Cuenta. La Empresa Revendedora
-decide, al dar de alta cada Cliente Final, si le otorga una Cuenta completa exclusiva o si comparte
-Cuenta con otros Clientes Finales. **Punto crítico de diseño (riesgo de negocio aceptado):** los
-Clientes Finales que comparten Cuenta reciben las mismas credenciales de acceso, sin saberlo entre
-sí, y el sistema no rota la contraseña al reasignar un Dispositivo tras una baja definitiva — ver
-riesgo aceptado en `03_Reglas_de_Negocio.md`, sección 6.
+Una Cuenta completa pertenece a un único Cliente Final, que puede vincular hasta 3 fijos + 3
+móviles. Una Cuenta compartida aloja hasta 3 ventas unitarias de idéntica firma de servicios, cada
+una para un Cliente Final con hasta 1 fijo + 1 móvil. **Punto crítico de diseño (riesgo de negocio
+aceptado):** los Clientes Finales que comparten Cuenta reciben las mismas credenciales de acceso,
+sin saberlo entre sí, y el sistema no rota la contraseña cuando ingresa una venta nueva después de
+una baja definitiva — ver riesgo aceptado en `03_Reglas_de_Negocio.md`, sección 6.
 
 ### Modalidad Comercial
 Esquema bajo el cual una Empresa Revendedora compra Cuentas al Operador Principal. Ver detalle

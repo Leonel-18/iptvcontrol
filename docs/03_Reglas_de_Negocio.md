@@ -36,31 +36,76 @@ Revendedora no puede autogestionarlo) — depende 100% del trato comercial pacta
 
 ### 2.1. Dos métodos de alta de Cliente Final
 Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
-1. **Cuenta completa exclusiva** (sin compartir con otros Clientes Finales): el sistema siempre
-   crea una Cuenta nueva en SENSA para ese cliente, sin buscar espacio en Cuentas existentes.
-2. **Solo alta de un Dispositivo** (fijo o móvil): la Cuenta se comparte con otros Clientes
-   Finales. En este caso:
-   - El sistema busca si la Empresa Revendedora ya tiene una Cuenta propia con un Dispositivo
-     disponible del tipo pedido.
-   - Si existe: se asocia el nuevo Dispositivo a esa Cuenta, y se actualiza la parametrización de
-     la Cuenta en SENSA vía API (+1 dispositivo, respetando el tope 3 fijos / 3 móviles).
-   - Si no existe: el sistema crea una Cuenta nueva en SENSA vía API, parametrizada en **1 fijo +
-     1 móvil** (arranque mínimo, no 0+0 ni 3+3 de entrada), y asocia el Dispositivo a esa Cuenta.
-3. Cada alta/baja de Dispositivo modifica la parametrización de la Cuenta de a un dispositivo por
-   vez (nunca en bloque).
+1. **Cuenta completa exclusiva**: el sistema siempre crea una Cuenta nueva en SENSA para ese
+   Cliente Final, sin buscar espacio en Cuentas existentes. La Cuenta pertenece a ese único cliente,
+   incluye todos los servicios contratados y permite registrar hasta **3 Dispositivos fijos + 3
+   móviles** (hasta 6 Dispositivos en total, sin relación entre sí).
+2. **Venta unitaria** (`dispositivo_compartido`): autoriza hasta **1 Dispositivo fijo + 1 móvil**
+   para ese Cliente Final ("fijo" = TV/`stationary`; "móvil" = celular, tablet o PC por navegador
+   `cloud_client` — confirmado por Bruno el 24/08/2026, caso Valentín Alamo). En el wizard la
+   Empresa Revendedora elige los servicios de esa venta; el
+   servicio básico código 1 está siempre incluido. El sistema calcula una firma canónica de
+   servicios y solo comparte Cuenta con otras ventas de firma idéntica. Una Cuenta compartida aloja
+   como máximo **3 ventas** (hasta 6 Dispositivos en total, 2 por venta).
+3. El formulario no solicita tipo ni MAC: SENSA los informa al primer login de cada equipo.
 
-### 2.2. Alta de Dispositivo adicional para un Cliente Final ya existente
+### 2.2. Bloqueo de capacidad vía contadores de SENSA y descubrimiento del Dispositivo
+
+- **Mecanismo de bloqueo (reemplaza el modelo anterior de "Dispositivos de reserva técnicos"):**
+  SENSA expone en cada Cuenta dos contadores por categoría —
+  `auto_provision_count_mobile` y `auto_provision_count_stationary` — que limitan cuántos
+  Dispositivos de esa categoría puede auto-provisionar la Cuenta. IPTVControl mantiene esos
+  contadores sincronizados con la cantidad de **ventas activas** de la Cuenta: una Cuenta compartida
+  nueva arranca en 1/1 (su primera venta); al sumarse una 2ª venta compatible, sube a 2/2 **antes**
+  de abrir su ventana de vinculación; al darse de baja o suspenderse la última venta de un cliente,
+  baja de nuevo (nunca por debajo de 1 mientras la Cuenta esté activa). Una Cuenta exclusiva nace
+  fija en 3/3 y no varía con las altas/bajas de su único cliente.
+- Después del primer login del Cliente Final, SENSA informa ID, MAC y tipo. IPTVControl toma una
+  instantánea previa, abre una ventana de **10 minutos** y consulta cada **30 segundos** para detectar
+  candidatos nuevos.
+- En una venta unitaria se pueden vincular hasta 1 candidato fijo + 1 candidato móvil al mismo
+  Cliente Final. En una Cuenta completa, hasta 3 fijos + 3 móviles al mismo Cliente Final. Cualquier
+  candidato que exceda el cupo de su categoría (para ese cliente, o para la Cuenta si es exclusiva)
+  no se vincula: queda como incidencia pendiente de revisión manual, igual que un Dispositivo
+  detectado por el barrido de inventario (no requiere el estado "ambiguo" del modelo anterior).
+- Si vence la ventana sin ningún candidato para una venta nueva, el Dispositivo vuelve a
+  `disponible` y el contador se resincroniza contra las ventas activas reales (baja solo).
+- **Límite real de los contadores de SENSA (confirmado por prueba de Bruno, 21/08/2026):** los
+  contadores `auto_provision_count*` evitan un alta explícita por API y probablemente los tipos
+  "phone"/"stationary", pero **no bloquean** un inicio de sesión por el reproductor web de SENSA
+  (`cloud_client`), que auto-provisiona un Dispositivo nuevo aunque la Cuenta esté al tope de sus
+  contadores. Por eso la defensa real contra un Dispositivo de más es la **detección activa**, no
+  el bloqueo de capacidad en sí: el botón "Consultar al proveedor" de `/accounts/:id` y un barrido
+  periódico best-effort comparan el inventario real de SENSA contra lo vendido, y dejan cualquier
+  Dispositivo no autorizado como incidencia pendiente de revisión manual — nunca se elimina solo
+  (ver `04_Esqueleto_Tecnico_Inicial.md`, sección 4.1, y `05_Decisiones_Pendientes.md`, sección 4).
+- **Corrección manual de vinculación equivocada (caso Pepito/Marcelo, definido con Bruno el
+  21/08/2026):** en una Cuenta compartida puede pasar que, mientras la ventana de vinculación del
+  Cliente Final A está abierta, el Cliente Final B pruebe las credenciales en otro equipo y ese
+  equipo quede vinculado a A. SENSA no identifica de quién es cada inicio de sesión, así que
+  IPTVControl no puede detectarlo solo: la corrección es siempre una decisión de la Empresa
+  Revendedora, desde la pestaña Dispositivos de `/accounts/:id` ("Corregir"), con dos opciones:
+  - **Reasignar**: el equipo pasa al Cliente Final real dueño (otro Cliente Final activo de la
+    misma Cuenta).
+  - **Eliminar**: el equipo no pertenece a nadie y se da de baja en el Proveedor.
+  En ambos casos, el Cliente Final afectado recibe automáticamente una ventana de vinculación
+  nueva. Cada corrección queda registrada en el Audit Log (`correccion_vinculacion_dispositivo`).
+
+### 2.3. Alta de Dispositivo adicional para un Cliente Final ya existente
 La Empresa Revendedora puede sumarle a un Cliente Final que ya tiene Dispositivo(s) uno adicional:
-- Si la Cuenta actual del Cliente Final tiene lugar disponible del tipo pedido, el nuevo
-  Dispositivo se agrega ahí, con el mismo mecanismo de alta descripto arriba.
-- Si la Cuenta actual **ya llegó a su tope** (3 fijos + 3 móviles) y no puede sumar más, el sistema
-  debe **asignarle al Cliente Final una Cuenta nueva** con capacidad suficiente para la cantidad
-  total de Dispositivos deseada — es decir, se le **cambia de Cuenta** al Cliente Final, migrando
-  ahí sus Dispositivos existentes.
+- Si es una Cuenta completa y tiene menos de 3 fijos o menos de 3 móviles, se abre el mismo flujo de
+  descubrimiento sin pedir tipo ni MAC.
+- Si es una venta unitaria y el cliente todavía no completó su par (1 fijo + 1 móvil) en esa misma
+  Cuenta compartida, el Dispositivo adicional se suma ahí mismo, sin crear una venta nueva ni tocar
+  los contadores de SENSA (la venta ya estaba contada).
+- Si la Cuenta exclusiva ya alcanzó 3 fijos y 3 móviles, o el cliente de una venta unitaria ya
+  completó su par, un Dispositivo adicional constituye **una venta nueva**: usa otra Cuenta
+  compatible con la misma firma de servicios o crea una Cuenta nueva. No se migran los Dispositivos
+  existentes para forzar un cupo imposible en la Cuenta actual.
 - La baja de uno de varios Dispositivos de un mismo Cliente Final (sin dar de baja al cliente
   entero) no afecta a los demás Dispositivos de ese cliente ni a su estado general.
 
-### 2.3. Identificador (DNI) y correo de contacto exigidos por SENSA
+### 2.4. Identificador (DNI), credenciales y datos enviados a SENSA
 - El identificador que SENSA exige para dar de alta una Cuenta corresponde a un **número de DNI**.
   Como el sistema no gestiona DNIs reales de personas físicas, IPTVControl genera estos números de
   forma autónoma: el **número inicial es parametrizable por el Operador Principal**, y a partir de
@@ -72,8 +117,14 @@ La Empresa Revendedora puede sumarle a un Cliente Final que ya tiene Dispositivo
   correo registrado por la Empresa Revendedora, **agregándole un número creciente antes de la
   arroba** (ej. `contacto@isp.com` → `contacto1@isp.com`, `contacto2@isp.com`, ...), para
   identificar cada Cuenta de forma única sin que la Empresa Revendedora gestione casillas reales.
+- La contraseña generada para la Cuenta tiene exactamente **8 dígitos numéricos** y el PIN,
+  exactamente **6 dígitos numéricos**.
+- El nombre y apellido reales del Cliente Final permanecen en IPTVControl. SENSA recibe el nombre y
+  apellido del contacto de la Empresa Revendedora. El teléfono y la dirección se toman del Cliente
+  Final cuando están disponibles y usan los datos de la Empresa Revendedora como fallback.
+- `id_gestion_externo` permanece exclusivamente local y nunca se envía a SENSA.
 
-### 2.4. Validación de duplicados por ID de sistema de gestión externo
+### 2.5. Validación de duplicados por ID de sistema de gestión externo
 
 - El campo `id_gestion_externo` del Cliente Final **sigue siendo opcional** — la Empresa
   Revendedora puede cargarlo o no al dar de alta un Cliente Final.
@@ -93,30 +144,25 @@ La Empresa Revendedora puede sumarle a un Cliente Final que ya tiene Dispositivo
 
 ## 3. Ciclo de vida de un Cliente Final / Dispositivo
 
-- **Alta:** la Empresa Revendedora da de alta al Cliente Final y su Dispositivo (fijo o móvil,
-  categorías con tope independiente de 3 cada una dentro de la misma Cuenta), por alguno de los
-  dos métodos descriptos en la sección 2.1.
-- **Identificación del Dispositivo:** se captura el ID que devuelve SENSA al momento de la
-  activación vía API (no es un dato libre cargado por la Empresa Revendedora).
+- **Alta:** la Empresa Revendedora da de alta al Cliente Final por alguno de los dos métodos de la
+  sección 2.1. No elige tipo ni informa MAC.
+- **Identificación del Dispositivo:** al primer login se capturan el ID, la MAC y el tipo reportados
+  por SENSA mediante el sondeo definido en la sección 2.2.
 - **Baja definitiva:** la Empresa Revendedora marca manualmente la baja del Cliente Final. La
-  lógica es **exactamente inversa al alta**: el sistema elimina el Dispositivo asociado y
-  actualiza vía API la parametrización de la Cuenta en SENSA, restando 1 dispositivo habilitado.
-  El Dispositivo **queda liberado y disponible** para que la Empresa Revendedora lo asigne a un
-  Cliente Final nuevo, con el mismo flujo de alta normal (búsqueda de Cuenta con Dispositivo
-  disponible, o creación de Cuenta nueva si corresponde). *(Incluido en el alcance del MVP.)*
+  sistema elimina el Dispositivo asociado. En una Cuenta compartida, la capacidad comercial que
+  deja la venta se protege con una reserva técnica hasta una venta nueva de idéntica firma de
+  servicios. No se reasigna el Dispositivo eliminado ni se reutiliza su MAC. *(Incluido en el
+  alcance del MVP.)*
 - **Suspensión:** la Empresa Revendedora marca manualmente la suspensión del Cliente Final. El
-  sistema también elimina el Dispositivo asociado y resta 1 dispositivo habilitado en la Cuenta
-  vía API a SENSA, igual que en la baja — pero, a diferencia de la baja, ese Dispositivo **no debe
-  quedar disponible para que otro Cliente Final lo ocupe**: el sistema debe "reservarlo"/
-  bloquearlo, de forma que las credenciales de la Cuenta no terminen en manos de otro Cliente
-  Final mientras exista la posibilidad de que el suspendido vuelva a activarse.
+  sistema elimina el Dispositivo asociado en SENSA y lo mantiene localmente como
+  `bloqueado_por_suspension`. Su capacidad comercial queda reservada para ese Cliente Final y no se
+  ofrece a otra venta mientras exista la posibilidad de reactivación.
   *(Incluido en el alcance del MVP.)*
-- **Transición de "suspendido" a "baja definitiva":** es la **única vía** para que un Dispositivo
-  bloqueado por suspensión pase a estar disponible y pueda asignarse a un Cliente Final nuevo. La
-  Empresa Revendedora ejecuta esta transición de forma explícita; recién en ese momento se libera
-  la posibilidad de que otro Cliente Final obtenga esas credenciales (ver riesgo aceptado en la
-  sección 6). Mientras el Cliente Final siga suspendido y no se ejecute esta transición, nadie más
-  puede tomar su Dispositivo. *(Incluido en el alcance del MVP.)*
+- **Transición de "suspendido" a "baja definitiva":** es la **única vía** para liberar la capacidad
+  comercial bloqueada. La Empresa Revendedora ejecuta esta transición de forma explícita; en una
+  Cuenta compartida se crea la reserva técnica correspondiente hasta una venta futura compatible.
+  Mientras el Cliente Final siga suspendido, esa capacidad no puede venderse. *(Incluido en el
+  alcance del MVP.)*
 - **Reasignación de un Dispositivo bloqueado por suspensión sin pasar por baja definitiva:** no
   puede existir. No es un pendiente de roadmap, es una regla de negocio permanente.
 
@@ -162,7 +208,7 @@ Cuentas y el detalle de Dispositivos muestran **únicamente**:
 | ID interno de la Cuenta (IPTVControl) | Sí |
 | ID de Cuenta en SENSA (`proveedor_cuenta_id`) | Sí — necesario para soporte técnico con SENSA |
 | Estado de la Cuenta (activa/cerrada) | Sí |
-| Dispositivos habilitados (conteo, ej. "2 de 3 fijos") | Sí |
+| Ventas/Dispositivos comerciales (conteo global, ej. "2 de 3") | Sí |
 | Usuario / contraseña / PIN de la Cuenta en SENSA | **No** |
 | ID de Dispositivo en SENSA (`proveedor_device_id`) | Sí |
 | Tipo y estado del Dispositivo | Sí |
@@ -189,11 +235,11 @@ Dispositivo):
 
 ## 6. Riesgo de negocio aceptado — contraseña compartida sin rotación
 
-**Contraseña compartida entre Clientes Finales de una misma Cuenta:** dado que hasta 6 Clientes
-Finales pueden compartir el mismo usuario/contraseña de una Cuenta SENSA, y dado que la baja
-definitiva de un Cliente Final libera su Dispositivo para reasignarlo a un Cliente Final nuevo
-**dentro del MVP**, ese cliente nuevo recibe las mismas credenciales de Cuenta que tenía el cliente
-saliente, **sin que el sistema rote la contraseña**. Rotar la contraseña en cada reasignación
+**Contraseña compartida entre Clientes Finales de una misma Cuenta:** dado que hasta 3 ventas
+unitarias de idéntica firma de servicios pueden compartir el mismo usuario/contraseña de una Cuenta
+SENSA, una venta nueva posterior a la baja definitiva de otro Cliente Final recibe las mismas
+credenciales de Cuenta que tenía el cliente saliente, **sin que el sistema rote la contraseña**.
+Rotar la contraseña en cada nueva venta
 evitaría que el cliente saliente siga usando el servicio con la clave vieja, pero también
 obligaría a notificar la nueva clave a todos los demás Clientes Finales activos de esa misma
 Cuenta — una complejidad operativa y de soporte que, por decisión de negocio de Bruno, **se
@@ -249,7 +295,8 @@ comunicación al respecto.
 ejecutó (`TeamMember`), **cuándo**, y **sobre qué entidad**:
 
 - Alta, suspensión, transición a baja definitiva y reasignación de Cliente Final.
-- Alta y baja de Dispositivo.
+- Alta y baja de Dispositivo, liberación/reposición de reservas técnicas y resolución de altas
+  ambiguas.
 - Cambio de modalidad comercial o de escala de una Empresa Revendedora (downgrade/upgrade).
 - Cambio de precios (parametrización del Operador Principal).
 - Cambio de configuración de conexión al Proveedor (servidor, credenciales, `dni_inicial_sensa` —
@@ -268,10 +315,10 @@ por ahora es solo consulta manual dentro del panel.
 ## 12. Alerta de Cuenta cerca del tope de capacidad
 
 **Incluido en el MVP.** El panel de la Empresa Revendedora muestra un aviso visual (no email, no
-notificación push) cuando una Cuenta alcanza **2 de 3** dispositivos habilitados en alguna de las
-dos categorías (fijo o móvil), para anticipar que el próximo alta de esa categoría va a requerir
-buscar otra Cuenta con lugar disponible o crear una Cuenta nueva (ver flujo 4.1 del esqueleto
-técnico). El umbral (2 de 3) es un valor inicial sugerido — **a validar con Federico** si conviene
+notificación push) cuando una Cuenta alcanza **2 de 3** ventas/Dispositivos comerciales globales,
+sin contar reservas técnicas, para anticipar que una venta adicional puede requerir otra Cuenta
+compatible (ver flujo 4.1 del esqueleto técnico). El umbral (2 de 3) es un valor inicial sugerido —
+**a validar con Federico** si conviene
 que sea configurable por el Operador Principal en una etapa posterior.
 
 ## 13. Exportación de datos propios a CSV
@@ -283,8 +330,9 @@ integración directa (eso queda para la API pública de la sección 8 del esquel
 
 ## 14. Datos registrados de la Empresa Revendedora
 
-Al dar de alta una Empresa Revendedora, el Operador Principal carga los siguientes datos, de uso
-administrativo/legal (no se envían al Proveedor):
+Al dar de alta una Empresa Revendedora, el Operador Principal carga los siguientes datos de uso
+administrativo/legal. El nombre y apellido del contacto se envían a SENSA al crear Cuentas; el
+teléfono y la dirección funcionan además como fallback cuando faltan en el Cliente Final:
 
 - Razón social
 - CUIT

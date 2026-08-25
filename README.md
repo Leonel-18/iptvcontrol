@@ -31,14 +31,14 @@ contra la API del proveedor de contenido (SENSA), con reintentos y consistencia 
 Operador Principal (Tecnología Activa)
     └── Empresas Revendedoras (ISPs)            ← tenant aislado, panel y login propios
             └── Clientes Finales (abonados)     ← sin acceso al sistema
-                    └── Dispositivos            ← hasta 3 fijos + 3 móviles por Cuenta
+                    └── Dispositivos            ← máximo global de 3 por Cuenta
 ```
 
 **Glosario mínimo** (el completo está en `docs/02_Glosario_de_Actores_y_Entidades.md`):
 
 | Término | Significado |
 |---|---|
-| **Cuenta** | Unidad de contratación con el proveedor (SENSA). Un usuario/contraseña/PIN únicos, capacidad 3 fijos + 3 móviles. Es lo que se factura de Operador a Revendedor. |
+| **Cuenta** | Unidad de contratación con el proveedor (SENSA). Un usuario, contraseña de 8 dígitos y PIN de 6 dígitos, con capacidad global de 3 Dispositivos. Es lo que se factura de Operador a Revendedor. |
 | **Dispositivo** | El aparato físico (TV o móvil) de un Cliente Final dentro de una Cuenta. Se identifica por el ID que devuelve SENSA. |
 | **Cliente Final** | El abonado que consume el servicio. No tiene acceso al sistema. |
 | **Empresa Revendedora** | El ISP intermediario. Opera bajo una sola modalidad comercial. |
@@ -49,15 +49,21 @@ Operador Principal (Tecnología Activa)
 
 ## Funcionalidades del MVP
 
-- Alta de Cliente Final por **dos métodos**: cuenta completa exclusiva, o un Dispositivo dentro de
-  una cuenta compartida (alta como **wizard** paso a paso).
-- Creación/parametrización automática de cuentas en SENSA vía API (arranque en 1 fijo + 1 móvil,
-  crecimiento de a 1 dispositivo hasta el tope 3+3).
+- Alta de Cliente Final por **dos métodos**: Cuenta completa exclusiva para un único cliente, con
+  hasta 3 Dispositivos y todos los servicios contratados, o venta unitaria de exactamente 1
+  Dispositivo dentro de una Cuenta compartida con firma de servicios idéntica.
+- Alta como **wizard** paso a paso: la venta unitaria permite elegir servicios y siempre incluye el
+  básico código 1; no solicita tipo ni MAC.
+- Protección de los cupos no vendidos de Cuentas compartidas con Dispositivos de reserva técnicos:
+  2 reservas con una venta, 1 con dos y ninguna con tres.
 - Generación automática del **identificador tipo DNI** y del **correo de contacto** que SENSA exige
   (números parametrizables por el Operador Principal).
-- Alta de Dispositivos adicionales a un Cliente Final ya existente, con **migración automática de
-  Cuenta** si la actual está al tope.
-- **Baja definitiva** de Cliente Final (libera y reasigna el Dispositivo) y **suspensión**
+- Descubrimiento del Dispositivo al primer login: SENSA reporta ID, MAC y tipo; IPTVControl sondea
+  cada 30 segundos durante 10 minutos. En venta unitaria resuelve candidato único o alta ambigua;
+  en Cuenta completa puede vincular hasta 3 candidatos al mismo cliente.
+- Alta de Dispositivos adicionales sin migrar cuatro equipos a una Cuenta: al llegar al máximo
+  global de 3, la venta adicional usa otra Cuenta compatible.
+- **Baja definitiva** de Cliente Final (libera capacidad comercial) y **suspensión**
   (bloquea el Dispositivo; la única salida es la transición explícita a baja).
 - Panel del **Operador Principal**: dashboard (cuentas vendidas/disponibles/bloqueadas), salud de la
   integración con SENSA, alta de Empresas Revendedoras, planes comerciales, auditoría. Desktop-first.
@@ -315,7 +321,7 @@ La tabla de campos permitidos/prohibidos de `docs/03_Reglas_de_Negocio.md` §4.2
    SOLO en `frontend/src/i18n/entityLabels.ts`.
 2. **Nunca hablarle directo a SENSA.** Toda integración pasa por `ProveedorAdapter`
    (`backend/src/proveedor/`). Es lo que permite sumar otro proveedor sin tocar el núcleo.
-3. **La palabra "slot" no se usa.** El nombre oficial es *Dispositivo*.
+3. **La unidad oficial es Dispositivo.** Para capacidad libre se usa *cupo*.
 4. **Casos de uso en servicios, no en controllers.** Así, la API pública de fase 2 es solo agregar
    controllers nuevos sobre los mismos servicios.
 5. **Lo que el Operador Principal no puede ver, no se serializa** (no es un tema de ocultarlo en el

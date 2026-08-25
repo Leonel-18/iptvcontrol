@@ -18,18 +18,22 @@ import { SENSA_SERVICIOS } from '../../proveedor/sensa/sensa.constants';
  * =============================================================================
  */
 
-/** Ocupación de una categoría, en formato listo para mostrar ("2 de 3"). */
+/**
+ * Ocupación de una categoría, en formato listo para mostrar ("2 de 3").
+ *
+ * `tope` es dinámico según el modo de la Cuenta: en una exclusiva es siempre 3
+ * (hasta 3 fijos + 3 móviles para su único Cliente Final); en una compartida
+ * refleja la cantidad de ventas activas (1 fijo + 1 móvil habilitado por cada
+ * venta, hasta 3 ventas).
+ */
 export class OcupacionCategoriaDto {
-  @ApiProperty({ description: 'Dispositivos habilitados en el proveedor.' })
-  habilitados!: number;
-
-  @ApiProperty({ description: 'Dispositivos que están ocupando lugar.' })
+  @ApiProperty({ description: 'Dispositivos de esta categoría que están ocupando lugar.' })
   ocupados!: number;
 
-  @ApiProperty({ description: 'Cupos habilitados y libres.' })
+  @ApiProperty({ description: 'Cupos libres de esta categoría.' })
   libres!: number;
 
-  @ApiProperty({ description: 'Tope de la categoría (3).' })
+  @ApiProperty({ description: 'Tope habilitado hoy para esta categoría.' })
   tope!: number;
 
   @ApiProperty({ description: 'True si conviene avisar que está cerca del tope.' })
@@ -48,6 +52,13 @@ export class CuentaOperadorDto {
   @ApiProperty() empresa_revendedora_id!: string;
   @ApiProperty({ type: OcupacionCategoriaDto }) fijos!: OcupacionCategoriaDto;
   @ApiProperty({ type: OcupacionCategoriaDto }) moviles!: OcupacionCategoriaDto;
+  @ApiProperty() capacidad!: {
+    ocupados: number;
+    libres: number;
+    limite: number;
+    cerca_del_tope: boolean;
+    resumen: string;
+  };
   @ApiProperty() creado_en!: Date;
 }
 
@@ -68,14 +79,13 @@ export class CuentaRevendedoraDto extends CuentaOperadorDto {
 
 const armarOcupacion = (
   categoria: CapacidadCuenta['fijo'],
-  tope: number,
+  cercaDelTope: boolean,
 ): OcupacionCategoriaDto => ({
-  habilitados: categoria.habilitados,
   ocupados: categoria.ocupados,
   libres: categoria.libres,
-  tope,
-  cerca_del_tope: categoria.cercaDelTope,
-  resumen: `${categoria.ocupados} de ${tope}`,
+  tope: categoria.limite,
+  cerca_del_tope: cercaDelTope,
+  resumen: `${categoria.ocupados} de ${categoria.limite}`,
 });
 
 /** Traduce "1|3|5" a los nombres de paquetes del Anexo de Servicios de SENSA. */
@@ -92,15 +102,21 @@ export const nombresDeServicios = (servicios: string): string[] =>
 export const mapCuentaParaOperador = (
   cuenta: Cuenta,
   capacidad: CapacidadCuenta,
-  tope = 3,
 ): CuentaOperadorDto => ({
   id: cuenta.id,
   proveedor_cuenta_id: cuenta.proveedorCuentaId,
   estado: cuenta.estado,
   es_exclusiva: cuenta.esExclusiva,
   empresa_revendedora_id: cuenta.empresaRevendedoraId,
-  fijos: armarOcupacion(capacidad.fijo, tope),
-  moviles: armarOcupacion(capacidad.movil, tope),
+  fijos: armarOcupacion(capacidad.fijo, capacidad.cercaDelTope),
+  moviles: armarOcupacion(capacidad.movil, capacidad.cercaDelTope),
+  capacidad: {
+    ocupados: capacidad.ocupados,
+    libres: capacidad.libres,
+    limite: capacidad.limite,
+    cerca_del_tope: capacidad.cercaDelTope,
+    resumen: `${capacidad.ocupados} de ${capacidad.limite}`,
+  },
   creado_en: cuenta.creadoEn,
 });
 
@@ -115,9 +131,8 @@ export const mapCuentaParaRevendedora = (
   cuenta: Cuenta,
   capacidad: CapacidadCuenta,
   credenciales: { password: string | null; pin: string | null } | null,
-  tope = 3,
 ): CuentaRevendedoraDto => ({
-  ...mapCuentaParaOperador(cuenta, capacidad, tope),
+  ...mapCuentaParaOperador(cuenta, capacidad),
   usuario: cuenta.usuario,
   password: credenciales?.password ?? undefined,
   pin: credenciales?.pin ?? undefined,
@@ -132,7 +147,9 @@ export const mapDispositivoParaOperador = (dispositivo: Dispositivo) => ({
   cuenta_id: dispositivo.cuentaId,
   proveedor_device_id: dispositivo.proveedorDeviceId,
   tipo: dispositivo.tipo,
+  tipo_proveedor: dispositivo.tipoProveedor,
   estado: dispositivo.estado,
+  estado_vinculacion: dispositivo.estadoVinculacion,
   creado_en: dispositivo.creadoEn,
 });
 

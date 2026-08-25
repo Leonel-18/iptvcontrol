@@ -43,7 +43,9 @@ export interface CrearCuentaParams {
   telefono: string;
   /** Parametrización de contenido, ej. "1|3|5". */
   servicios: string;
-  /** Arranque: 1 fijo + 1 móvil (nunca 0+0 ni 3+3 de entrada). */
+  /** Límite comercial global de Dispositivos de la Cuenta. */
+  limiteDispositivos: number;
+  /** Proyección técnica para Proveedores que separan categorías. */
   dispositivosFijos: number;
   dispositivosMoviles: number;
   /** Identificador propio para cruce de datos (external_customer_id). */
@@ -63,6 +65,7 @@ export interface CuentaProveedor {
 
 export interface ActualizarCapacidadParams {
   proveedorCuentaId: string;
+  limiteDispositivos?: number;
   dispositivosFijos: number;
   dispositivosMoviles: number;
 }

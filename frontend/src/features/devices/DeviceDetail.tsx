@@ -109,7 +109,7 @@ export const DeviceDetail = () => {
         acciones={
           <>
             <DeviceTypeBadge tipo={data.tipo} />
-            <DeviceStatusBadge estado={data.estado} />
+            <DeviceStatusBadge estado={data.estado} vinculacion={data.estado_vinculacion} />
             {!esOperador && disponible ? (
               <Button variant="primary" size="sm" onClick={() => setReasignar(true)}>
                 <UserCheck />

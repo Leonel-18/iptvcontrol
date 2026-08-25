@@ -93,7 +93,7 @@ export const ResellerAccountsCard = ({
                     </Link>
                   </TD>
                   <TD>
-                    <CapacityMeter fijos={cuenta.fijos} moviles={cuenta.moviles} compacto />
+                    <CapacityMeter capacidad={cuenta.capacidad} compacto />
                   </TD>
                   <TD>
                     <Badge tone={cuenta.es_exclusiva ? 'info' : 'neutral'}>

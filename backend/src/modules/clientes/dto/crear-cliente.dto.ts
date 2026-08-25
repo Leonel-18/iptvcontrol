@@ -1,14 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TipoAltaClienteFinal, TipoDispositivo } from '@prisma/client';
+import { TipoAltaClienteFinal } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
   IsEnum,
-  IsHexadecimal,
+  IsArray,
   IsOptional,
   IsString,
   IsUUID,
+  ArrayUnique,
   Length,
   MaxLength,
   ValidateNested,
@@ -16,25 +17,6 @@ import {
 
 /** Dispositivo con el que arranca el Cliente Final. */
 export class DispositivoAltaDto {
-  @ApiProperty({
-    enum: TipoDispositivo,
-    description: 'Categoría del dispositivo. Cada una tiene tope independiente de 3 por Cuenta.',
-  })
-  @IsEnum(TipoDispositivo)
-  tipo!: TipoDispositivo;
-
-  @ApiPropertyOptional({
-    description:
-      'MAC del equipo (12 dígitos hexadecimales). Si se informa, el dispositivo se da de alta ' +
-      'explícitamente en el proveedor; si no, se auto-provisiona al iniciar sesión y el ID se ' +
-      'captura después por consulta al proveedor.',
-    example: '03AC1AE60CA7',
-  })
-  @IsOptional()
-  @IsHexadecimal()
-  @Length(12, 12, { message: 'La MAC debe tener 12 dígitos hexadecimales, sin separadores.' })
-  mac?: string;
-
   @ApiPropertyOptional({
     description:
       'Nota interna de la Empresa Revendedora, ej. "TV living". No se envía al proveedor.',
@@ -101,6 +83,18 @@ export class CrearClienteDto {
   })
   @IsEnum(TipoAltaClienteFinal)
   tipo_alta!: TipoAltaClienteFinal;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Servicios elegidos para una Cuenta compartida. El básico se agrega siempre. En Cuenta ' +
+      'completa el backend usa todos los servicios contratados.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  servicios?: string[];
 
   @ApiProperty({ type: DispositivoAltaDto })
   @ValidateNested()

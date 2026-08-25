@@ -1,14 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EstadoDispositivo, TipoDispositivo } from '@prisma/client';
-import {
-  IsEnum,
-  IsHexadecimal,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Length,
-  MaxLength,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 /**
@@ -49,16 +41,6 @@ export class CrearDispositivoDto {
   @IsUUID()
   customer_id!: string;
 
-  @ApiProperty({ enum: TipoDispositivo })
-  @IsEnum(TipoDispositivo)
-  tipo!: TipoDispositivo;
-
-  @ApiPropertyOptional({ description: 'MAC del equipo (12 dígitos hexadecimales).' })
-  @IsOptional()
-  @IsHexadecimal()
-  @Length(12, 12)
-  mac?: string;
-
   @ApiPropertyOptional({ description: 'Nota interna, ej. "TV dormitorio".' })
   @IsOptional()
   @IsString()
@@ -71,12 +53,6 @@ export class ReasignarDispositivoDto {
   @ApiProperty({ description: 'Cliente Final que recibe el dispositivo liberado.' })
   @IsUUID()
   customer_id!: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsHexadecimal()
-  @Length(12, 12)
-  mac?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

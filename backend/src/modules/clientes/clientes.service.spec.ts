@@ -6,7 +6,7 @@ import { CryptoService } from '../../common/crypto/crypto.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { DispositivosService } from '../dispositivos/dispositivos.service';
 import { IdentificadoresService } from '../cuentas/identificadores.service';
-import { ColaProveedorService } from '../../queues/cola-proveedor.service';
+import { ProveedorService } from '../../proveedor/proveedor.service';
 import { ListarClientesQueryDto } from './dto/listar-clientes.query';
 
 /**
@@ -74,7 +74,7 @@ describe('ClientesService — visibilidad según el rol (regla 4.2)', () => {
       contexto,
       {} as DispositivosService,
       {} as IdentificadoresService,
-      {} as ColaProveedorService,
+      {} as ProveedorService,
     );
 
     return { servicio, findMany };

@@ -5,6 +5,7 @@ import { CuentasService } from './cuentas.service';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
+import { InventarioProveedorService } from './inventario-proveedor.service';
 
 /**
  * Cuentas — `/accounts` en el frontend.
@@ -15,7 +16,10 @@ import { SoloRevendedor } from '../../common/auth/decorators';
 @ApiTags('accounts')
 @Controller('accounts')
 export class CuentasController {
-  constructor(private readonly cuentas: CuentasService) {}
+  constructor(
+    private readonly cuentas: CuentasService,
+    private readonly inventario: InventarioProveedorService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -88,5 +92,30 @@ export class CuentasController {
   })
   async sincronizar(@Param('id', ParseUUIDPipe) id: string) {
     return this.cuentas.sincronizarServicios(id);
+  }
+
+  @Post(':id/sync-devices')
+  @ApiOperation({
+    summary: 'Consulta el inventario real de Dispositivos de la Cuenta en el proveedor.',
+    description:
+      'SENSA no tiene webhooks: es la única forma de ver qué equipo se auto-provisionó al ' +
+      'iniciar sesión por el reproductor web. Los Dispositivos que no son ni una venta ni una ' +
+      'reserva técnica quedan registrados como incidencia pendiente de revisión manual; nunca ' +
+      'se eliminan automáticamente desde acá.',
+  })
+  async sincronizarDispositivos(@Param('id', ParseUUIDPipe) id: string) {
+    return this.inventario.sincronizar(id);
+  }
+
+  @Post(':id/close')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Cierra una Cuenta sin uso (creada por error o abandonada).',
+    description:
+      'No se puede cerrar una Cuenta con Dispositivos activos o bloqueados por suspensión: ' +
+      'primero hay que dar de baja a esos Clientes Finales.',
+  })
+  async cerrar(@Param('id', ParseUUIDPipe) id: string) {
+    return this.cuentas.cerrar(id);
   }
 }

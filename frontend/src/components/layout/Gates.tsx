@@ -5,8 +5,15 @@ import { Navigate } from 'react-router-dom';
 import { useSesion } from '@/lib/session';
 import { Alert, Button, Skeleton } from '../ui/primitives';
 
-/** Pantalla de carga mientras se resuelven Auth0 y la sesión del Team Member. */
-const Cargando = ({ mensaje }: { mensaje: string }) => (
+/**
+ * Pantalla de carga mientras se resuelven Auth0 y la sesión del Team Member.
+ *
+ * Se exporta porque `LandingPage` también la usa: mientras Auth0 está
+ * procesando el regreso del login (`isLoading`), no hay que dibujar el
+ * contenido público — si no, se ve un flash de la landing antes de que el
+ * `useEffect` la mande al panel (caso reportado 25/08/2026).
+ */
+export const Cargando = ({ mensaje }: { mensaje: string }) => (
   <div className="grid min-h-full place-items-center p-6">
     <div className="w-full max-w-sm space-y-4 text-center">
       <img

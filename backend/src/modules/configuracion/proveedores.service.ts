@@ -30,7 +30,7 @@ export class ProveedoresService {
       }),
     ]);
 
-    const configuradas = await this.prisma.configuracionProveedor.findMany({
+    const configuradas = await this.prisma.db.configuracionProveedor.findMany({
       where: { operadorPrincipalId },
       select: { proveedorId: true },
     });
@@ -57,6 +57,19 @@ export class ProveedoresService {
           : codigo === '2'
             ? 'Sólo disponible en el reproductor web (los App Stores no admiten contenido adulto).'
             : undefined,
+    }));
+  }
+
+  /** Catálogo vendible para ambos paneles, sin exponer cantidades contratadas. */
+  async catalogoServiciosDisponibles() {
+    const operadorPrincipalId = this.contexto.operadorPrincipalId;
+    if (!operadorPrincipalId) {
+      throw new ForbiddenException('No se pudo identificar al Operador Principal del request.');
+    }
+    const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
+    return this.catalogoServicios().map((servicio) => ({
+      ...servicio,
+      contratado: servicio.obligatorio || (licencias.compradas[servicio.codigo] ?? 0) > 0,
     }));
   }
 

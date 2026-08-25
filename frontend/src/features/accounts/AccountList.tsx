@@ -24,14 +24,17 @@ export const AccountList = () => {
   const [params, setParams] = useSearchParams();
 
   const pagina = Number(params.get('page') ?? 1);
-  const estado = params.get('status') ?? '';
+  // Por defecto se muestran sólo las activas: las cerradas (creadas por error o
+  // abandonadas) no tienen por qué aparecer en el día a día, pero se pueden ver
+  // eligiendo "Todos los estados" — no se borran de la base, sólo se filtran.
+  const estado = params.get('status') ?? 'activa';
   const busqueda = params.get('q') ?? '';
   const resellerId = params.get('reseller_id') ?? '';
 
   const filtros = {
     page: pagina,
     per_page: 25,
-    status: estado || undefined,
+    status: estado === 'todas' ? undefined : estado,
     q: busqueda || undefined,
     reseller_id: resellerId || undefined,
   };
@@ -76,8 +79,8 @@ export const AccountList = () => {
             aria-label="Buscar cuentas"
           />
           <Select
-            value={estado || 'todas'}
-            onChange={(valor) => actualizar('status', valor === 'todas' ? '' : valor)}
+            value={estado}
+            onChange={(valor) => actualizar('status', valor)}
             className="max-w-40"
             opciones={[
               { value: 'todas', label: 'Todos los estados' },
@@ -118,7 +121,7 @@ export const AccountList = () => {
                     </div>
                   </TD>
                   <TD>
-                    <CapacityMeter fijos={cuenta.fijos} moviles={cuenta.moviles} />
+                    <CapacityMeter capacidad={cuenta.capacidad} />
                   </TD>
                   <TD>
                     <Badge tone={cuenta.es_exclusiva ? 'info' : 'neutral'}>

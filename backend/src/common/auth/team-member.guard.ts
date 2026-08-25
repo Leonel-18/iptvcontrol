@@ -44,7 +44,10 @@ export class TeamMemberGuard implements CanActivate {
 
     // Se busca con el cliente sin contexto: en este punto todavía no sabemos a
     // qué tenant pertenece el usuario. La política de RLS de `team_member`
-    // habilita exactamente este caso (contexto vacío).
+    // habilita exactamente este caso (contexto vacío). El `include` de la
+    // empresa NO se hace acá: la política RLS de `empresa_revendedora` exige el
+    // tenant seteado, así que con contexto vacío la fila quedaría filtrada y no
+    // detectaríamos una Empresa Revendedora suspendida.
     const teamMember = await this.prisma.sinContexto.teamMember.findUnique({
       where: { auth0UserId },
       select: {
@@ -54,7 +57,6 @@ export class TeamMemberGuard implements CanActivate {
         estado: true,
         empresaRevendedoraId: true,
         operadorPrincipalId: true,
-        empresaRevendedora: { select: { operadorPrincipalId: true, estado: true } },
       },
     });
 
@@ -72,17 +74,12 @@ export class TeamMemberGuard implements CanActivate {
       teamMember.rol === RolTeamMember.operator_admin ||
       teamMember.rol === RolTeamMember.operator_staff;
 
-    // Una Empresa Revendedora suspendida no opera; su Team Member no entra.
-    if (!esOperador && teamMember.empresaRevendedora?.estado === 'suspendida') {
-      throw new ForbiddenException(
-        'La Empresa Revendedora está suspendida. Comuníquese con el operador.',
-      );
-    }
+    const operadorPrincipalId = esOperador ? teamMember.operadorPrincipalId : null;
 
-    const operadorPrincipalId = esOperador
-      ? teamMember.operadorPrincipalId
-      : (teamMember.empresaRevendedora?.operadorPrincipalId ?? null);
-
+    // Se fija el contexto del request ANTES de tocar la base con `this.prisma.db`:
+    // el cliente RLS lee el contexto para setear `app.current_tenant`. Adentro, la
+    // Empresa Revendedora ya resuelve su operador (aunque RLS no lo exija: la
+    // política de `empresa_revendedora` admite `id = app.current_tenant`).
     this.contexto.set({
       teamMemberId: teamMember.id,
       auth0UserId,
@@ -92,6 +89,27 @@ export class TeamMemberGuard implements CanActivate {
       operadorPrincipalId,
       esOperador,
     });
+
+    // Una Empresa Revendedora suspendida no opera; su Team Member no entra.
+    // Se resuelve con el contexto ya seteado (ver comentario de la línea 45):
+    // con la RLS de `empresa_revendedora` no se puede `select` de `sinContexto`.
+    let empresaRevendedora: { estado: string; operadorPrincipalId: string | null } | null = null;
+    if (!esOperador && teamMember.empresaRevendedoraId) {
+      empresaRevendedora = await this.prisma.db.empresaRevendedora.findFirst({
+        where: { id: teamMember.empresaRevendedoraId },
+      });
+
+      if (empresaRevendedora?.estado === 'suspendida') {
+        throw new ForbiddenException(
+          'La Empresa Revendedora está suspendida. Comuníquese con el operador.',
+        );
+      }
+
+      const operadorDeEmpresa = empresaRevendedora?.operadorPrincipalId ?? null;
+      if (operadorDeEmpresa && operadorDeEmpresa !== operadorPrincipalId) {
+        this.contexto.set({ operadorPrincipalId: operadorDeEmpresa });
+      }
+    }
 
     // Se expone también en el request para el decorador @CurrentUser().
     request.contextoIptv = this.contexto.get();

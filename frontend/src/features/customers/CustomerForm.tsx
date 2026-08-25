@@ -1,11 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   CircleAlert,
-  MonitorPlay,
-  Smartphone,
   UserPlus,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -13,13 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import type { CustomerDetail, ExternalIdMatch } from '@/lib/types';
-import {
-  customerIntakeHelp,
-  customerIntakeLabels,
-  deviceTypeHelp,
-  deviceTypeLabels,
-} from '@/i18n/entityLabels';
+import type { CustomerDetail, ExternalIdMatch, ServiceCatalogItem } from '@/lib/types';
+import { customerIntakeHelp, customerIntakeLabels } from '@/i18n/entityLabels';
 import { PageHeader } from '@/components/common';
 import {
   Alert,
@@ -45,13 +38,12 @@ import {
  * Los cuatro pasos:
  *   1. Datos del cliente (acá se valida el ID de gestión externa).
  *   2. Método de alta: cuenta exclusiva o dispositivo en cuenta compartida.
- *   3. Dispositivo: categoría, MAC opcional y nota interna.
+ *   3. Servicios: paquetes de contenido y nota interna del Dispositivo.
  *   4. Confirmación: se resume qué va a pasar antes de tocar el proveedor.
  * =============================================================================
  */
 
 type MetodoAlta = 'cuenta_exclusiva' | 'dispositivo_compartido';
-type TipoDispositivo = 'fijo' | 'movil';
 
 interface EstadoFormulario {
   nombre: string;
@@ -61,8 +53,7 @@ interface EstadoFormulario {
   direccion: string;
   idGestionExterno: string;
   metodoAlta: MetodoAlta;
-  tipoDispositivo: TipoDispositivo;
-  mac: string;
+  servicios: string[];
   notaDescriptiva: string;
 }
 
@@ -74,12 +65,11 @@ const INICIAL: EstadoFormulario = {
   direccion: '',
   idGestionExterno: '',
   metodoAlta: 'dispositivo_compartido',
-  tipoDispositivo: 'fijo',
-  mac: '',
+  servicios: ['1'],
   notaDescriptiva: '',
 };
 
-const PASOS = ['Cliente', 'Método de alta', 'Dispositivo', 'Confirmar'] as const;
+const PASOS = ['Cliente', 'Método de alta', 'Servicios', 'Confirmar'] as const;
 
 export const CustomerForm = () => {
   const navigate = useNavigate();
@@ -93,6 +83,15 @@ export const CustomerForm = () => {
   const [decisionDuplicado, setDecisionDuplicado] = useState<
     { tipo: 'agrupar'; clienteId: string; nombre: string } | { tipo: 'crear' } | null
   >(null);
+
+  const catalogo = useQuery({
+    queryKey: ['providers-catalog'],
+    queryFn: () => api<ServiceCatalogItem[]>('/providers/services-catalog'),
+    staleTime: Infinity,
+  });
+
+  const serviciosContratados = (catalogo.data ?? []).filter((servicio) => servicio.contratado);
+  const catalogoDisponible = catalogo.isSuccess && serviciosContratados.length > 0;
 
   const actualizar = <K extends keyof EstadoFormulario>(clave: K, valor: EstadoFormulario[K]) => {
     setValores((actual) => ({ ...actual, [clave]: valor }));
@@ -131,9 +130,11 @@ export const CustomerForm = () => {
             direccion: valores.direccion.trim() || undefined,
             id_gestion_externo: valores.idGestionExterno.trim() || undefined,
             tipo_alta: valores.metodoAlta,
+            ...(decisionDuplicado?.tipo !== 'agrupar' &&
+            valores.metodoAlta === 'dispositivo_compartido'
+              ? { servicios: valores.servicios }
+              : {}),
             dispositivo: {
-              tipo: valores.tipoDispositivo,
-              mac: valores.mac.replace(/[^0-9a-fA-F]/g, '').toUpperCase() || undefined,
               nota_descriptiva: valores.notaDescriptiva.trim() || undefined,
             },
             confirmar_duplicado: decisionDuplicado?.tipo === 'crear' ? true : undefined,
@@ -151,7 +152,7 @@ export const CustomerForm = () => {
       );
       if (resultado.dispositivo_pendiente_de_activacion) {
         toast.info(
-          'El dispositivo queda a la espera del primer inicio de sesión para capturar su ID.',
+          'Se abrirá una ventana de vinculación cuando el cliente inicie sesión por primera vez.',
           { duration: 6000 },
         );
       }
@@ -194,12 +195,8 @@ export const CustomerForm = () => {
       return Object.keys(nuevos).length === 0;
     }
 
-    if (paso === 2 && valores.mac) {
-      const limpia = valores.mac.replace(/[^0-9a-fA-F]/g, '');
-      if (limpia.length !== 12) {
-        setErrores({ mac: 'La MAC debe tener 12 dígitos hexadecimales (ej. 03AC1AE60CA7).' });
-        return false;
-      }
+    if (paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible) {
+      return false;
     }
 
     return true;
@@ -461,55 +458,120 @@ export const CustomerForm = () => {
           ) : null}
 
           {/* ---------------------------------------------------------------- */}
-          {/* Paso 3 — Dispositivo                                             */}
+          {/* Paso 3 — Servicios                                               */}
           {/* ---------------------------------------------------------------- */}
           {paso === 2 ? (
             <div className="space-y-4">
-              <div>
-                <p className="mb-2 text-sm font-medium">Categoría del dispositivo</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {(['fijo', 'movil'] as TipoDispositivo[]).map((tipo) => {
-                    const Icono = tipo === 'fijo' ? MonitorPlay : Smartphone;
-                    return (
-                      <button
-                        key={tipo}
-                        type="button"
-                        onClick={() => actualizar('tipoDispositivo', tipo)}
-                        className={cn(
-                          'flex items-start gap-3 rounded-lg border p-3 text-left transition-colors',
-                          valores.tipoDispositivo === tipo
-                            ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
-                            : 'hover:bg-navy-50 dark:hover:bg-navy-800',
-                        )}
+              {decisionDuplicado?.tipo === 'agrupar' ? (
+                <Alert tone="info" titulo="Servicios heredados">
+                  Este Dispositivo adicional usará los mismos servicios de la Cuenta actual de{' '}
+                  <strong>{decisionDuplicado.nombre}</strong>. No hace falta seleccionarlos otra vez.
+                </Alert>
+              ) : catalogo.isPending ? (
+                <Alert tone="info" titulo="Cargando servicios">
+                  Estamos consultando los servicios contratados. Espere para continuar.
+                </Alert>
+              ) : catalogo.isError ? (
+                <Alert tone="danger" titulo="No se pudo cargar el catálogo">
+                  <p className="mb-3">
+                    Revise su conexión e intente nuevamente. El alta no puede continuar sin esta
+                    información.
+                  </p>
+                  <Button variant="secondary" size="sm" onClick={() => void catalogo.refetch()}>
+                    Reintentar
+                  </Button>
+                </Alert>
+              ) : serviciosContratados.length === 0 ? (
+                <Alert tone="warning" titulo="No hay servicios contratados disponibles">
+                  No se puede continuar con el alta hasta que el Operador Principal disponga de al
+                  menos un servicio contratado.
+                </Alert>
+              ) : valores.metodoAlta === 'cuenta_exclusiva' ? (
+                <div className="space-y-3">
+                  <Alert tone="info" titulo="Todos los servicios están incluidos">
+                    La Cuenta completa recibe automáticamente todos los servicios contratados. No es
+                    necesario elegirlos.
+                  </Alert>
+                  <ul className="grid gap-2 sm:grid-cols-2" aria-label="Servicios incluidos">
+                    {serviciosContratados.map((servicio) => (
+                      <li
+                        key={servicio.codigo}
+                        className="flex items-start gap-3 rounded-lg border px-3 py-3"
                       >
-                        <Icono className="mt-0.5 size-4 shrink-0 texto-suave" />
+                        <Check className="mt-0.5 size-4 shrink-0 text-signal" aria-hidden="true" />
                         <div>
-                          <p className="font-medium">{deviceTypeLabels[tipo]}</p>
-                          <p className="text-xs texto-suave">{deviceTypeHelp[tipo]}</p>
+                          <p className="text-sm font-medium">{servicio.nombre}</p>
+                          {servicio.nota ? (
+                            <p className="mt-0.5 text-xs texto-suave">{servicio.nota}</p>
+                          ) : null}
                         </div>
-                      </button>
-                    );
-                  })}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <p className="mt-2 text-xs texto-suave">
-                  Cada categoría tiene su propio tope de 3 dispositivos por cuenta.
-                </p>
-              </div>
-
-              <Field
-                label="MAC del equipo"
-                htmlFor="mac"
-                error={errores.mac}
-                help="Opcional. Si la informa, el dispositivo se da de alta en el proveedor ahora mismo. Si no, se activa solo cuando el cliente inicie sesión."
-              >
-                <Input
-                  id="mac"
-                  value={valores.mac}
-                  placeholder="03AC1AE60CA7"
-                  onChange={(evento) => actualizar('mac', evento.target.value)}
-                  className="font-mono"
-                />
-              </Field>
+              ) : (
+                <div className="space-y-3">
+                  <Alert tone="info">
+                    Una Cuenta sólo se comparte con otras ventas que tengan exactamente la misma
+                    selección de servicios.
+                  </Alert>
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-medium">Servicios de esta venta</legend>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {serviciosContratados.map((servicio) => {
+                        const esBasico = servicio.codigo === '1';
+                        const seleccionado = esBasico || valores.servicios.includes(servicio.codigo);
+                        return (
+                          <label
+                            key={servicio.codigo}
+                            className={cn(
+                              'flex items-start gap-3 rounded-lg border p-3 transition-colors',
+                              seleccionado
+                                ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
+                                : 'cursor-pointer hover:bg-navy-50 dark:hover:bg-navy-800',
+                              esBasico && 'cursor-not-allowed',
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              name="servicios"
+                              value={servicio.codigo}
+                              checked={seleccionado}
+                              disabled={esBasico}
+                              onChange={(evento) =>
+                                actualizar(
+                                  'servicios',
+                                  evento.target.checked
+                                    ? [...valores.servicios, servicio.codigo]
+                                    : valores.servicios.filter(
+                                        (codigo) => codigo !== servicio.codigo,
+                                      ),
+                                )
+                              }
+                              className="mt-0.5 size-4 shrink-0 accent-azure-500"
+                            />
+                            <span>
+                              <span className="block text-sm font-medium">
+                                {servicio.nombre}
+                                {esBasico ? (
+                                  <span className="ml-2 text-xs font-normal texto-suave">
+                                    Siempre incluido
+                                  </span>
+                                ) : null}
+                              </span>
+                              {servicio.nota ? (
+                                <span className="mt-0.5 block text-xs texto-suave">
+                                  {servicio.nota}
+                                </span>
+                              ) : null}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                </div>
+              )}
 
               <Field
                 label="Nota interna"
@@ -540,35 +602,49 @@ export const CustomerForm = () => {
                     <span className="id-tecnico">{valores.idGestionExterno}</span>
                   </Resumen>
                 ) : null}
-                <Resumen etiqueta="Método de alta">
+                <Resumen etiqueta="Modalidad">
                   {decisionDuplicado?.tipo === 'agrupar'
                     ? `Dispositivo adicional para ${decisionDuplicado.nombre}`
                     : customerIntakeLabels[valores.metodoAlta]}
                 </Resumen>
-                <Resumen etiqueta="Dispositivo">
-                  {deviceTypeLabels[valores.tipoDispositivo]}
-                  {valores.mac ? (
-                    <span className="id-tecnico ml-2">
-                      {valores.mac.replace(/[^0-9a-fA-F]/g, '').toUpperCase()}
-                    </span>
-                  ) : null}
+                <Resumen etiqueta="Servicios">
+                  {decisionDuplicado?.tipo === 'agrupar' ? (
+                    'Heredados de la Cuenta existente'
+                  ) : (
+                    <ul className="space-y-0.5">
+                      {serviciosContratados
+                        .filter(
+                          (servicio) =>
+                            valores.metodoAlta === 'cuenta_exclusiva' ||
+                            valores.servicios.includes(servicio.codigo),
+                        )
+                        .map((servicio) => (
+                          <li key={servicio.codigo}>{servicio.nombre}</li>
+                        ))}
+                    </ul>
+                  )}
                 </Resumen>
-                {valores.notaDescriptiva ? (
-                  <Resumen etiqueta="Nota">{valores.notaDescriptiva}</Resumen>
-                ) : null}
+                <Resumen etiqueta="Nota">
+                  {valores.notaDescriptiva || 'Sin nota interna'}
+                </Resumen>
               </dl>
 
               <Alert tone="info" titulo="Qué va a pasar al confirmar">
-                {valores.metodoAlta === 'cuenta_exclusiva' &&
-                decisionDuplicado?.tipo !== 'agrupar' ? (
+                {decisionDuplicado?.tipo === 'agrupar' ? (
                   <p>
-                    Se crea una cuenta nueva en el proveedor (parametrizada en 1 fijo + 1 móvil) y se
-                    activa el dispositivo de este cliente.
+                    Se autoriza un Dispositivo adicional con los servicios de la Cuenta existente
+                    (hasta 1 fijo + 1 móvil por venta, en una Cuenta compartida).
+                  </p>
+                ) : valores.metodoAlta === 'cuenta_exclusiva' ? (
+                  <p>
+                    La Cuenta completa incluye todos los servicios contratados y permite hasta 3
+                    fijos + 3 móviles para este cliente.
                   </p>
                 ) : (
                   <p>
-                    El sistema busca una cuenta propia con lugar en esa categoría. Si encuentra,
-                    amplía su parametrización de a un dispositivo; si no, crea una cuenta nueva.
+                    La venta unitaria autoriza hasta 1 Dispositivo fijo + 1 móvil para este cliente,
+                    en una Cuenta compartida sólo con otras ventas de exactamente la misma selección
+                    de servicios.
                   </p>
                 )}
               </Alert>
@@ -589,7 +665,13 @@ export const CustomerForm = () => {
           </Button>
 
           {paso < PASOS.length - 1 ? (
-            <Button variant="primary" onClick={siguiente}>
+            <Button
+              variant="primary"
+              onClick={siguiente}
+              disabled={
+                paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible
+              }
+            >
               Continuar
               <ArrowRight />
             </Button>

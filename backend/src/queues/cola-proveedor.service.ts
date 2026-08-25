@@ -1,12 +1,13 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import {
   COLA_PROVEEDOR,
   DatosCerrarCuenta,
   DatosEliminarDispositivo,
   DatosReconciliarDispositivos,
-  DatosSincronizarCapacidad,
+  DatosSondearVinculacion,
+  DatosSincronizarContadoresVenta,
   OPCIONES_REINTENTO,
   TRABAJOS_PROVEEDOR,
 } from './cola-proveedor.constants';
@@ -19,17 +20,48 @@ import {
  * completó correctamente.
  */
 @Injectable()
-export class ColaProveedorService {
+export class ColaProveedorService implements OnModuleInit {
   private readonly logger = new Logger(ColaProveedorService.name);
 
   constructor(@InjectQueue(COLA_PROVEEDOR) private readonly cola: Queue) {}
 
-  async encolarSincronizacionCapacidad(datos: DatosSincronizarCapacidad): Promise<void> {
-    await this.encolar(TRABAJOS_PROVEEDOR.SINCRONIZAR_CAPACIDAD, datos, {
-      // Un solo pendiente por Cuenta: si ya hay uno esperando, no tiene sentido
-      // apilar diez que van a hacer exactamente lo mismo.
-      jobId: `capacidad:${datos.cuentaId}`,
-    });
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.cola.add(
+        TRABAJOS_PROVEEDOR.BARRER_VINCULACIONES,
+        {},
+        {
+          jobId: 'barrer-vinculaciones',
+          repeat: { every: 60_000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 86_400 },
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `No se pudo programar el barrido de vinculaciones: ${(error as Error).message}`,
+      );
+    }
+
+    try {
+      await this.cola.add(
+        TRABAJOS_PROVEEDOR.BARRER_INVENTARIO_CUENTAS,
+        {},
+        {
+          jobId: 'barrer-inventario-cuentas',
+          // Best-effort: revisa un lote al azar cada 5 minutos. No depende de
+          // que la Empresa Revendedora abra el botón de sincronización manual
+          // para detectar un Dispositivo auto-provisionado por fuera de una venta.
+          repeat: { every: 5 * 60_000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 86_400 },
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `No se pudo programar el barrido de inventario: ${(error as Error).message}`,
+      );
+    }
   }
 
   async encolarEliminacionDispositivo(datos: DatosEliminarDispositivo): Promise<void> {
@@ -47,9 +79,24 @@ export class ColaProveedorService {
     });
   }
 
+  async encolarSondeoVinculacion(datos: DatosSondearVinculacion): Promise<void> {
+    await this.encolar(TRABAJOS_PROVEEDOR.SONDEAR_VINCULACION, datos, {
+      jobId: `vinculacion:${datos.solicitudId}:${datos.intento}`,
+      delay: 30_000,
+    });
+  }
+
   async encolarCierreCuenta(datos: DatosCerrarCuenta): Promise<void> {
     await this.encolar(TRABAJOS_PROVEEDOR.CERRAR_CUENTA, datos, {
       jobId: `cerrar-cuenta:${datos.cuentaId}`,
+    });
+  }
+
+  async encolarSincronizacionContadoresVenta(
+    datos: DatosSincronizarContadoresVenta,
+  ): Promise<void> {
+    await this.encolar(TRABAJOS_PROVEEDOR.SINCRONIZAR_CONTADORES_VENTA, datos, {
+      jobId: `contadores-venta:${datos.cuentaId}`,
     });
   }
 

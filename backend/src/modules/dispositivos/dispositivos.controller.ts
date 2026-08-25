@@ -20,9 +20,9 @@ import {
   ListarDispositivosQueryDto,
   ReasignarDispositivoDto,
 } from './dto/listar-dispositivos.query';
+import { CorregirVinculacionDto } from './dto/corregir-vinculacion.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
-import { ColaProveedorService } from '../../queues/cola-proveedor.service';
 
 /**
  * Forma laxa de una fila del CSV de Dispositivos: los campos exclusivos de la
@@ -48,7 +48,6 @@ export class DispositivosController {
   constructor(
     private readonly consultas: DispositivosQueryService,
     private readonly dispositivos: DispositivosService,
-    private readonly cola: ColaProveedorService,
   ) {}
 
   @Get()
@@ -104,29 +103,22 @@ export class DispositivosController {
   @ApiOperation({
     summary: 'Agrega un Dispositivo a un Cliente Final existente.',
     description:
-      'Si la Cuenta actual del cliente llegó al tope 3+3, el sistema le asigna una Cuenta nueva con ' +
-      'capacidad suficiente y migra ahí sus Dispositivos existentes (flujo 4.4).',
+      'La Cuenta admite 3 Dispositivos globales. Una venta compartida adicional abre una ventana ' +
+      'de vinculación en una Cuenta con la misma firma de servicios.',
   })
   async crear(@Body() dto: CrearDispositivoDto) {
     const operadorPrincipalId = await this.dispositivos.operadorPrincipalId();
-    const resultado = await this.dispositivos.altaAdicional(dto.customer_id, dto.tipo, {
-      mac: dto.mac,
+    const resultado = await this.dispositivos.altaAdicional(dto.customer_id, {
       notaDescriptiva: dto.nota_descriptiva,
       operadorPrincipalId,
     });
-
-    if (resultado.pendienteDeAutoprovision) {
-      await this.cola.encolarReconciliacion({
-        cuentaId: resultado.cuenta.id,
-        operadorPrincipalId,
-      });
-    }
 
     return {
       dispositivo: await this.consultas.obtener(resultado.dispositivo.id),
       cuenta_creada: resultado.cuentaCreada,
       migro_de_cuenta: resultado.migro,
       dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
+      solicitud_vinculacion_id: resultado.solicitudVinculacionId,
     };
   }
 
@@ -141,12 +133,37 @@ export class DispositivosController {
   async reasignar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReasignarDispositivoDto) {
     const operadorPrincipalId = await this.dispositivos.operadorPrincipalId();
     const resultado = await this.dispositivos.reasignar(id, dto.customer_id, operadorPrincipalId, {
-      mac: dto.mac,
       notaDescriptiva: dto.nota_descriptiva,
     });
     return {
       dispositivo: await this.consultas.obtener(resultado.dispositivo.id),
       dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
+    };
+  }
+
+  @Post(':id/correct-binding')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Corrige un Dispositivo vinculado al Cliente Final equivocado.',
+    description:
+      'Caso típico en Cuentas compartidas: mientras la ventana de vinculación de un Cliente Final ' +
+      'está abierta, otro Cliente Final de la misma Cuenta prueba las credenciales en un segundo ' +
+      'equipo, que termina vinculado al que no correspondía. SENSA no identifica de quién es cada ' +
+      'inicio de sesión, así que la corrección es siempre una decisión manual. El Cliente Final que ' +
+      'queda sin Dispositivo recibe una ventana de vinculación nueva automáticamente.',
+  })
+  async corregirVinculacion(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CorregirVinculacionDto,
+  ) {
+    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId();
+    const resultado = await this.dispositivos.corregirVinculacion(id, operadorPrincipalId, {
+      accion: dto.accion,
+      clienteFinalDestinoId: dto.cliente_final_id,
+    });
+    return {
+      solicitud_vinculacion_id: resultado.solicitudVinculacionId,
+      cliente_final_afectado_id: resultado.clienteFinalAfectadoId,
     };
   }
 

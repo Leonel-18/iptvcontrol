@@ -26,14 +26,15 @@ describe('SensaAdapter', () => {
   const paramsCuenta: CrearCuentaParams = {
     dni: '30000001',
     email: 'contacto1@isp.com',
-    password: '1234567890',
-    pin: '1234',
+    password: '12345678',
+    pin: '123456',
     nombre: 'TECNOLOGIA ACTIVA S.A.S.',
     apellido: 'Contacto',
     direccion: 'Echeverría 1776 PB',
     ciudad: 'Godoy Cruz',
     telefono: '261-575-5355',
     servicios: '1|3',
+    limiteDispositivos: 3,
     dispositivosFijos: 1,
     dispositivosMoviles: 1,
   };
@@ -129,7 +130,7 @@ describe('SensaAdapter', () => {
   // Mapeo de capacidad hacia la API
   // ---------------------------------------------------------------------------
 
-  it('mapea fijo→stationary, movil→mobile y deja los STB Linux en 0', async () => {
+  it('proyecta el límite global sobre los tres contadores técnicos', async () => {
     const { adapter } = crearAdapter();
     const fetchMock = jest
       .spyOn(global, 'fetch')
@@ -142,9 +143,11 @@ describe('SensaAdapter', () => {
     });
 
     const cuerpo = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
-    expect(cuerpo.auto_provision_count_stationary).toBe(2);
-    expect(cuerpo.auto_provision_count_mobile).toBe(3);
-    expect(cuerpo.auto_provision_count).toBe(0);
+    // SENSA rechaza estos tres campos si llegan como número JSON sin comillas
+    // (código 707 "Invalid format"), así que deben viajar como string.
+    expect(cuerpo.auto_provision_count_stationary).toBe('3');
+    expect(cuerpo.auto_provision_count_mobile).toBe('3');
+    expect(cuerpo.auto_provision_count).toBe('3');
   });
 
   it('arma la URL base con el esquema y puerto correctos', async () => {

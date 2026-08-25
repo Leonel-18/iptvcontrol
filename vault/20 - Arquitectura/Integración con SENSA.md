@@ -38,8 +38,8 @@ documento oficial completo es `docs/API_Sensa_V4_1_3.pdf`.
 | Cerrar Cuenta | `DELETE /v4/user/<customer_id>` |
 | Parametrización de contenido | `GET /v4/user_services/<customer_id>` |
 | Listar dispositivos (polling) | `GET /v4/user_devices/<customer_id>` |
-| Alta de Dispositivo | `POST /v4/device` (con `mac`) |
-| Reasignar Dispositivo | `PUT /v4/device` |
+| Crear reserva técnica | `POST /v4/device` (con MAC unicast administrada localmente) |
+| Reasignar Dispositivo | `PUT /v4/device` existe en SENSA, pero IPTVControl no lo usa automáticamente ante colisiones |
 | Baja de Dispositivo | `DELETE /v4/device/<device_id>` |
 | Licencias contratadas | `GET /v4/licenses/` |
 
@@ -47,26 +47,32 @@ documento oficial completo es `docs/API_Sensa_V4_1_3.pdf`.
 
 ## Mapeo de capacidad
 
-| IPTVControl | Campo de SENSA | Rango |
-|---|---|---|
-| Dispositivo `fijo` | `auto_provision_count_stationary` | 0 a 3 |
-| Dispositivo `movil` | `auto_provision_count_mobile` | **1** a 3 |
-| (no se usa) | `auto_provision_count` (STB Linux) | queda en 0 |
+IPTVControl aplica un máximo comercial global de **3 Dispositivos por Cuenta**, indistintamente del
+tipo reportado por SENSA. La API expone tres campos técnicos:
 
-Que los móviles no puedan bajar de 1 es una restricción de la API: se respeta al restar capacidad.
+- `auto_provision_count`
+- `auto_provision_count_stationary`
+- `auto_provision_count_mobile`
+
+La interacción exacta entre esos campos, la autoprovisión y los Dispositivos de reserva debe
+confirmarse antes del deploy mediante la prueba ya autorizada en una Cuenta SENSA productiva
+dedicada. La prueba todavía no fue ejecutada y no reabre el máximo comercial global confirmado.
 
 ## Validaciones de la API que el adapter sanea
 
 | Campo | Restricción | Qué hace el adapter |
 |---|---|---|
 | `dni` / `customer_id` | 7 u 8 dígitos | Genera y valida el correlativo |
-| `first_name` / `last_name` | 3 a 20, sólo alfabéticos y espacios | Limpia la razón social (puntos, dígitos, acentos) |
-| `mobile_phone` | 7 a 10 dígitos | Deja los últimos 10 dígitos |
-| `password` | 8 a 20, sólo numérica | Genera una aleatoria y la cifra |
-| `pin` | 4 a 8, sólo numérico | Ídem |
+| `first_name` / `last_name` | 3 a 20, sólo alfabéticos y espacios | Envía el nombre y apellido del contacto de la Empresa Revendedora; los del Cliente Final quedan locales |
+| `mobile_phone` | 7 a 10 dígitos | Usa el teléfono del Cliente Final con fallback al de la Empresa Revendedora |
+| Dirección | Según contrato SENSA | Usa la del Cliente Final con fallback a la de la Empresa Revendedora |
+| `password` | 8 a 20, sólo numérica | Genera exactamente 8 dígitos y los cifra |
+| `pin` | 4 a 8, sólo numérico | Genera exactamente 6 dígitos y los cifra |
 | `email` | único en el sistema | Deriva del correo de la Empresa Revendedora + correlativo |
 | `external_customer_id` | hasta 40 alfanuméricos | Usa el ID interno de la Cuenta sin guiones |
 | `mac` | 12 hexadecimales | Normaliza a mayúsculas sin separadores |
+
+`id_gestion_externo` nunca se envía a SENSA.
 
 ## Códigos de error relevantes
 
@@ -76,7 +82,7 @@ Que los móviles no puedan bajar de 1 es una restricción de la API: se respeta 
 | 805 | Email ya existe | Avanzar el correlativo del correo y reintentar |
 | 701–708 | Validación de datos | Error de validación: reintentar no sirve |
 | 820 | Datos no modificados | Se tolera: el estado deseado ya estaba |
-| 806 | Dispositivo ya existe | Se reasigna a esta Cuenta |
+| 806 | Dispositivo ya existe | Reporta la colisión; nunca reasigna automáticamente el Dispositivo existente |
 | 901 / 903 | No existe | En bajas se trata como éxito |
 | 401 / 403 | Autenticación | Proveedor no disponible (problema de configuración) |
 | 500 / 503 / 1001 / 1003 | Falla del lado del Proveedor | Mensaje de negocio + cola de reintentos |

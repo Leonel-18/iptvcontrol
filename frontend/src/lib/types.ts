@@ -10,8 +10,12 @@
  * el resto del frontend.
  */
 
+/**
+ * Ocupación de una categoría (fijo o móvil). `tope` es dinámico: en una Cuenta
+ * exclusiva siempre es 3; en una compartida refleja la cantidad de ventas
+ * activas (1 fijo + 1 móvil habilitado por cada venta, hasta 3 ventas).
+ */
 export interface CapacityCategory {
-  habilitados: number;
   ocupados: number;
   libres: number;
   tope: number;
@@ -19,12 +23,26 @@ export interface CapacityCategory {
   resumen: string;
 }
 
+/**
+ * Ocupación global de la Cuenta. En una exclusiva, `ocupados`/`limite` son
+ * Dispositivos (sobre 6 = 3 fijos + 3 móviles). En una compartida son ventas
+ * (Clientes Finales distintos, sobre 3).
+ */
+export interface AccountCapacity {
+  ocupados: number;
+  libres: number;
+  limite: number;
+  cerca_del_tope: boolean;
+  resumen: string;
+}
+
 export interface Account {
   id: string;
   proveedor_cuenta_id: string | null;
-  estado: 'activa' | 'cerrada';
+  estado: "activa" | "cerrada";
   es_exclusiva: boolean;
   empresa_revendedora_id: string;
+  capacidad: AccountCapacity;
   fijos: CapacityCategory;
   moviles: CapacityCategory;
   creado_en: string;
@@ -41,19 +59,76 @@ export interface AccountDevice {
   id: string;
   cuenta_id: string;
   proveedor_device_id: string | null;
-  tipo: 'fijo' | 'movil';
-  estado: 'activo' | 'bloqueado_por_suspension' | 'disponible' | 'dado_de_baja';
+  tipo: "fijo" | "movil" | null;
+  tipo_proveedor: string | null;
+  estado_vinculacion:
+    | "pendiente"
+    | "observando"
+    | "vinculado"
+    | "ambiguo"
+    | "expirado"
+    | "cancelado";
+  estado: "activo" | "bloqueado_por_suspension" | "disponible" | "dado_de_baja";
   creado_en: string;
   cliente_final_id?: string | null;
   cliente_final?: { id: string; numero_cliente: number; nombre: string } | null;
   mac?: string | null;
   nota_descriptiva?: string | null;
   proveedor_cuenta_id?: string | null;
+  /**
+   * Ventana de vinculación activa (hasta 10 min desde el alta, SENSA se
+   * revisa cada 30 s). `null` si ya se vinculó, si venció o si nunca hubo.
+   */
+  ventana_vinculacion?: { expira_en: string; proximo_sondeo_en?: string } | null;
+}
+
+export interface DeviceIncident {
+  id: string;
+  cuenta_id: string;
+  proveedor_device_id: string;
+  mac: string | null;
+  tipo_proveedor: string | null;
+  cantidad_detecciones: number;
+  primera_deteccion_en: string;
+  ultima_deteccion_en: string;
 }
 
 export interface AccountDetail extends Account {
   dispositivos: AccountDevice[];
-  clientes_finales?: { id: string; numero_cliente: number; nombre: string; dispositivos: number }[];
+  clientes_finales?: {
+    id: string;
+    numero_cliente: number;
+    nombre: string;
+    dispositivos: number;
+  }[];
+}
+
+/**
+ * Un Dispositivo tal como lo reporta el Proveedor en este momento, clasificado
+ * contra lo que IPTVControl conoce (regla 4.2: el Operador no recibe mac ni
+ * datos de cliente, así que llegan `undefined` para ese rol).
+ */
+export interface AccountProviderDevice {
+  proveedor_device_id: string;
+  mac?: string | null;
+  tipo_proveedor?: string | null;
+  nombre?: string | null;
+  modelo?: string | null;
+  activo: boolean;
+  ultimo_inicio?: string | null;
+  clasificacion: "vinculado" | "reserva_tecnica" | "desconocido";
+  dispositivo_id?: string | null;
+  cliente_final?: { id: string; numero_cliente: number; nombre: string } | null;
+  incidencia_id?: string | null;
+  ventana_activa?: boolean;
+}
+
+export interface AccountProviderInventory {
+  cuenta_id: string;
+  proveedor_cuenta_id: string | null;
+  limite_dispositivos: number;
+  sincronizado_en: string;
+  dispositivos: AccountProviderDevice[];
 }
 
 export interface AccountCredentials {
@@ -66,6 +141,8 @@ export interface AccountCredentials {
 export interface CapacityAlert {
   cuenta_id: string;
   proveedor_cuenta_id: string | null;
+  /** Exclusiva: "X de 6" (Dispositivos). Compartida: "X de 3 ventas". */
+  dispositivos: string;
   fijos: string;
   moviles: string;
   completa: boolean;
@@ -82,8 +159,8 @@ export interface Customer {
   telefono: string | null;
   email: string | null;
   direccion: string | null;
-  tipo_alta: 'cuenta_exclusiva' | 'dispositivo_compartido';
-  estado: 'activo' | 'suspendido' | 'dado_de_baja';
+  tipo_alta: "cuenta_exclusiva" | "dispositivo_compartido";
+  estado: "activo" | "suspendido" | "dado_de_baja";
   empresa_revendedora_id: string;
   cantidad_dispositivos: number;
   cuenta_ids: string[];
@@ -103,6 +180,7 @@ export interface CustomerDetail extends Customer {
     servicios: string;
     servicios_nombres: string[];
     es_exclusiva: boolean;
+    capacidad: string | null;
     fijos: string | null;
     moviles: string | null;
     cerca_del_tope: boolean;
@@ -137,7 +215,7 @@ export interface Reseller {
   telefono_contacto: string;
   contacto: string;
   sitio_web: string | null;
-  estado: 'activa' | 'suspendida';
+  estado: "activa" | "suspendida";
   modalidad_comercial: {
     id: string;
     tipo: string;
@@ -159,7 +237,7 @@ export interface ResellerDetail {
   telefono_contacto: string;
   email_contacto: string;
   sitio_web: string | null;
-  estado: 'activa' | 'suspendida';
+  estado: "activa" | "suspendida";
   modalidad_comercial: {
     id: string;
     tipo: string;
@@ -188,7 +266,7 @@ export interface ResellerDetail {
 
 export interface CommercialPlan {
   id: string;
-  tipo: 'menudeo' | 'obligacion_mensual';
+  tipo: "menudeo" | "obligacion_mensual";
   escala: string;
   precio_por_cuenta: number;
   ritmo_incremento: number | null;
@@ -212,8 +290,9 @@ export interface TeamMember {
   id: string;
   email: string;
   nombre: string | null;
-  rol: 'operator_admin' | 'operator_staff' | 'reseller_admin' | 'reseller_staff';
-  estado: 'invitado' | 'activo' | 'inactivo';
+  rol:
+    "operator_admin" | "operator_staff" | "reseller_admin" | "reseller_staff";
+  estado: "invitado" | "activo" | "inactivo";
   empresa_revendedora: { id: string; razon_social: string } | null;
   es_del_operador: boolean;
   ultimo_acceso_en: string | null;
@@ -235,7 +314,12 @@ export interface AuditEntry {
   entidad: string;
   entidad_id: string | null;
   empresa_revendedora: { id: string; razon_social: string } | null;
-  ejecutado_por: { id: string; email: string; nombre: string | null; rol: string } | null;
+  ejecutado_por: {
+    id: string;
+    email: string;
+    nombre: string | null;
+    rol: string;
+  } | null;
   detalle: Record<string, unknown> | null;
   creado_en: string;
 }
@@ -245,7 +329,11 @@ export interface IntegrationHealth {
   llamadas_exitosas: number;
   llamadas_fallidas: number;
   tasa_exito: number | null;
-  ultima_exitosa: { operacion: string; duracion_ms: number; fecha: string } | null;
+  ultima_exitosa: {
+    operacion: string;
+    duracion_ms: number;
+    fecha: string;
+  } | null;
   ultimas_fallidas: {
     operacion: string;
     codigo: number | null;
@@ -260,20 +348,29 @@ export interface IntegrationHealth {
     demorados: number;
     disponible: boolean;
   };
-  estado_general: 'ok' | 'atencion' | 'critico';
+  estado_general: "ok" | "atencion" | "critico";
 }
 
 export interface OperatorDashboard {
-  rol: 'operator';
-  cuentas: { total: number; vendidas: number; disponibles: number; bloqueadas: number };
+  rol: "operator";
+  cuentas: {
+    total: number;
+    vendidas: number;
+    disponibles: number;
+    bloqueadas: number;
+  };
   dispositivos: { activos: number; bloqueados: number; disponibles: number };
   empresas_revendedoras: { activas: number; suspendidas: number };
-  clientes_finales: { activos: number; suspendidos: number; dados_de_baja: number };
+  clientes_finales: {
+    activos: number;
+    suspendidos: number;
+    dados_de_baja: number;
+  };
   salud_integracion: IntegrationHealth;
 }
 
 export interface ResellerDashboard {
-  rol: 'reseller';
+  rol: "reseller";
   cuentas: { activas: number; cerradas: number };
   dispositivos: {
     activos: number;
@@ -282,8 +379,16 @@ export interface ResellerDashboard {
     bloqueados: number;
     disponibles: number;
   };
-  clientes_finales: { activos: number; suspendidos: number; dados_de_baja: number };
-  modalidad_comercial: { tipo: string; escala: string; precio_por_cuenta: number } | null;
+  clientes_finales: {
+    activos: number;
+    suspendidos: number;
+    dados_de_baja: number;
+  };
+  modalidad_comercial: {
+    tipo: string;
+    escala: string;
+    precio_por_cuenta: number;
+  } | null;
   alertas_capacidad: CapacityAlert[];
 }
 
@@ -326,6 +431,7 @@ export interface ServiceCatalogItem {
   codigo: string;
   nombre: string;
   obligatorio: boolean;
+  contratado: boolean;
   nota?: string;
 }
 

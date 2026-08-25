@@ -62,15 +62,17 @@ graph TB
 
 ## Las cinco reglas que más se consultan
 
-1. **Una Cuenta admite 3 dispositivos fijos + 3 móviles**, con topes independientes por categoría.
-   Ver [[Capacidad de una Cuenta]].
+1. **Una Cuenta admite un máximo comercial global de 3 Dispositivos**, indistintamente del tipo.
+   En Cuentas compartidas, los cupos no vendidos se protegen con reservas técnicas. Ver
+   [[Capacidad de una Cuenta]].
 2. **Suspensión ≠ baja definitiva.** La suspensión reserva el Dispositivo; la baja lo libera. La
    única vía para liberar un Dispositivo bloqueado es la transición explícita a baja definitiva.
    Ver [[Ciclo de vida del Cliente Final]].
 3. **El Operador Principal no ve datos comerciales de sus Empresas Revendedoras**: identifica todo
    por ID. Ver [[Aislamiento multi-tenant]].
-4. **La contraseña de una Cuenta no se rota nunca** al reasignar un Dispositivo. Es un riesgo
-   aceptado y confirmado, no un pendiente. Ver [[Riesgo aceptado - contraseña compartida]].
+4. **La contraseña de una Cuenta no se rota** cuando una nueva venta ocupa capacidad liberada. Es
+   un riesgo aceptado y confirmado, no un pendiente. Ver
+   [[Riesgo aceptado - contraseña compartida]].
 5. **La lógica de negocio nunca le habla directo a SENSA.** Ver [[Patrón ProveedorAdapter]].
 
 ## Convenciones de este vault

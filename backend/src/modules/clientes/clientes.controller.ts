@@ -126,7 +126,7 @@ export class ClientesController {
     description:
       'Dos métodos: `cuenta_exclusiva` (siempre crea una Cuenta nueva) o ' +
       '`dispositivo_compartido` (busca lugar en una Cuenta propia y, si no hay, crea una nueva ' +
-      'parametrizada en 1 fijo + 1 móvil).',
+      'con la misma firma de servicios). Cada Cuenta admite hasta 3 Dispositivos.',
   })
   async crear(@Body() dto: CrearClienteDto) {
     return this.clientes.crear(dto);
