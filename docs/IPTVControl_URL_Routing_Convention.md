@@ -21,11 +21,11 @@
 | Revendedores (**Empresa Revendedora**) | `/resellers` | Visible solo para Operador Principal |
 | Revendedor específico | `/resellers/:id` | Alta/edición, modalidad comercial asignada, escala |
 | Cuentas (**Cuenta**) | `/accounts` | Listado — Operador Principal ve todas, Empresa Revendedora solo las propias |
-| Cuenta específica | `/accounts/:id` | Detalle: usuario/password/PIN SENSA, ocupación 3+3 |
-| Clientes (**Cliente Final**) | `/customers` | Alta con selector `cuenta_exclusiva` / `dispositivo_compartido` |
+| Cuenta específica | `/accounts/:id` | Detalle: usuario/password/PIN SENSA y ocupación global hasta 3 Dispositivos |
+| Clientes (**Cliente Final**) | `/customers` | Wizard con `cuenta_exclusiva` / `dispositivo_compartido`; no pide tipo ni MAC |
 | Cliente específico | `/customers/:id` | Incluye sus Dispositivos asociados |
 | Dispositivos (**Dispositivo**) | `/devices` | Listado global, filtrable por `?account_id=` o `?customer_id=` |
-| Dispositivo específico | `/devices/:id` | Estado: activo / bloqueado_por_suspension / disponible / dado_de_baja |
+| Dispositivo específico | `/devices/:id` | Estado: pendiente / activo / ambiguo / bloqueado_por_suspension / reserva_tecnica / dado_de_baja |
 | Planes comerciales (**Modalidad Comercial**) | `/commercial-plans` | Gestión exclusiva del Operador Principal |
 | Plan específico | `/commercial-plans/:id` | Menudeo / obligación mensual, escala X5-X10 |
 | Proveedores (**Proveedor**) | `/providers` | Hoy un único registro (SENSA); preparado para multi-proveedor post-MVP |

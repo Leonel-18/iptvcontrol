@@ -54,9 +54,9 @@ enum EstadoCuenta {
   cerrada
 }
 
-/// Categorías con tope independiente de 3 cada una dentro de la misma Cuenta.
-/// Mapeo hacia SENSA: fijo -> auto_provision_count_stationary,
-/// movil -> auto_provision_count_mobile.
+/// Proyección técnica de las categorías del Proveedor. La capacidad comercial
+/// de una Cuenta es un máximo global de 3 Dispositivos, sin topes comerciales
+/// independientes por categoría.
 enum TipoDispositivo {
   fijo
   movil
@@ -69,6 +69,31 @@ enum EstadoDispositivo {
   bloqueado_por_suspension
   disponible
   dado_de_baja
+}
+
+enum EstadoVinculacionDispositivo {
+  pendiente
+  observando
+  vinculado
+  ambiguo
+  expirado
+  cancelado
+}
+
+enum EstadoSolicitudVinculacion {
+  pendiente
+  observando
+  vinculado
+  ambiguo
+  expirado
+  cancelado
+}
+
+enum EstadoIncidenciaDispositivo {
+  pendiente
+  reconocido
+  eliminacion_pendiente
+  resuelto
 }
 
 /// En el MVP solo se usan `operator_admin` y `reseller_admin`; los otros dos
@@ -106,6 +131,14 @@ enum AccionAuditoria {
   alta_team_member
   reenvio_invitacion_team_member
   baja_team_member
+  apertura_vinculacion_dispositivo
+  vinculacion_dispositivo
+  vinculacion_ambigua
+  alta_reserva_tecnica
+  liberacion_reserva_tecnica
+  deteccion_dispositivo_no_autorizado
+  resolucion_incidencia_dispositivo
+  correccion_vinculacion_dispositivo
 }
 
 enum EntidadAuditada {
@@ -116,6 +149,9 @@ enum EntidadAuditada {
   ModalidadComercial
   ConfiguracionProveedor
   TeamMember
+  SolicitudVinculacionDispositivo
+  ReservaTecnicaDispositivo
+  IncidenciaDispositivoProveedor
 }
 
 enum EstadoLlamadaProveedor {
@@ -258,11 +294,13 @@ model EmpresaRevendedora {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  clientesFinales ClienteFinal[]
-  cuentas         Cuenta[]
-  dispositivos    Dispositivo[]
-  teamMembers     TeamMember[]
-  auditLogs       AuditLog[]
+  clientesFinales        ClienteFinal[]
+  cuentas                Cuenta[]
+  dispositivos           Dispositivo[]
+  solicitudesVinculacion SolicitudVinculacionDispositivo[]
+  incidenciasDispositivo IncidenciaDispositivoProveedor[]
+  teamMembers            TeamMember[]
+  auditLogs              AuditLog[]
 
   @@index([operadorPrincipalId])
   @@map("empresa_revendedora")
@@ -307,7 +345,7 @@ model ClienteFinal {
 }
 
 /// Unidad de contratación entre el Operador Principal y el Proveedor.
-/// Capacidad máxima: 3 dispositivos fijos + 3 móviles. Es la unidad que se
+/// Capacidad comercial máxima global: 3 Dispositivos. Es la unidad que se
 /// factura del Operador Principal a la Empresa Revendedora.
 model Cuenta {
   id String @id @default(uuid()) @db.Uuid
@@ -340,8 +378,11 @@ model Cuenta {
   /// Parametrización de contenido vigente en el Proveedor (ej. "1|3|5").
   servicios String @default("1") @db.VarChar(40)
 
-  /// Dispositivos habilitados en el Proveedor. Arrancan en 1 y 1, y se
-  /// actualizan de a uno por vez hasta el tope 3 + 3.
+  /// Máximo comercial global de Dispositivos vinculables a la Cuenta.
+  limiteDispositivos Int @default(3) @map("limite_dispositivos")
+
+  /// Proyección técnica de la parametrización por categoría del Proveedor.
+  /// Se conserva por compatibilidad, pero no define la capacidad comercial.
   dispositivosFijosHabilitados   Int @default(1) @map("dispositivos_fijos_habilitados")
   dispositivosMovilesHabilitados Int @default(1) @map("dispositivos_moviles_habilitados")
 
@@ -350,7 +391,9 @@ model Cuenta {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  dispositivos Dispositivo[]
+  dispositivos           Dispositivo[]
+  solicitudesVinculacion SolicitudVinculacionDispositivo[]
+  incidenciasDispositivo IncidenciaDispositivoProveedor[]
 
   @@index([empresaRevendedoraId, estado])
   @@map("cuenta")
@@ -380,12 +423,15 @@ model Dispositivo {
   /// reconciliación lo capture por polling (la API no tiene webhooks).
   proveedorDeviceId String? @map("proveedor_device_id") @db.VarChar(60)
 
-  /// MAC informada por la Empresa Revendedora, si la tiene. Habilita el alta
-  /// explícita vía Create Device en lugar de esperar la auto-provisión.
+  /// MAC reportada por el Proveedor al detectar el primer inicio de sesión.
   mac String? @db.VarChar(12)
 
-  tipo   TipoDispositivo
-  estado EstadoDispositivo @default(activo)
+  /// Se completa cuando el sondeo detecta el tipo informado por el Proveedor.
+  tipo          TipoDispositivo?
+  tipoProveedor String?          @map("tipo_proveedor") @db.VarChar(40)
+
+  estado            EstadoDispositivo            @default(activo)
+  estadoVinculacion EstadoVinculacionDispositivo @default(pendiente) @map("estado_vinculacion")
 
   /// Nota descriptiva libre de la Empresa Revendedora (ej. "TV living").
   /// Dato interno de IPTVControl, NO se envía al Proveedor y NO se expone al
@@ -395,10 +441,73 @@ model Dispositivo {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
+  solicitudesVinculacion SolicitudVinculacionDispositivo[]
+
+  @@unique([cuentaId, proveedorDeviceId])
   @@index([empresaRevendedoraId, estado])
   @@index([cuentaId, tipo, estado])
   @@index([clienteFinalId])
   @@map("dispositivo")
+}
+
+model SolicitudVinculacionDispositivo {
+  id String @id @default(uuid()) @db.Uuid
+
+  dispositivoId String      @map("dispositivo_id") @db.Uuid
+  dispositivo   Dispositivo @relation(fields: [dispositivoId], references: [id], onDelete: Cascade)
+
+  cuentaId String @map("cuenta_id") @db.Uuid
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  /// Denormalizado para aplicar RLS sin joins.
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  estado                     EstadoSolicitudVinculacion @default(pendiente)
+  baselineDeviceIds          Json                       @map("baseline_device_ids")
+  proveedorDeviceIdCandidato String?                    @map("proveedor_device_id_candidato") @db.VarChar(60)
+  abiertaEn                  DateTime                   @default(now()) @map("abierta_en")
+  expiraEn                   DateTime                   @map("expira_en")
+  proximoSondeoEn            DateTime                   @map("proximo_sondeo_en")
+  ultimoSondeoEn             DateTime?                  @map("ultimo_sondeo_en")
+  cantidadIntentos           Int                        @default(0) @map("cantidad_intentos")
+  motivoAmbiguedad           String?                    @map("motivo_ambiguedad") @db.VarChar(300)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@index([empresaRevendedoraId, estado])
+  @@index([cuentaId, estado])
+  @@index([proximoSondeoEn])
+  @@map("solicitud_vinculacion_dispositivo")
+}
+
+model IncidenciaDispositivoProveedor {
+  id String @id @default(uuid()) @db.Uuid
+
+  cuentaId String @map("cuenta_id") @db.Uuid
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  /// Denormalizado para aplicar RLS sin joins.
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  proveedorDeviceId   String                      @map("proveedor_device_id") @db.VarChar(60)
+  mac                 String?                     @db.VarChar(12)
+  tipoProveedor       String?                     @map("tipo_proveedor") @db.VarChar(40)
+  estado              EstadoIncidenciaDispositivo @default(pendiente)
+  cantidadDetecciones Int                         @default(1) @map("cantidad_detecciones")
+  primeraDeteccionEn  DateTime                    @default(now()) @map("primera_deteccion_en")
+  ultimaDeteccionEn   DateTime                    @default(now()) @map("ultima_deteccion_en")
+  resueltaEn          DateTime?                   @map("resuelta_en")
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@unique([cuentaId, proveedorDeviceId])
+  @@index([empresaRevendedoraId, estado])
+  @@index([cuentaId, estado])
+  @@map("incidencia_dispositivo_proveedor")
 }
 
 /// Login con permisos sobre alguno de los dos paneles. Pertenece a un único

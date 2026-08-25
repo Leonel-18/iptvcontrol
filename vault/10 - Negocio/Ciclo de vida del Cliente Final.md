@@ -25,9 +25,9 @@ stateDiagram-v2
     end note
 
     note right of dado_de_baja
-        Dispositivo: disponible
-        Liberado y reasignable a un
-        Cliente Final nuevo.
+        Dispositivo: dado_de_baja
+        En Cuenta compartida, el cupo
+        se protege con reserva técnica.
     end note
 ```
 
@@ -35,18 +35,18 @@ stateDiagram-v2
 
 | Transición | En el Proveedor | Estado del Dispositivo | ¿Otro cliente puede tomarlo? |
 |---|---|---|---|
-| **Alta** | Crea Cuenta o amplía capacidad, y activa el dispositivo | `activo` | No |
-| **Suspensión** | Elimina el dispositivo y resta 1 habilitado | `bloqueado_por_suspension` | **No** |
-| **Reactivación** | Vuelve a habilitar el cupo y reactiva el dispositivo | `activo` | No |
-| **Baja definitiva** | Elimina el dispositivo y resta 1 habilitado | `disponible` | **Sí** |
+| **Alta** | Crea o reutiliza Cuenta y descubre el equipo después del primer login | `pendiente` → `activo` o `ambiguo` | No |
+| **Suspensión** | Elimina el dispositivo en SENSA y conserva su capacidad comercial bloqueada | `bloqueado_por_suspension` | **No** |
+| **Reactivación** | Abre nuevamente el descubrimiento para el mismo Cliente Final | `pendiente` → `activo` o `ambiguo` | No |
+| **Baja definitiva** | Elimina el dispositivo; en Cuenta compartida repone una reserva técnica | `dado_de_baja` | La capacidad comercial sí; el Dispositivo y su MAC, no |
 
 ## La regla permanente
 
-> La **única vía** para que un Dispositivo bloqueado por suspensión quede disponible es la
-> transición explícita de *suspendido* → *baja definitiva*.
+> La **única vía** para liberar a otra venta la capacidad bloqueada por suspensión es la transición
+> explícita de *suspendido* → *baja definitiva*.
 
 No es un pendiente de roadmap: es una regla de negocio permanente. La razón es concreterísima — si
-un Dispositivo bloqueado se pudiera reasignar, las credenciales de esa Cuenta terminarían en manos de
+la capacidad bloqueada se pudiera vender, las credenciales de esa Cuenta terminarían en manos de
 otro Cliente Final mientras el suspendido todavía podría volver. Ver
 [[Riesgo aceptado - contraseña compartida]].
 

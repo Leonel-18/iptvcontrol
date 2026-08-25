@@ -1,20 +1,24 @@
-import { Check, Copy, Eye, EyeOff } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
+import { Check, Copy, Eye, EyeOff } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import {
   accountStatusLabels,
   customerStatusLabels,
   deviceStatusHelp,
   deviceStatusLabels,
+  deviceBindingHelp,
+  deviceBindingLabels,
   deviceTypeLabels,
   healthStatusLabels,
+  providerDeviceClassHelp,
+  providerDeviceClassLabels,
   resellerStatusLabels,
   teamMemberStatusLabels,
   traducir,
-} from '@/i18n/entityLabels';
-import { cn, copiarAlPortapapeles } from '@/lib/utils';
-import { Badge, Button, type BadgeProps } from './ui/primitives';
-import { Tooltip } from './ui/overlays';
+} from "@/i18n/entityLabels";
+import { cn, copiarAlPortapapeles } from "@/lib/utils";
+import { Alert, Badge, Button, type BadgeProps } from "./ui/primitives";
+import { Tooltip } from "./ui/overlays";
 
 /**
  * Componentes compartidos entre secciones.
@@ -42,10 +46,16 @@ export const PageHeader = ({
   <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div className="space-y-1">
       {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-      <h1 className="font-display text-xl font-bold tracking-tight sm:text-2xl">{titulo}</h1>
-      {descripcion ? <p className="max-w-2xl text-sm texto-suave">{descripcion}</p> : null}
+      <h1 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+        {titulo}
+      </h1>
+      {descripcion ? (
+        <p className="max-w-2xl text-sm texto-suave">{descripcion}</p>
+      ) : null}
     </div>
-    {acciones ? <div className="flex flex-wrap items-center gap-2">{acciones}</div> : null}
+    {acciones ? (
+      <div className="flex flex-wrap items-center gap-2">{acciones}</div>
+    ) : null}
   </header>
 );
 
@@ -79,17 +89,17 @@ export const CopyableId = ({
   const copiar = async () => {
     const ok = await copiarAlPortapapeles(valor);
     if (!ok) {
-      toast.error('No se pudo copiar. Seleccione el texto y copie a mano.');
+      toast.error("No se pudo copiar. Seleccione el texto y copie a mano.");
       return;
     }
     setCopiado(true);
-    toast.success(`${etiqueta ?? 'Dato'} copiado`);
+    toast.success(`${etiqueta ?? "Dato"} copiado`);
     setTimeout(() => setCopiado(false), 1500);
   };
 
   return (
-    <span className={cn('group inline-flex items-center gap-1.5', className)}>
-      <span className={mono ? 'id-tecnico' : 'text-sm'}>{valor}</span>
+    <span className={cn("group inline-flex items-center gap-1.5", className)}>
+      <span className={mono ? "id-tecnico" : "text-sm"}>{valor}</span>
       <button
         type="button"
         onClick={copiar}
@@ -115,14 +125,22 @@ export const CopyableId = ({
  * que por ahora la interfaz al menos evita exponerlos de casualidad en pantalla
  * frente a otra persona.
  */
-export const SecretValue = ({ valor, etiqueta }: { valor?: string | null; etiqueta: string }) => {
+export const SecretValue = ({
+  valor,
+  etiqueta,
+}: {
+  valor?: string | null;
+  etiqueta: string;
+}) => {
   const [visible, setVisible] = useState(false);
 
   if (!valor) return <span className="texto-suave">—</span>;
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="id-tecnico">{visible ? valor : '•'.repeat(Math.min(valor.length, 10))}</span>
+      <span className="id-tecnico">
+        {visible ? valor : "•".repeat(Math.min(valor.length, 10))}
+      </span>
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
@@ -135,7 +153,13 @@ export const SecretValue = ({ valor, etiqueta }: { valor?: string | null; etique
           <Eye className="size-3.5 texto-suave" />
         )}
       </button>
-      {visible ? <CopyableId valor={valor} etiqueta={etiqueta} className="[&>span]:sr-only" /> : null}
+      {visible ? (
+        <CopyableId
+          valor={valor}
+          etiqueta={etiqueta}
+          className="[&>span]:sr-only"
+        />
+      ) : null}
     </span>
   );
 };
@@ -144,36 +168,50 @@ export const SecretValue = ({ valor, etiqueta }: { valor?: string | null; etique
 // Estados
 // -----------------------------------------------------------------------------
 
-const tonoPorEstado: Record<string, BadgeProps['tone']> = {
+const tonoPorEstado: Record<string, BadgeProps["tone"]> = {
   // Cuenta / Empresa Revendedora
-  activa: 'success',
-  cerrada: 'neutral',
-  suspendida: 'warning',
+  activa: "success",
+  cerrada: "neutral",
+  suspendida: "warning",
   // Cliente Final / Dispositivo
-  activo: 'success',
-  suspendido: 'warning',
-  dado_de_baja: 'neutral',
-  bloqueado_por_suspension: 'warning',
-  disponible: 'info',
+  activo: "success",
+  suspendido: "warning",
+  dado_de_baja: "neutral",
+  bloqueado_por_suspension: "warning",
+  disponible: "info",
+  pendiente: "info",
+  observando: "info",
+  vinculado: "success",
+  ambiguo: "warning",
+  expirado: "danger",
+  cancelado: "neutral",
+  reserva_tecnica: "neutral",
+  desconocido: "danger",
   // Team Member
-  invitado: 'info',
-  inactivo: 'neutral',
+  invitado: "info",
+  inactivo: "neutral",
 };
 
 export const AccountStatusBadge = ({ estado }: { estado: string }) => (
-  <Badge tone={tonoPorEstado[estado] ?? 'neutral'}>{traducir(accountStatusLabels, estado)}</Badge>
+  <Badge tone={tonoPorEstado[estado] ?? "neutral"}>
+    {traducir(accountStatusLabels, estado)}
+  </Badge>
 );
 
 export const CustomerStatusBadge = ({ estado }: { estado: string }) => (
-  <Badge tone={tonoPorEstado[estado] ?? 'neutral'}>{traducir(customerStatusLabels, estado)}</Badge>
+  <Badge tone={tonoPorEstado[estado] ?? "neutral"}>
+    {traducir(customerStatusLabels, estado)}
+  </Badge>
 );
 
 export const ResellerStatusBadge = ({ estado }: { estado: string }) => (
-  <Badge tone={tonoPorEstado[estado] ?? 'neutral'}>{traducir(resellerStatusLabels, estado)}</Badge>
+  <Badge tone={tonoPorEstado[estado] ?? "neutral"}>
+    {traducir(resellerStatusLabels, estado)}
+  </Badge>
 );
 
 export const TeamMemberStatusBadge = ({ estado }: { estado: string }) => (
-  <Badge tone={tonoPorEstado[estado] ?? 'neutral'}>
+  <Badge tone={tonoPorEstado[estado] ?? "neutral"}>
     {traducir(teamMemberStatusLabels, estado)}
   </Badge>
 );
@@ -182,35 +220,68 @@ export const TeamMemberStatusBadge = ({ estado }: { estado: string }) => (
  * Estado de Dispositivo con su explicación al costado.
  * "Bloqueado" es el estado que más consultas genera, así que la ayuda va pegada.
  */
-export const DeviceStatusBadge = ({ estado }: { estado: string }) => (
-  <Tooltip contenido={deviceStatusHelp[estado] ?? traducir(deviceStatusLabels, estado)}>
+export const DeviceStatusBadge = ({
+  estado,
+  vinculacion,
+}: {
+  estado: string;
+  vinculacion?: string;
+}) => {
+  const mostrarVinculacion =
+    estado === "activo" && vinculacion && vinculacion !== "vinculado";
+  const clave = mostrarVinculacion ? vinculacion : estado;
+  const etiqueta = mostrarVinculacion
+    ? traducir(deviceBindingLabels, vinculacion)
+    : traducir(deviceStatusLabels, estado);
+  const ayuda = mostrarVinculacion
+    ? (deviceBindingHelp[vinculacion] ?? etiqueta)
+    : (deviceStatusHelp[estado] ?? etiqueta);
+  return (
+    <Tooltip contenido={ayuda}>
+      <span>
+        <Badge tone={tonoPorEstado[clave] ?? "neutral"}>{etiqueta}</Badge>
+      </span>
+    </Tooltip>
+  );
+};
+
+export const DeviceTypeBadge = ({ tipo }: { tipo: string | null }) => (
+  <Badge tone="neutral">{traducir(deviceTypeLabels, tipo)}</Badge>
+);
+
+/**
+ * Clasificación de un Dispositivo tal como lo reporta el Proveedor al
+ * sincronizar una Cuenta: vendido, reserva técnica, o no autorizado.
+ */
+export const ProviderDeviceClassBadge = ({
+  clasificacion,
+}: {
+  clasificacion: string;
+}) => (
+  <Tooltip contenido={providerDeviceClassHelp[clasificacion] ?? clasificacion}>
     <span>
-      <Badge tone={tonoPorEstado[estado] ?? 'neutral'}>
-        {traducir(deviceStatusLabels, estado)}
+      <Badge tone={tonoPorEstado[clasificacion] ?? "neutral"}>
+        {traducir(providerDeviceClassLabels, clasificacion)}
       </Badge>
     </span>
   </Tooltip>
 );
 
-export const DeviceTypeBadge = ({ tipo }: { tipo: string }) => (
-  <Badge tone="neutral">{traducir(deviceTypeLabels, tipo)}</Badge>
-);
-
 /** Semáforo de la salud de la integración con el proveedor. */
 export const HealthBadge = ({ estado }: { estado: string }) => {
-  const tonos: Record<string, BadgeProps['tone']> = {
-    ok: 'success',
-    atencion: 'warning',
-    critico: 'danger',
+  const tonos: Record<string, BadgeProps["tone"]> = {
+    ok: "success",
+    atencion: "warning",
+    critico: "danger",
   };
   return (
-    <Badge tone={tonos[estado] ?? 'neutral'}>
+    <Badge tone={tonos[estado] ?? "neutral"}>
       <span
         className={cn(
-          'size-1.5 rounded-full',
-          estado === 'ok' && 'bg-signal',
-          estado === 'atencion' && 'bg-warn',
-          estado === 'critico' && 'bg-alert',
+          "size-1.5 rounded-full",
+          estado === "ok" && "bg-signal",
+          estado === "atencion" && "bg-warn",
+          estado === "critico" && "bg-alert",
         )}
       />
       {traducir(healthStatusLabels, estado)}
@@ -239,7 +310,7 @@ export const Metric = ({
   etiqueta: string;
   valor: ReactNode;
   detalle?: string;
-  tono?: 'azure' | 'signal' | 'warn' | 'alert';
+  tono?: "azure" | "signal" | "warn" | "alert";
   icono?: ReactNode;
 }) => (
   <div className="superficie rounded-lg border p-4 shadow-card">
@@ -249,11 +320,11 @@ export const Metric = ({
     </div>
     <p
       className={cn(
-        'mt-2 font-display text-2xl font-bold tabular-nums',
-        tono === 'azure' && 'text-azure-600 dark:text-azure-400',
-        tono === 'signal' && 'text-signal',
-        tono === 'warn' && 'text-warn',
-        tono === 'alert' && 'text-alert',
+        "mt-2 font-display text-2xl font-bold tabular-nums",
+        tono === "azure" && "text-azure-600 dark:text-azure-400",
+        tono === "signal" && "text-signal",
+        tono === "warn" && "text-warn",
+        tono === "alert" && "text-alert",
       )}
     >
       {valor}
@@ -272,7 +343,12 @@ export const DetailRow = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn('flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-4', className)}>
+  <div
+    className={cn(
+      "flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:gap-4",
+      className,
+    )}
+  >
     <dt className="eyebrow sm:w-56 sm:shrink-0">{etiqueta}</dt>
     <dd className="text-sm">{children}</dd>
   </div>
@@ -281,7 +357,7 @@ export const DetailRow = ({
 /** Botón de exportación a CSV, con estado de descarga. */
 export const ExportCsvButton = ({
   onExportar,
-  etiqueta = 'Exportar CSV',
+  etiqueta = "Exportar CSV",
 }: {
   onExportar: () => Promise<void>;
   etiqueta?: string;
@@ -298,13 +374,45 @@ export const ExportCsvButton = ({
         try {
           await onExportar();
         } catch {
-          toast.error('No se pudo generar el archivo. Intente nuevamente.');
+          toast.error("No se pudo generar el archivo. Intente nuevamente.");
         } finally {
           setDescargando(false);
         }
       }}
     >
-      {descargando ? 'Generando…' : etiqueta}
+      {descargando ? "Generando…" : etiqueta}
     </Button>
+  );
+};
+
+/**
+ * Aviso de ventana de vinculación en curso (hasta 10 min desde el alta,
+ * SENSA se revisa cada 30 s).
+ *
+ * Se agrega porque el único aviso que existía era un toast que dura unos
+ * segundos y se pierde si la persona navega rápido: sin esto, es fácil
+ * asumir apresuradamente que algo falló al primer minuto sin ver el equipo
+ * vinculado (caso reportado 25/08/2026).
+ */
+export const VinculacionEnCursoAlert = ({ expiraEn }: { expiraEn: string }) => {
+  const expira = new Date(expiraEn);
+  const minutosRestantes = Math.max(
+    0,
+    Math.round((expira.getTime() - Date.now()) / 60_000),
+  );
+  const hora = expira.toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return (
+    <Alert tone="info" titulo="Esperando que el equipo se conecte">
+      Estamos revisando cada 30 segundos si ya inició sesión en el proveedor con las
+      credenciales de esta cuenta. Puede tardar hasta 10 minutos desde el alta — todavía
+      no significa que algo esté mal.{" "}
+      {minutosRestantes > 0
+        ? `Si no detecta nada, esta ventana vence a las ${hora} (dentro de ${minutosRestantes} min).`
+        : `Está por vencer (${hora}).`}
+    </Alert>
   );
 };

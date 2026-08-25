@@ -3,6 +3,7 @@ import {
   Dispositivo,
   EstadoCuenta,
   EstadoDispositivo,
+  EstadoVinculacionDispositivo,
   TipoDispositivo,
 } from '@prisma/client';
 import {
@@ -36,6 +37,7 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
     emailContacto: 'contacto1@isp.com',
     esExclusiva: false,
     servicios: '1|3|5',
+    limiteDispositivos: 3,
     dispositivosFijosHabilitados: 2,
     dispositivosMovilesHabilitados: 1,
     estado: EstadoCuenta.activa,
@@ -51,16 +53,19 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
     proveedorDeviceId: '830792',
     mac: '03AC1AE60CA7',
     tipo: TipoDispositivo.fijo,
+    tipoProveedor: 'stationary',
     estado: EstadoDispositivo.activo,
+    estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
     notaDescriptiva: 'TV living',
     creadoEn: new Date('2026-08-01T10:00:00Z'),
     actualizadoEn: new Date('2026-08-01T10:00:00Z'),
   };
 
   const capacidad = calcularCapacidad({
-    dispositivosFijosHabilitados: 2,
-    dispositivosMovilesHabilitados: 1,
-    dispositivos: [{ tipo: TipoDispositivo.fijo, estado: EstadoDispositivo.activo }],
+    esExclusiva: false,
+    dispositivos: [
+      { tipo: TipoDispositivo.fijo, estado: EstadoDispositivo.activo, clienteFinalId: 'cliente-1' },
+    ],
   });
 
   describe('vista del Operador Principal', () => {
@@ -72,9 +77,9 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
       expect(vista.estado).toBe(EstadoCuenta.activa);
     });
 
-    it('expone el conteo de dispositivos habilitados como "X de 3"', () => {
-      expect(vista.fijos.resumen).toBe('1 de 3');
-      expect(vista.moviles.resumen).toBe('0 de 3');
+    it('expone el conteo de dispositivos ocupados sobre el habilitado por la venta activa', () => {
+      expect(vista.fijos.resumen).toBe('1 de 1');
+      expect(vista.moviles.resumen).toBe('0 de 1');
     });
 
     it('NO expone usuario, contraseña ni PIN de la Cuenta', () => {

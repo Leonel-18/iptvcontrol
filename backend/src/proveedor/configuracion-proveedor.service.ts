@@ -33,38 +33,46 @@ export class ConfiguracionProveedorService {
   /**
    * Configuración vigente del Operador Principal indicado.
    *
-   * Se lee con el cliente sin extensión de RLS porque también la usan jobs de
-   * BullMQ que corren fuera de un request HTTP; el filtro por
-   * `operadorPrincipalId` es explícito en el where.
+   * Se lee con el contexto de Operador Principal explícito (transacción RLS),
+   * porque la política de `configuracion_proveedor` lo exige. Aplica tanto
+   * desde un request HTTP como desde jobs de BullMQ que corren fuera de un
+   * request: el contexto se setea acá mismo, no depende del AsyncLocalStorage.
    */
   async obtener(operadorPrincipalId: string): Promise<ConfiguracionProveedorResuelta> {
-    const operador = await this.prisma.operadorPrincipal.findUnique({
-      where: { id: operadorPrincipalId },
-      select: { proveedorActivoId: true },
-    });
+    const configuracion = await this.prisma.transactionComoOperador(
+      operadorPrincipalId,
+      async (tx) => {
+        const operador = await tx.operadorPrincipal.findUnique({
+          where: { id: operadorPrincipalId },
+          select: { proveedorActivoId: true },
+        });
 
-    if (!operador?.proveedorActivoId) {
-      throw new NotFoundException(
-        'El Operador Principal no tiene un Proveedor activo configurado. ' +
-          'Configúrelo en Configuración → Conexión con el proveedor.',
-      );
-    }
+        if (!operador?.proveedorActivoId) {
+          throw new NotFoundException(
+            'El Operador Principal no tiene un Proveedor activo configurado. ' +
+              'Configúrelo en Configuración → Conexión con el proveedor.',
+          );
+        }
 
-    const configuracion = await this.prisma.configuracionProveedor.findUnique({
-      where: {
-        operadorPrincipalId_proveedorId: {
-          operadorPrincipalId,
-          proveedorId: operador.proveedorActivoId,
-        },
+        const configuracionBuscada = await tx.configuracionProveedor.findUnique({
+          where: {
+            operadorPrincipalId_proveedorId: {
+              operadorPrincipalId,
+              proveedorId: operador.proveedorActivoId,
+            },
+          },
+          include: { proveedor: true },
+        });
+
+        if (!configuracionBuscada) {
+          throw new NotFoundException(
+            'Falta configurar la conexión con el proveedor (servidor, puerto, usuario y token).',
+          );
+        }
+
+        return configuracionBuscada;
       },
-      include: { proveedor: true },
-    });
-
-    if (!configuracion) {
-      throw new NotFoundException(
-        'Falta configurar la conexión con el proveedor (servidor, puerto, usuario y token).',
-      );
-    }
+    );
 
     return {
       id: configuracion.id,

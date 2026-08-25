@@ -90,21 +90,30 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
 
 **Incluido:**
 - Alta de Operadores Principales, Empresas Revendedoras y Clientes Finales.
-- Alta de Cliente Final por **dos métodos**: Cuenta completa exclusiva, o solo alta de un Dispositivo
-  dentro de una Cuenta compartida con otros Clientes Finales (ver `03_Reglas_de_Negocio.md`).
-- Creación y parametrización de cuentas SENSA vía API (arranque en 1 fijo + 1 móvil, incremento
-  automático de a un dispositivo por vez hasta el tope 3+3).
+- Alta de Cliente Final por **dos métodos**: Cuenta completa exclusiva, con hasta 3 Dispositivos
+  para un único Cliente Final, o venta unitaria de exactamente 1 Dispositivo dentro de una Cuenta
+  compartida con ventas de idéntica firma de servicios (ver `03_Reglas_de_Negocio.md`).
+- Creación y parametrización de Cuentas SENSA vía API con un máximo comercial global de
+  **3 Dispositivos por Cuenta**, indistintamente del tipo informado después por SENSA.
+- Protección de la capacidad no vendida de las Cuentas compartidas mediante Dispositivos de
+  reserva técnicos, con MAC unicast administrada localmente y sin Cliente Final asociado.
+  **[Superado — ver nota abajo]**
 - Generación automática del identificador tipo DNI exigido por SENSA para cada Cuenta nueva (número
   inicial parametrizable por el Operador Principal, incremento ante colisión) y del correo de
   contacto asociado (ver `03_Reglas_de_Negocio.md`, sección 2).
-- Alta de dispositivos por parte de la Empresa Revendedora, asociados a Cliente Final y a Cuenta,
-  incluyendo alta de un Dispositivo adicional a un Cliente Final ya existente, con migración
-  automática de Cuenta si la actual no tiene capacidad.
-- **Baja definitiva de Cliente Final**, con liberación del Dispositivo y **reasignación permitida**
-  a un Cliente Final nuevo dentro de esta misma etapa.
+- Alta de Dispositivos sin solicitar tipo ni MAC en el formulario: SENSA informa ID, MAC y tipo al
+  primer login y el sistema los detecta durante una ventana inicial de 10 minutos, con sondeo cada
+  30 segundos. En una venta unitaria, un candidato se vincula y varios dejan el alta ambigua; una
+  Cuenta completa puede vincular hasta 3 candidatos al mismo Cliente Final.
+- Alta de un Dispositivo adicional para un Cliente Final ya existente: si su Cuenta alcanzó el
+  máximo global de 3, la venta adicional usa otra Cuenta compatible; nunca se intentan migrar
+  cuatro Dispositivos a una sola Cuenta.
+- **Baja definitiva de Cliente Final**, con liberación de capacidad comercial para una venta
+  posterior dentro de esta misma etapa.
 - **Suspensión de Cliente Final**, con bloqueo del Dispositivo liberado (no reasignable mientras
-  dure la suspensión). La única vía para habilitar la reasignación es la transición explícita de
-  "suspendido" a "baja definitiva" (ver `03_Reglas_de_Negocio.md`, sección 3).
+  dure la suspensión). La única vía para liberar esa capacidad comercial a otra venta es la
+  transición explícita de "suspendido" a "baja definitiva" (ver
+  `03_Reglas_de_Negocio.md`, sección 3).
 - Vista por Cuenta y vista por Cliente en el panel de la Empresa Revendedora (usuario, contraseña,
   PIN, parametrización de contenido y relacionados — ver `03_Reglas_de_Negocio.md`, sección 8).
 - Modo claro y modo oscuro en toda la interfaz.
@@ -114,7 +123,8 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
   desde el celular) — panel completamente separado del de Operador Principal, ya que administra
   a las Empresas Revendedoras.
 - **Alta de Cliente Final:** implementada como **wizard** (asistente paso a paso), no un formulario
-  único.
+  único. En la venta unitaria permite elegir servicios, con el servicio básico código 1 siempre
+  incluido; la Cuenta completa recibe todos los servicios contratados.
 - Aislamiento multi-tenant total entre Empresas Revendedoras (identificación por ID para soporte,
   sin acceso a datos sensibles entre sí; tampoco la Empresa Revendedora ve datos del Operador
   Principal).
@@ -137,11 +147,19 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
 - **Panel de salud de la integración con SENSA** en el dashboard del Operador Principal (llamadas
   exitosas/fallidas recientes, cola de reintentos pendientes de BullMQ — ver
   `04_Esqueleto_Tecnico_Inicial.md`, sección 5).
-- **Alerta de Cuenta cerca del tope** (3 fijos + 3 móviles) en el panel de la Empresa Revendedora,
-  para anticipar que el próximo alta va a requerir una Cuenta nueva.
+- **Alerta de Cuenta cerca del tope global** (2 de 3 ventas/Dispositivos comerciales, sin contar
+  reservas técnicas) en el panel de la Empresa Revendedora, para anticipar que una venta adicional
+  puede requerir otra Cuenta compatible.
 - **Exportación a CSV** de Clientes Finales y Dispositivos, disponible para la Empresa Revendedora,
   para facilitar la conciliación con su propio CRM/facturación externa (campo `id_gestion_externo`
   ya contemplado en el modelo de datos).
+
+**Nota sobre puntos superados de este listado:** el mecanismo de "Dispositivos de reserva técnicos"
+(marcado arriba) fue reemplazado por los contadores nativos de SENSA
+(`auto_provision_count_mobile`/`auto_provision_count_stationary`), que IPTVControl sincroniza con la
+cantidad de ventas activas de cada Cuenta. Además, el tope por venta unitaria pasó de "exactamente 1
+Dispositivo" a "hasta 1 fijo + 1 móvil", y la Cuenta exclusiva pasó de un máximo global de 3 a hasta
+3 fijos + 3 móviles (6 en total). Detalle completo y vigente en `03_Reglas_de_Negocio.md`, sección 2.
 
 **Explícitamente fuera de alcance (primera etapa):**
 - Facturación y cobranza (el sistema no emite ni gestiona pagos).
@@ -156,8 +174,8 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
   `04_Esqueleto_Tecnico_Inicial.md`, sección 8).
 
 **Riesgo de negocio aceptado (no bloqueante, ver `03_Reglas_de_Negocio.md`, sección 6):**
-La reasignación del Dispositivo tras una baja definitiva no rota la contraseña de la Cuenta —
-el Cliente Final nuevo recibe las mismas credenciales que tenía el cliente saliente, y los demás
+Una nueva venta unitaria dentro de una Cuenta compartida no rota la contraseña de la Cuenta: el
+Cliente Final nuevo recibe las mismas credenciales que tenía el cliente saliente, y los demás
 Clientes Finales activos de esa Cuenta no son notificados. **Esta es una decisión de negocio ya
 tomada por Bruno**, como parte del trade-off para lograr mayor rentabilidad operativa, no una
 pregunta abierta.

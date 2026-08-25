@@ -96,14 +96,14 @@ export class CryptoService {
    * Contraseña numérica para una Cuenta en SENSA.
    * La API exige sólo dígitos, longitud entre 8 y 20 (ver Add User).
    */
-  generarPasswordNumerica(longitud = 10): string {
+  generarPasswordNumerica(longitud = 8): string {
     return this.digitosAleatorios(Math.min(Math.max(longitud, 8), 20));
   }
 
   /**
    * PIN de control parental. La API exige entre 4 y 8 dígitos numéricos.
    */
-  generarPinNumerico(longitud = 4): string {
+  generarPinNumerico(longitud = 6): string {
     return this.digitosAleatorios(Math.min(Math.max(longitud, 4), 8));
   }
 

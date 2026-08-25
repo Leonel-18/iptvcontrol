@@ -108,19 +108,34 @@ Comandos habituales:
 
 ## Herramientas de contexto: Graphify y el vault de Obsidian
 
-**Graphify** mantiene un knowledge graph del repo en `graphify-out/`. Sirve para navegar el código sin
-leer archivos completos, que es la forma barata de trabajar cuando el repo ya es grande:
+**Graphify** mantiene un knowledge graph del repo en `graphify-out/`. Es la herramienta
+**por defecto** para entender el código en este repo — antes de leer archivos completos a mano o
+salir a buscar con grep a ciegas, conviene consultar el grafo primero:
 
 ```bash
 graphify update .                          # reconstruir tras cambios de código
-graphify query "alta de Cliente Final"     # recorrido por el grafo
-graphify explain "SensaAdapter"            # explicación de un nodo y sus vecinos
-graphify affected "capacidad.util"         # qué se rompe si toco esto
+graphify query "alta de Cliente Final"     # recorrido por el grafo (flujos, conceptos)
+graphify explain "SensaAdapter"            # explicación de un nodo y sus vecinos directos
+graphify affected "capacidad.util"         # qué le pega si toco este símbolo/archivo
 ```
 
-Se versionan `graph.json` y `GRAPH_REPORT.md` (son la memoria compartida); `graph.html` y el cache
-quedan fuera del control de versiones. **Después de un cambio de código relevante, correr
-`graphify update .`** para que la próxima sesión arranque con el grafo al día.
+**Uso obligatorio, no solo al final de la tarea:**
+
+- **Antes de orientarse en código desconocido o retomar una sesión**, usar
+  `graphify explain "<Módulo/Clase/Componente>"` o `graphify query "<concepto de negocio>"` en vez
+  de releer archivos completos de punta a punta. Es la forma barata de trabajar en este repo.
+- **Antes de modificar un archivo compartido** (un `*.util.ts`, una interfaz, un servicio con
+  varios consumidores — ej. `capacidad.util.ts`, `ProveedorAdapter`, `DispositivosService`), correr
+  `graphify affected "<símbolo>"` para no dejar afuera un caller del radar. El caso real que lo
+  justifica: en el rediseño de capacidad (24/08/2026) un caller de `tipoLocal` en
+  `IncidenciasDispositivosService` quedó sin actualizar en la primera pasada porque no se consultó
+  el grafo de dependencias antes de tocar el mapeo de tipos.
+- **Después de un cambio de código relevante**, correr `graphify update .` para que la próxima
+  sesión arranque con el grafo al día — esto ya estaba, sigue vigente.
+- Si el grafo no tiene la respuesta o queda ambiguo, ahí sí corresponde leer el archivo completo o
+  usar el agente `explore` — Graphify es el primer paso, no reemplaza la lectura cuando hace falta
+  precisión línea por línea (ej. antes de un `edit`, siempre se lee el archivo real con la
+  herramienta de lectura, nunca se edita solo en base a lo que dice el grafo).
 
 El comando `graphify install --platform opencode` escribe en la configuración global del usuario
 (fuera del repo) y **no se ejecutó**: si se lo quiere como skill permanente, lo corre el desarrollador
@@ -137,7 +152,7 @@ Documentos que se cargan siempre en cada sesión (ver `opencode.json` → `instr
 - `docs/01_Instrucciones_del_Proyecto.md` — alcance completo del MVP (incluido / fuera de
   alcance), equipo, infraestructura, criterios de respuesta para el agente.
 - `docs/02_Glosario_de_Actores_y_Entidades.md` — nomenclatura oficial de actores y entidades.
-  **No usar la palabra "slot"** — el nombre oficial es "Dispositivo".
+  La unidad oficial es "Dispositivo"; para capacidad libre se usa "cupo".
 - `docs/03_Reglas_de_Negocio.md` — modalidades comerciales, ciclo de vida de Cuenta/Cliente Final,
   aislamiento multi-tenant, manejo de errores de SENSA, Audit Log, exportación CSV.
 - `docs/04_Esqueleto_Tecnico_Inicial.md` — modelo de datos preliminar, patrón `ProveedorAdapter`,

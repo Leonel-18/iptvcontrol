@@ -13,20 +13,30 @@
 export const COLA_PROVEEDOR = 'proveedor-operaciones';
 
 export const TRABAJOS_PROVEEDOR = {
-  /** Reenvía a la parametrización del Proveedor la capacidad que dice la base. */
-  SINCRONIZAR_CAPACIDAD: 'sincronizar_capacidad_cuenta',
   /** Reintenta la eliminación de un dispositivo en el Proveedor. */
   ELIMINAR_DISPOSITIVO: 'eliminar_dispositivo',
   /** Captura por polling los `device_id` de dispositivos auto-provisionados. */
   RECONCILIAR_DISPOSITIVOS: 'reconciliar_dispositivos_cuenta',
+  /** Sondea una solicitud durable durante su ventana de vinculación. */
+  SONDEAR_VINCULACION: 'sondear_vinculacion_dispositivo',
+  /** Recupera solicitudes durables que no tienen un sondeo en cola. */
+  BARRER_VINCULACIONES: 'barrer_vinculaciones_pendientes',
+  /**
+   * Reintenta sincronizar con SENSA los contadores `dispositivos_fijos` /
+   * `dispositivos_moviles` de una Cuenta compartida, a partir de sus ventas
+   * activas reales (docs/03_Reglas_de_Negocio.md, sección 2.2).
+   */
+  SINCRONIZAR_CONTADORES_VENTA: 'sincronizar_contadores_venta',
+  /**
+   * Barrido periódico de todas las Cuentas: detecta Dispositivos que se
+   * auto-provisionaron por fuera de una venta (ej. reproductor web con
+   * credenciales compartidas) sin esperar a que la Empresa Revendedora abra el
+   * botón de sincronización manual. Nunca elimina: sólo deja incidencia.
+   */
+  BARRER_INVENTARIO_CUENTAS: 'barrer_inventario_cuentas',
   /** Reintenta el cierre de una Cuenta en el Proveedor. */
   CERRAR_CUENTA: 'cerrar_cuenta',
 } as const;
-
-export interface DatosSincronizarCapacidad {
-  cuentaId: string;
-  operadorPrincipalId: string;
-}
 
 export interface DatosEliminarDispositivo {
   proveedorDeviceId: string;
@@ -35,6 +45,17 @@ export interface DatosEliminarDispositivo {
 }
 
 export interface DatosReconciliarDispositivos {
+  cuentaId: string;
+  operadorPrincipalId: string;
+}
+
+export interface DatosSondearVinculacion {
+  solicitudId: string;
+  operadorPrincipalId: string;
+  intento: number;
+}
+
+export interface DatosSincronizarContadoresVenta {
   cuentaId: string;
   operadorPrincipalId: string;
 }

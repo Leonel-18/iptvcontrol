@@ -67,12 +67,13 @@ revela de a uno. Es una mitigación de la exposición accidental en pantalla, no
 | Pendiente | Estado en el código |
 |---|---|
 | ¿Límite de reintentos ante identificador repetido, o reintento infinito? | Implementado con **límite configurable** (por defecto 25). Al agotarse corta con error y queda la traza. No reintenta indefinidamente |
+| Validar reservas técnicas y autoprovisión en SENSA | Prueba productiva dedicada **autorizada pero no ejecutada**. Debe confirmar el consumo del límite global y la interacción de los tres campos `auto_provision_count` antes del deploy |
 
 ## 5 · Parametrización — umbrales y validaciones
 
 | Pendiente | Estado en el código |
 |---|---|
-| ¿Umbral de alerta fijo en 2 de 3 o configurable? | Implementado **configurable** desde Configuración, con 2 por defecto |
+| ¿Umbral de alerta fijo en 2 de 3 ventas/Dispositivos comerciales globales o configurable? | Implementado **configurable** desde Configuración, con 2 por defecto; las reservas técnicas no cuentan para el umbral |
 | Formato del CUIT | Implementado como **string de 11 dígitos sin guiones**, validado en el backend, por consistencia con el campo `cuit` de SENSA. **A confirmar** |
 
 ## 6 · Menú de Parametrización

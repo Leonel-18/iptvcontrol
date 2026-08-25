@@ -151,7 +151,10 @@ export const DeviceList = () => {
                     <DeviceTypeBadge tipo={dispositivo.tipo} />
                   </TD>
                   <TD>
-                    <DeviceStatusBadge estado={dispositivo.estado} />
+                    <DeviceStatusBadge
+                      estado={dispositivo.estado}
+                      vinculacion={dispositivo.estado_vinculacion}
+                    />
                   </TD>
                   {!esOperador ? (
                     <TD>

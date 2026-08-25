@@ -25,6 +25,14 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   alta_team_member: 'Alta de miembro del equipo',
   reenvio_invitacion_team_member: 'Reenvío de invitación',
   baja_team_member: 'Baja de miembro del equipo',
+  apertura_vinculacion_dispositivo: 'Apertura de vinculación de Dispositivo',
+  vinculacion_dispositivo: 'Vinculación de Dispositivo',
+  vinculacion_ambigua: 'Vinculación ambigua de Dispositivo',
+  alta_reserva_tecnica: 'Alta de reserva técnica',
+  liberacion_reserva_tecnica: 'Liberación de reserva técnica',
+  deteccion_dispositivo_no_autorizado: 'Detección de Dispositivo no autorizado',
+  resolucion_incidencia_dispositivo: 'Resolución de incidencia de Dispositivo',
+  correccion_vinculacion_dispositivo: 'Corrección de vinculación de Dispositivo',
 };
 
 /**

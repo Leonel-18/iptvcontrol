@@ -57,13 +57,16 @@ interface OpcionesLlamada {
  * Traduce el vocabulario de IPTVControl al de la API de SENSA v4.1.3:
  *
  *   Cuenta                    → "user" de SENSA (identificado por dni/customer_id)
- *   Dispositivo tipo `fijo`    → auto_provision_count_stationary (Android TV,
- *                                Roku, Amazon Fire TV, Apple TV)
- *   Dispositivo tipo `movil`   → auto_provision_count_mobile
- *   (auto_provision_count, los "STB Linux", queda en 0: no se usa en la reventa)
+ *   Capacidad comercial global → se proyecta sobre los tres contadores técnicos
+ *                                 y se protege con reservas de Dispositivo.
  *
  * Nada de esta traducción debe filtrarse hacia la lógica de negocio: si mañana
  * aparece otro Proveedor, este archivo es el único que se reemplaza.
+ *
+ * Nota sobre tipos: el PDF de SENSA documenta `auto_provision_count*` como
+ * "int", pero la API real los valida como string — un número JSON sin
+ * comillas se rechaza con código 707 ("Invalid format"), sin importar el
+ * valor. Por eso estos tres campos se mandan siempre con `String(...)`.
  * =============================================================================
  */
 @Injectable()
@@ -144,10 +147,17 @@ export class SensaAdapter implements ProveedorAdapter {
       password: params.password,
       pin: params.pin,
       services: params.servicios,
-      // Los "STB Linux" no se usan en el modelo de reventa de IPTVControl.
-      auto_provision_count: 0,
-      auto_provision_count_mobile: SensaAdapter.acotarCapacidad(params.dispositivosMoviles, 1),
-      auto_provision_count_stationary: SensaAdapter.acotarCapacidad(params.dispositivosFijos, 0),
+      // IPTVControl aplica un máximo comercial global. Hasta validar en la
+      // Cuenta de prueba cuál de los tres contadores consume cada cliente,
+      // se proyecta el mismo límite a las categorías de SENSA y se bloquea la
+      // capacidad no vendida mediante reservas técnicas.
+      auto_provision_count: String(SensaAdapter.acotarCapacidad(params.limiteDispositivos, 1)),
+      auto_provision_count_mobile: String(
+        SensaAdapter.acotarCapacidad(params.limiteDispositivos, 1),
+      ),
+      auto_provision_count_stationary: String(
+        SensaAdapter.acotarCapacidad(params.limiteDispositivos, 1),
+      ),
       status: 'A',
     };
 
@@ -169,9 +179,19 @@ export class SensaAdapter implements ProveedorAdapter {
     credenciales: CredencialesProveedor,
     params: ActualizarCapacidadParams,
   ): Promise<void> {
+    const limite = params.limiteDispositivos;
     const body: SensaEditUserRequest = {
-      auto_provision_count_mobile: SensaAdapter.acotarCapacidad(params.dispositivosMoviles, 1),
-      auto_provision_count_stationary: SensaAdapter.acotarCapacidad(params.dispositivosFijos, 0),
+      // String por el mismo motivo que en crearCuenta: SENSA rechaza estos
+      // campos con código 707 si llegan como número JSON sin comillas.
+      auto_provision_count_mobile: String(
+        SensaAdapter.acotarCapacidad(params.dispositivosMoviles, 1),
+      ),
+      auto_provision_count_stationary: String(
+        SensaAdapter.acotarCapacidad(params.dispositivosFijos, 0),
+      ),
+      ...(limite === undefined
+        ? {}
+        : { auto_provision_count: String(SensaAdapter.acotarCapacidad(limite, 1)) }),
     };
 
     await this.llamar<SensaUser>(credenciales, {
@@ -513,8 +533,14 @@ export class SensaAdapter implements ProveedorAdapter {
       dni: String(user?.dni ?? params?.dni ?? ''),
       email: user?.email ?? params?.email ?? '',
       servicios: user?.services ?? params?.servicios ?? '',
-      dispositivosFijos: user?.auto_provision_count_stationary ?? params?.dispositivosFijos ?? 0,
-      dispositivosMoviles: user?.auto_provision_count_mobile ?? params?.dispositivosMoviles ?? 0,
+      // SENSA puede devolver los contadores como string o número; se coerciosa
+      // a número porque la capa de negocio los persiste como Int.
+      dispositivosFijos: Number(
+        user?.auto_provision_count_stationary ?? params?.dispositivosFijos ?? 0,
+      ),
+      dispositivosMoviles: Number(
+        user?.auto_provision_count_mobile ?? params?.dispositivosMoviles ?? 0,
+      ),
       activa: estado !== 'I',
     };
   }

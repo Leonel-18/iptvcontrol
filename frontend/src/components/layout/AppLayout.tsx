@@ -260,7 +260,7 @@ export const AppLayout = () => {
 
         <footer className="px-3 pb-5 pt-2 text-center sm:px-5">
           <p className="text-2xs texto-suave">
-            IPTVControl · TECNOLOGIA ACTIVA S.A.S. · Godoy Cruz, Mendoza
+            IPTVControl · Godoy Cruz, Mendoza
           </p>
         </footer>
       </div>

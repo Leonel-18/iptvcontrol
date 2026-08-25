@@ -6,7 +6,7 @@ deriva-de: docs/02_Glosario_de_Actores_y_Entidades.md
 # Glosario de actores y entidades
 
 > Nomenclatura oficial del proyecto. Se usa igual en código, base de datos y documentación.
-> **No usar la palabra "slot":** el nombre oficial es **Dispositivo**.
+> La unidad oficial es **Dispositivo**; para capacidad libre se usa **cupo**.
 
 ## Actores
 
@@ -40,7 +40,7 @@ erDiagram
     OPERADOR_PRINCIPAL ||--o{ EMPRESA_REVENDEDORA : "tiene"
     EMPRESA_REVENDEDORA ||--o{ CUENTA : "tiene"
     EMPRESA_REVENDEDORA ||--o{ CLIENTE_FINAL : "tiene"
-    CUENTA ||--o{ DISPOSITIVO : "aloja hasta 3+3"
+    CUENTA ||--o{ DISPOSITIVO : "aloja hasta 3"
     CLIENTE_FINAL ||--o{ DISPOSITIVO : "usa"
     MODALIDAD_COMERCIAL ||--o{ EMPRESA_REVENDEDORA : "aplica a"
 ```
@@ -50,10 +50,12 @@ erDiagram
 Unidad de contratación entre el Operador Principal y el Proveedor, y **la unidad que se factura**.
 
 - Un usuario, una contraseña y un PIN únicos.
+- Contraseña de exactamente **8 dígitos numéricos** y PIN de **6 dígitos numéricos**.
 - Un identificador tipo **DNI** exigido por SENSA, generado por IPTVControl (no es un DNI real).
 - Un correo de contacto derivado del correo de la Empresa Revendedora.
-- Capacidad: **3 dispositivos fijos + 3 móviles**. Ver [[Capacidad de una Cuenta]].
-- Se crea parametrizada en **1 fijo + 1 móvil** y crece de a un dispositivo por vez.
+- Capacidad comercial máxima global: **3 Dispositivos**, indistintamente del tipo.
+- Una Cuenta completa pertenece a un solo Cliente Final y recibe todos los servicios contratados.
+- Una Cuenta compartida aloja hasta 3 ventas unitarias con idéntica firma de servicios.
 
 ### Dispositivo
 
@@ -62,13 +64,19 @@ Cliente Final dentro de una Cuenta.
 
 - **No tiene precio propio** en el sistema: cuánto le cobra la Empresa Revendedora a su Cliente
   Final se define por fuera de IPTVControl.
-- Se identifica por el **ID que devuelve SENSA** al activarlo.
+- El formulario no pide tipo ni MAC. SENSA reporta ID, MAC y tipo al primer login; IPTVControl los
+  detecta mediante sondeo durante la ventana inicial. Varios candidatos dejan ambigua una venta
+  unitaria; una Cuenta completa puede vincular hasta 3 al mismo Cliente Final.
 - Admite una **nota descriptiva** libre ("TV living"), que es dato interno: no se envía al
   Proveedor y no se expone al Operador Principal.
+- Puede ser una **reserva técnica** sin Cliente Final, con MAC unicast administrada localmente,
+  para proteger un cupo no vendido de una Cuenta compartida.
 
 ### Relación Cuenta – Dispositivo – Cliente Final
 
-Una misma Cuenta puede estar compartida por hasta 6 Clientes Finales, cada uno con su Dispositivo.
+Una Cuenta completa puede vincular hasta 3 Dispositivos al mismo Cliente Final. Una Cuenta
+compartida puede alojar hasta 3 ventas unitarias, cada una para un Cliente Final y exactamente 1
+Dispositivo, siempre que tengan idéntica firma de servicios.
 
 > **Punto crítico:** todos ellos reciben **las mismas credenciales**, sin saberlo entre sí. Ver
 > [[Riesgo aceptado - contraseña compartida]].

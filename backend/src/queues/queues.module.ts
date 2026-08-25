@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ProveedorModule } from '../proveedor/proveedor.module';
+import { CuentasModule } from '../modules/cuentas/cuentas.module';
 import { COLA_PROVEEDOR } from './cola-proveedor.constants';
 import { ColaProveedorProcessor } from './cola-proveedor.processor';
 import { ColaProveedorService } from './cola-proveedor.service';
@@ -31,6 +32,7 @@ import { ColaProveedorService } from './cola-proveedor.service';
     }),
     BullModule.registerQueue({ name: COLA_PROVEEDOR }),
     ProveedorModule,
+    CuentasModule,
   ],
   providers: [ColaProveedorService, ColaProveedorProcessor],
   exports: [ColaProveedorService, BullModule],

@@ -1,11 +1,17 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EstadoCuenta, Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { AccionAuditoria, EntidadAuditada, EstadoCuenta, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { RequestContextService } from '../../common/context/request-context.service';
+import { AuditService } from '../../common/audit/audit.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
-import { calcularCapacidad } from './capacidad.util';
+import { calcularCapacidad, ESTADOS_QUE_OCUPAN } from './capacidad.util';
 import {
   CuentaOperadorDto,
   CuentaRevendedoraDto,
@@ -31,6 +37,7 @@ export class CuentasService {
     private readonly crypto: CryptoService,
     private readonly contexto: RequestContextService,
     private readonly proveedor: ProveedorService,
+    private readonly audit: AuditService,
   ) {}
 
   async listar(
@@ -68,7 +75,7 @@ export class CuentasService {
       this.prisma.db.cuenta.count({ where }),
       this.prisma.db.cuenta.findMany({
         where,
-        include: { dispositivos: { select: { tipo: true, estado: true } } },
+        include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
         orderBy: { creadoEn: 'desc' },
         skip: esCsv ? undefined : query.skip,
         take: esCsv ? undefined : query.take,
@@ -198,6 +205,66 @@ export class CuentasService {
     return { servicios: servicios.servicios, plan: servicios.plan, sincronizada: true };
   }
 
+  /**
+   * Cierra una Cuenta sin uso (ej. creada por error, o que quedó abandonada).
+   *
+   * No se puede cerrar una Cuenta con Dispositivos ocupando lugar: primero hay
+   * que dar de baja a esos Clientes Finales. Si la Cuenta nunca llegó a
+   * confirmarse en el Proveedor (falló el alta a mitad de camino), sólo se
+   * borra la reserva local; si ya tiene `proveedor_cuenta_id`, se cierra
+   * también en SENSA antes de marcarla localmente.
+   */
+  async cerrar(id: string): Promise<{ id: string; estado: EstadoCuenta }> {
+    const cuenta = await this.prisma.db.cuenta.findUnique({
+      where: { id },
+      include: { dispositivos: { select: { estado: true } } },
+    });
+    if (!cuenta) {
+      throw new NotFoundException('La cuenta no existe o no está disponible.');
+    }
+    if (cuenta.estado === EstadoCuenta.cerrada) {
+      throw new BadRequestException('La Cuenta ya está cerrada.');
+    }
+    const tieneDispositivosOcupando = cuenta.dispositivos.some((dispositivo) =>
+      ESTADOS_QUE_OCUPAN.includes(dispositivo.estado),
+    );
+    if (tieneDispositivosOcupando) {
+      throw new BadRequestException(
+        'No se puede cerrar una Cuenta con Dispositivos activos o bloqueados por suspensión. ' +
+          'Dé de baja a esos Clientes Finales primero.',
+      );
+    }
+
+    if (!cuenta.proveedorCuentaId) {
+      // Nunca se confirmó en el Proveedor: no hay nada que cerrar allá.
+      await this.prisma.db.cuenta.delete({ where: { id } });
+      await this.audit.registrar({
+        accion: AccionAuditoria.cierre_cuenta,
+        entidad: EntidadAuditada.Cuenta,
+        entidadId: id,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        detalle: { proveedor_cuenta_id: null, motivo: 'nunca_confirmada_en_proveedor' },
+      });
+      return { id, estado: EstadoCuenta.cerrada };
+    }
+
+    const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
+    await this.proveedor.cerrarCuenta(operadorPrincipalId, cuenta.proveedorCuentaId);
+
+    await this.prisma.db.cuenta.update({
+      where: { id },
+      data: { estado: EstadoCuenta.cerrada },
+    });
+    await this.audit.registrar({
+      accion: AccionAuditoria.cierre_cuenta,
+      entidad: EntidadAuditada.Cuenta,
+      entidadId: id,
+      empresaRevendedoraId: cuenta.empresaRevendedoraId,
+      detalle: { proveedor_cuenta_id: cuenta.proveedorCuentaId },
+    });
+    return { id, estado: EstadoCuenta.cerrada };
+  }
+
   /** Cuentas cerca del tope, para el aviso visual del panel (regla 12). */
   async alertasCapacidad(empresaRevendedoraId?: string) {
     const umbral = await this.umbralAlerta();
@@ -206,20 +273,25 @@ export class CuentasService {
         estado: EstadoCuenta.activa,
         empresaRevendedoraId,
       },
-      include: { dispositivos: { select: { tipo: true, estado: true } } },
+      include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
     });
 
     return cuentas
       .map((cuenta) => ({ cuenta, capacidad: calcularCapacidad(cuenta, umbral) }))
-      .filter(({ capacidad }) => capacidad.fijo.cercaDelTope || capacidad.movil.cercaDelTope)
+      .filter(({ capacidad }) => capacidad.cercaDelTope)
       .map(({ cuenta, capacidad }) => ({
         cuenta_id: cuenta.id,
         proveedor_cuenta_id: cuenta.proveedorCuentaId,
-        fijos: `${capacidad.fijo.ocupados} de 3`,
-        moviles: `${capacidad.movil.ocupados} de 3`,
+        dispositivos: capacidad.esExclusiva
+          ? `${capacidad.ocupados} de ${capacidad.limite}`
+          : `${capacidad.ocupados} de ${capacidad.limite} ventas`,
+        fijos: `${capacidad.fijo.ocupados} de ${capacidad.fijo.limite}`,
+        moviles: `${capacidad.movil.ocupados} de ${capacidad.movil.limite}`,
         completa: capacidad.completa,
         mensaje: capacidad.completa
-          ? 'La cuenta llegó al tope: el próximo alta va a requerir otra cuenta.'
+          ? capacidad.esExclusiva
+            ? 'La Cuenta llegó al límite de 3 fijos y 3 móviles.'
+            : 'La Cuenta llegó al límite de 3 ventas.'
           : 'La cuenta está cerca del tope de capacidad.',
       }));
   }

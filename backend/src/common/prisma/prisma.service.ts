@@ -48,6 +48,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         { emit: 'event', level: 'error' },
       ],
     });
+    // La construcción del cliente RLS necesita la instancia real durante el
+    // constructor, antes de que `db` quede asignada. Se guarda en una variable
+    // de módulo para que `sinContexto` la encuentre (ver getter abajo).
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     clienteVisible = this;
     this.db = this.construirClienteConRls();
   }

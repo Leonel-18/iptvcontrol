@@ -13,8 +13,8 @@ Cada acción sensible queda registrada con **quién** la ejecutó, **cuándo** y
 | Acción | Entidad |
 |---|---|
 | Alta, suspensión, reactivación y baja definitiva de Cliente Final | ClienteFinal |
-| Alta, baja y reasignación de Dispositivo | Dispositivo |
-| Migración de Cuenta | Dispositivo |
+| Alta, baja y resolución de descubrimiento ambiguo | Dispositivo |
+| Liberación y reposición de reservas técnicas | Dispositivo |
 | Alta y cierre de Cuenta | Cuenta |
 | Cambio de modalidad comercial o de escala | EmpresaRevendedora |
 | Cambio de precios | ModalidadComercial |

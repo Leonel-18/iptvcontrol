@@ -52,9 +52,16 @@ export interface SensaAddUserRequest {
   password: string;
   pin: string;
   services: string;
-  auto_provision_count: number;
-  auto_provision_count_mobile: number;
-  auto_provision_count_stationary: number;
+  /**
+   * El PDF los documenta como tipo "int", pero la API de SENSA en producción
+   * los valida como string (rechaza con código 707 "Invalid format" si se
+   * manda un número JSON sin comillas) — confirmado empíricamente contra el
+   * ambiente real. Por eso van tipados `string` acá, aunque representen un
+   * número entre 0/1 y 3.
+   */
+  auto_provision_count: string;
+  auto_provision_count_mobile: string;
+  auto_provision_count_stationary: string;
   vod?: 'Y' | 'N';
   status?: 'A' | 'I';
 }

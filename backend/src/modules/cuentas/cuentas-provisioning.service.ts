@@ -1,13 +1,13 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   AccionAuditoria,
+  ClienteFinal,
   Cuenta,
   EmpresaRevendedora,
   EntidadAuditada,
   EstadoCuenta,
-  TipoDispositivo,
 } from '@prisma/client';
-import { PrismaService, TransactionClient } from '../../common/prisma/prisma.service';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
@@ -18,17 +18,12 @@ import {
   ReintentosDniAgotadosError,
 } from '../../common/errors/proveedor.errors';
 import { IdentificadoresService } from './identificadores.service';
-import {
-  calcularCapacidad,
-  capacidadDe,
-  habilitadosNecesariosParaAlta,
-  habilitadosTrasBaja,
-} from './capacidad.util';
+import { calcularCapacidad, contarVentasActivas, LIMITE_VENTAS_COMPARTIDA } from './capacidad.util';
 
-/** Señal interna: esta Cuenta no puede alojar el Dispositivo pedido. */
+/** Señal interna: esta Cuenta no puede alojar la venta/Dispositivo pedido. */
 export class SinCapacidadEnCuentaError extends Error {
   constructor(readonly cuentaId: string) {
-    super(`La Cuenta ${cuentaId} no tiene lugar disponible para el tipo pedido.`);
+    super(`La Cuenta ${cuentaId} llegó a su límite comercial.`);
     this.name = 'SinCapacidadEnCuentaError';
   }
 }
@@ -38,7 +33,14 @@ export interface CrearCuentaOpciones {
   operadorPrincipalId: string;
   /** true si la Cuenta se crea para un único Cliente Final (cuenta exclusiva). */
   esExclusiva: boolean;
-  /** Capacidad inicial. Por defecto 1 fijo + 1 móvil (arranque mínimo). */
+  clienteFinal?: Pick<ClienteFinal, 'telefono' | 'direccion'>;
+  /** Firma canónica de servicios. */
+  servicios?: string;
+  /**
+   * Proyección técnica inicial de capacidad. Por defecto: 3/3 para una Cuenta
+   * exclusiva (hasta 3 fijos + 3 móviles para su único cliente) y 1/1 para una
+   * Cuenta compartida recién creada (arranca con 1 venta).
+   */
   dispositivosFijos?: number;
   dispositivosMoviles?: number;
 }
@@ -85,20 +87,24 @@ export class CuentasProvisioningService {
   /**
    * Crea una Cuenta nueva en el Proveedor y la registra localmente.
    *
-   * Arranca parametrizada en 1 fijo + 1 móvil (nunca 0+0 ni 3+3 de entrada), tal
-   * como pide la regla 2.1.
+   * Una Cuenta exclusiva arranca con sus tres categorías al tope (3 fijos + 3
+   * móviles) para su único Cliente Final. Una Cuenta compartida arranca en 1/1
+   * (su primera venta); los contadores suben de a uno por cada venta nueva que
+   * se suma, vía `incrementarCapacidadPorNuevaVenta`.
    */
   async crearCuenta(opciones: CrearCuentaOpciones): Promise<Cuenta> {
     const { empresaRevendedora, operadorPrincipalId, esExclusiva } = opciones;
     const config = await this.configuracion.obtener(operadorPrincipalId);
 
-    const dispositivosFijos = opciones.dispositivosFijos ?? 1;
-    const dispositivosMoviles = opciones.dispositivosMoviles ?? 1;
+    const limiteDispositivos = LIMITE_VENTAS_COMPARTIDA;
+    const dispositivosPorDefecto = esExclusiva ? LIMITE_VENTAS_COMPARTIDA : 1;
+    const dispositivosFijos = opciones.dispositivosFijos ?? dispositivosPorDefecto;
+    const dispositivosMoviles = opciones.dispositivosMoviles ?? dispositivosPorDefecto;
 
     // Credenciales de la Cuenta en el Proveedor. SENSA exige contraseña
     // numérica (8-20) y PIN numérico (4-8).
-    const password = this.crypto.generarPasswordNumerica(10);
-    const pin = this.crypto.generarPinNumerico(4);
+    const password = this.crypto.generarPasswordNumerica(8);
+    const pin = this.crypto.generarPinNumerico(6);
 
     // --- Paso 1: reserva local ------------------------------------------------
     const reserva = await this.prisma.transaction(async (tx) => {
@@ -117,7 +123,8 @@ export class CuentasProvisioningService {
           pinCifrado: this.crypto.encrypt(pin),
           emailContacto: email,
           esExclusiva,
-          servicios: config.serviciosPorDefecto,
+          servicios: opciones.servicios ?? config.serviciosPorDefecto,
+          limiteDispositivos,
           dispositivosFijosHabilitados: dispositivosFijos,
           dispositivosMovilesHabilitados: dispositivosMoviles,
           estado: EstadoCuenta.activa,
@@ -145,15 +152,23 @@ export class CuentasProvisioningService {
           email: cuentaActual.emailContacto,
           password,
           pin,
-          nombre: empresaRevendedora.razonSocial,
+          nombre: empresaRevendedora.nombreContacto || empresaRevendedora.razonSocial,
           apellido: empresaRevendedora.apellidoContacto || 'Revendedor',
-          direccion: empresaRevendedora.direccion,
+          direccion: opciones.clienteFinal?.direccion || empresaRevendedora.direccion,
           ciudad: config.ciudadPorDefecto,
-          telefono: empresaRevendedora.telefonoContacto,
+          telefono: opciones.clienteFinal?.telefono || empresaRevendedora.telefonoContacto,
           servicios: cuentaActual.servicios,
+          // El contador genérico de SENSA (`auto_provision_count`, STB) no se
+          // usa como categoría propia del negocio: se manda siempre igual a
+          // fijos/móviles para que los tres contadores avancen en lockstep
+          // (1/1/1 en una Cuenta compartida nueva, 3/3/3 en una exclusiva).
+          limiteDispositivos: dispositivosFijos,
           dispositivosFijos,
           dispositivosMoviles,
-          referenciaExterna: cuentaActual.id.replace(/-/g, '').slice(0, 40),
+          // El external_customer_id debe coincidir con el DNI generado, no con
+          // el UUID interno de la Cuenta: es el identificador que Bruno usa
+          // para cruzar la Cuenta de SENSA con IPTVControl.
+          referenciaExterna: cuentaActual.dniAltaSensa,
         });
 
         // --- Paso 3: confirmación local -------------------------------------
@@ -162,7 +177,10 @@ export class CuentasProvisioningService {
             where: { id: cuentaActual.id },
             data: {
               proveedorCuentaId: cuentaProveedor.proveedorCuentaId,
-              servicios: cuentaProveedor.servicios || cuentaActual.servicios,
+              // La firma canónica siempre es la local: es la que permite
+              // compartir Cuentas por igualdad exacta. El valor de SENSA se
+              // conserva sólo como referencia en el detalle de auditoría.
+              servicios: cuentaActual.servicios,
               dispositivosFijosHabilitados: cuentaProveedor.dispositivosFijos || dispositivosFijos,
               dispositivosMovilesHabilitados:
                 cuentaProveedor.dispositivosMoviles || dispositivosMoviles,
@@ -237,105 +255,79 @@ export class CuentasProvisioningService {
   }
 
   /**
-   * Garantiza que la Cuenta tenga lugar para un Dispositivo más del tipo pedido,
-   * ampliando la parametrización en el Proveedor si hace falta (+1 por vez).
+   * Sube los contadores de una Cuenta compartida ya existente a la cantidad de
+   * ventas activas + 1 (la venta nueva que se está por vincular). Se llama
+   * ANTES de abrir la ventana de vinculación de un Cliente Final nuevo, para
+   * que SENSA admita su primer inicio de sesión.
    *
-   * Devuelve la Cuenta con los contadores actualizados. Lanza
-   * `SinCapacidadEnCuentaError` si la Cuenta ya está en el tope de esa categoría.
+   * No hace nada sobre Cuentas exclusivas: esas ya nacen con sus contadores en
+   * el tope (3/3) y no varían con las bajas/altas de su único cliente.
    */
-  async asegurarCapacidadParaAlta(
+  async incrementarCapacidadPorNuevaVenta(
     cuentaId: string,
-    tipo: TipoDispositivo,
-    operadorPrincipalId: string,
-    umbralAlerta = 2,
-  ): Promise<Cuenta> {
-    const cuenta = await this.prisma.db.cuenta.findUniqueOrThrow({
-      where: { id: cuentaId },
-      include: { dispositivos: { select: { tipo: true, estado: true } } },
-    });
-
-    const capacidad = calcularCapacidad(cuenta, umbralAlerta);
-    const objetivo = habilitadosNecesariosParaAlta(capacidad, tipo);
-
-    if (objetivo === null) {
-      throw new SinCapacidadEnCuentaError(cuentaId);
-    }
-
-    const actuales = capacidadDe(capacidad, tipo).habilitados;
-    if (objetivo === actuales) {
-      // Ya hay un cupo habilitado y sin usar: no se toca el Proveedor.
-      return cuenta;
-    }
-
-    const fijos = tipo === TipoDispositivo.fijo ? objetivo : capacidad.fijo.habilitados;
-    const moviles = tipo === TipoDispositivo.movil ? objetivo : capacidad.movil.habilitados;
-
-    if (!cuenta.proveedorCuentaId) {
-      throw new BadRequestException(
-        'La Cuenta todavía no está confirmada en el proveedor. Intente nuevamente en unos minutos.',
-      );
-    }
-
-    await this.proveedor.actualizarCapacidadDispositivos(operadorPrincipalId, {
-      proveedorCuentaId: cuenta.proveedorCuentaId,
-      dispositivosFijos: fijos,
-      dispositivosMoviles: moviles,
-    });
-
-    return this.prisma.db.cuenta.update({
-      where: { id: cuentaId },
-      data: {
-        dispositivosFijosHabilitados: fijos,
-        dispositivosMovilesHabilitados: moviles,
-      },
-    });
-  }
-
-  /**
-   * Resta 1 dispositivo habilitado de la Cuenta en el Proveedor (lógica inversa
-   * exacta al alta) y actualiza el contador local.
-   *
-   * Se llama DESPUÉS de eliminar el dispositivo en el Proveedor.
-   */
-  async reducirCapacidad(
-    tx: TransactionClient,
-    cuentaId: string,
-    tipo: TipoDispositivo,
     operadorPrincipalId: string,
   ): Promise<void> {
-    const cuenta = await tx.cuenta.findUniqueOrThrow({ where: { id: cuentaId } });
-    const actuales =
-      tipo === TipoDispositivo.fijo
-        ? cuenta.dispositivosFijosHabilitados
-        : cuenta.dispositivosMovilesHabilitados;
-    const objetivo = habilitadosTrasBaja(actuales, tipo);
-
-    if (objetivo === actuales) return;
-
-    const fijos = tipo === TipoDispositivo.fijo ? objetivo : cuenta.dispositivosFijosHabilitados;
-    const moviles =
-      tipo === TipoDispositivo.movil ? objetivo : cuenta.dispositivosMovilesHabilitados;
-
-    if (cuenta.proveedorCuentaId) {
-      await this.proveedor.actualizarCapacidadDispositivos(operadorPrincipalId, {
-        proveedorCuentaId: cuenta.proveedorCuentaId,
-        dispositivosFijos: fijos,
-        dispositivosMoviles: moviles,
-      });
-    }
-
-    await tx.cuenta.update({
+    const cuenta = await this.prisma.db.cuenta.findUniqueOrThrow({
       where: { id: cuentaId },
-      data: {
-        dispositivosFijosHabilitados: fijos,
-        dispositivosMovilesHabilitados: moviles,
-      },
+      include: { dispositivos: { select: { estado: true, clienteFinalId: true } } },
+    });
+    if (cuenta.esExclusiva || !cuenta.proveedorCuentaId) return;
+
+    const ventasActuales = contarVentasActivas(
+      cuenta.dispositivos.map((dispositivo) => ({ ...dispositivo, tipo: null })),
+    );
+    const nuevoValor = Math.min(LIMITE_VENTAS_COMPARTIDA, ventasActuales + 1);
+    await this.aplicarContadoresVenta(cuenta, nuevoValor, operadorPrincipalId);
+  }
+
+  /**
+   * Recalcula los contadores de una Cuenta compartida a partir de sus ventas
+   * activas reales y los sincroniza con el Proveedor si cambiaron. Se llama
+   * DESPUÉS de dar de baja o suspender al último Dispositivo de un Cliente
+   * Final en la Cuenta, para bajar el cupo que SENSA le habilita a esa Cuenta.
+   */
+  async sincronizarContadoresVenta(cuentaId: string, operadorPrincipalId: string): Promise<void> {
+    const cuenta = await this.prisma.db.cuenta.findUniqueOrThrow({
+      where: { id: cuentaId },
+      include: { dispositivos: { select: { estado: true, clienteFinalId: true } } },
+    });
+    if (cuenta.esExclusiva || !cuenta.proveedorCuentaId) return;
+
+    const ventas = contarVentasActivas(
+      cuenta.dispositivos.map((dispositivo) => ({ ...dispositivo, tipo: null })),
+    );
+    // Nunca menos de 1: SENSA exige al menos un dispositivo móvil habilitado
+    // mientras la Cuenta siga activa, aunque momentáneamente no tenga ventas.
+    const nuevoValor = Math.max(1, ventas);
+    if (nuevoValor === cuenta.dispositivosFijosHabilitados) return;
+    await this.aplicarContadoresVenta(cuenta, nuevoValor, operadorPrincipalId);
+  }
+
+  private async aplicarContadoresVenta(
+    cuenta: Pick<Cuenta, 'id' | 'proveedorCuentaId'>,
+    valor: number,
+    operadorPrincipalId: string,
+  ): Promise<void> {
+    if (!cuenta.proveedorCuentaId) return;
+    await this.proveedor.actualizarCapacidadDispositivos(operadorPrincipalId, {
+      proveedorCuentaId: cuenta.proveedorCuentaId,
+      // Los tres contadores de SENSA avanzan siempre juntos (1/1/1 → 2/2/2 →
+      // 3/3/3): `limiteDispositivos` es el genérico (`auto_provision_count`,
+      // STB), sin uso de negocio propio, pero igual debe reflejar la cantidad
+      // de ventas activas para no quedar desincronizado de fijos/móviles.
+      limiteDispositivos: valor,
+      dispositivosFijos: valor,
+      dispositivosMoviles: valor,
+    });
+    await this.prisma.db.cuenta.update({
+      where: { id: cuenta.id },
+      data: { dispositivosFijosHabilitados: valor, dispositivosMovilesHabilitados: valor },
     });
   }
 
   /**
-   * Busca una Cuenta propia de la Empresa Revendedora con lugar para un
-   * Dispositivo del tipo pedido (flujo 4.1, paso 4).
+   * Busca una Cuenta compartida con la misma firma de servicios y lugar para
+   * una venta nueva (menos de 3 ventas activas).
    *
    * Quedan afuera: las Cuentas cerradas y las exclusivas (creadas para un único
    * Cliente Final, no se comparten). Se ordena por antigüedad para ir llenando
@@ -344,32 +336,25 @@ export class CuentasProvisioningService {
    */
   async buscarCuentaConLugar(
     empresaRevendedoraId: string,
-    tipo: TipoDispositivo,
     umbralAlerta = 2,
     excluirCuentaIds: string[] = [],
+    servicios?: string,
   ): Promise<string | null> {
     const candidatas = await this.prisma.db.cuenta.findMany({
       where: {
         empresaRevendedoraId,
         estado: EstadoCuenta.activa,
         esExclusiva: false,
+        servicios,
         id: excluirCuentaIds.length ? { notIn: excluirCuentaIds } : undefined,
       },
-      include: { dispositivos: { select: { tipo: true, estado: true } } },
+      include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
       orderBy: { creadoEn: 'asc' },
     });
 
     for (const candidata of candidatas) {
       const capacidad = calcularCapacidad(candidata, umbralAlerta);
-      const categoria = capacidadDe(capacidad, tipo);
-      // Se prioriza el cupo ya habilitado: es el alta que no requiere tocar la
-      // parametrización en el Proveedor.
-      if (categoria.libres > 0) return candidata.id;
-    }
-
-    for (const candidata of candidatas) {
-      const capacidad = calcularCapacidad(candidata, umbralAlerta);
-      if (capacidadDe(capacidad, tipo).puedeAmpliar) return candidata.id;
+      if (capacidad.libres > 0) return candidata.id;
     }
 
     return null;

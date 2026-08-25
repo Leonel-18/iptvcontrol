@@ -108,7 +108,11 @@ export class TeamMembersService {
     const teamMemberId = this.contexto.teamMemberId;
     if (!teamMemberId) throw new ForbiddenException('Sesión sin Team Member asociado.');
 
-    const miembro = await this.prisma.sinContexto.teamMember.findUniqueOrThrow({
+    // Se usa `this.prisma.db` (NO sinContexto): el guard ya fijó el tenant en el
+    // contexto del request, y la política RLS de `empresa_revendedora` exige ese
+    // contexto para exponer la fila. Con `sinContexto` el include llegaría null
+    // y el panel no mostraría la Empresa Revendedora del reseller.
+    const miembro = await this.prisma.db.teamMember.findUniqueOrThrow({
       where: { id: teamMemberId },
       include: {
         empresaRevendedora: { select: { id: true, razonSocial: true, estado: true } },
@@ -306,7 +310,7 @@ export class TeamMembersService {
     const existente = await this.prisma.sinContexto.teamMember.findUnique({ where: { email } });
     if (existente) {
       throw new BadRequestException(
-        `Ya existe un Team Member con el email ${email}. Use "Reenviar invitación" si hace falta.`,
+        `Ya existe un usuario con el email ${email}. Use "Reenviar invitación" si hace falta.`,
       );
     }
 

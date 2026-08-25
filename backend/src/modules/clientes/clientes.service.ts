@@ -12,6 +12,7 @@ import {
   EntidadAuditada,
   EstadoClienteFinal,
   EstadoDispositivo,
+  EstadoSolicitudVinculacion,
   Prisma,
   TipoAltaClienteFinal,
 } from '@prisma/client';
@@ -22,7 +23,12 @@ import { RequestContextService } from '../../common/context/request-context.serv
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { DispositivosService } from '../dispositivos/dispositivos.service';
 import { IdentificadoresService } from '../cuentas/identificadores.service';
-import { ColaProveedorService } from '../../queues/cola-proveedor.service';
+import { ProveedorService } from '../../proveedor/proveedor.service';
+import {
+  normalizarServicios,
+  serviciosContratados,
+  validarServiciosContratados,
+} from '../../proveedor/servicios.util';
 import { CrearClienteDto } from './dto/crear-cliente.dto';
 import { ActualizarClienteDto, ListarClientesQueryDto } from './dto/listar-clientes.query';
 import { calcularCapacidad } from '../cuentas/capacidad.util';
@@ -65,7 +71,7 @@ export class ClientesService {
     private readonly contexto: RequestContextService,
     private readonly dispositivos: DispositivosService,
     private readonly identificadores: IdentificadoresService,
-    private readonly cola: ColaProveedorService,
+    private readonly proveedor: ProveedorService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -131,7 +137,26 @@ export class ClientesService {
       where: { id },
       include: {
         dispositivos: {
-          include: { cuenta: true },
+          include: {
+            cuenta: true,
+            // Para avisar en el panel que hay una ventana de vinculación en
+            // curso (hasta 10 minutos, sondeo cada 30 s) en vez de dejar que
+            // la Empresa Revendedora se entere sólo por un toast que ya pasó.
+            solicitudesVinculacion: {
+              where: {
+                estado: {
+                  in: [
+                    EstadoSolicitudVinculacion.pendiente,
+                    EstadoSolicitudVinculacion.observando,
+                    EstadoSolicitudVinculacion.ambiguo,
+                  ],
+                },
+              },
+              select: { expiraEn: true, proximoSondeoEn: true },
+              orderBy: { abiertaEn: 'desc' },
+              take: 1,
+            },
+          },
           orderBy: [{ tipo: 'asc' }, { creadoEn: 'asc' }],
         },
       },
@@ -157,6 +182,9 @@ export class ClientesService {
           proveedor_device_id: dispositivo.proveedorDeviceId,
           tipo: dispositivo.tipo,
           estado: dispositivo.estado,
+          ventana_vinculacion: dispositivo.solicitudesVinculacion[0]
+            ? { expira_en: dispositivo.solicitudesVinculacion[0].expiraEn }
+            : null,
         })),
       };
     }
@@ -167,7 +195,7 @@ export class ClientesService {
           ...cuentaPrincipal,
           dispositivos: await this.prisma.db.dispositivo.findMany({
             where: { cuentaId: cuentaPrincipal.id },
-            select: { tipo: true, estado: true },
+            select: { tipo: true, estado: true, clienteFinalId: true },
           }),
         })
       : null;
@@ -187,11 +215,14 @@ export class ClientesService {
             servicios: cuentaPrincipal.servicios,
             servicios_nombres: nombresDeServicios(cuentaPrincipal.servicios),
             es_exclusiva: cuentaPrincipal.esExclusiva,
-            fijos: capacidad ? `${capacidad.fijo.ocupados} de 3` : null,
-            moviles: capacidad ? `${capacidad.movil.ocupados} de 3` : null,
-            cerca_del_tope: capacidad
-              ? capacidad.fijo.cercaDelTope || capacidad.movil.cercaDelTope
-              : false,
+            capacidad: capacidad
+              ? capacidad.esExclusiva
+                ? `${capacidad.ocupados} de ${capacidad.limite}`
+                : `${capacidad.ocupados} de ${capacidad.limite} ventas`
+              : null,
+            fijos: capacidad ? `${capacidad.fijo.ocupados} de ${capacidad.fijo.limite}` : null,
+            moviles: capacidad ? `${capacidad.movil.ocupados} de ${capacidad.movil.limite}` : null,
+            cerca_del_tope: capacidad ? capacidad.cercaDelTope : false,
           }
         : null,
       dispositivos: cliente.dispositivos.map((dispositivo) => ({
@@ -199,10 +230,20 @@ export class ClientesService {
         cuenta_id: dispositivo.cuentaId,
         proveedor_device_id: dispositivo.proveedorDeviceId,
         tipo: dispositivo.tipo,
+        tipo_proveedor: dispositivo.tipoProveedor,
         estado: dispositivo.estado,
+        estado_vinculacion: dispositivo.estadoVinculacion,
         mac: dispositivo.mac,
         nota_descriptiva: dispositivo.notaDescriptiva,
         creado_en: dispositivo.creadoEn,
+        // Ventana de vinculación activa (hasta 10 min, sondeo cada 30 s):
+        // null si ya se vinculó, si venció o si nunca hubo una.
+        ventana_vinculacion: dispositivo.solicitudesVinculacion[0]
+          ? {
+              expira_en: dispositivo.solicitudesVinculacion[0].expiraEn,
+              proximo_sondeo_en: dispositivo.solicitudesVinculacion[0].proximoSondeoEn,
+            }
+          : null,
       })),
     };
   }
@@ -277,22 +318,10 @@ export class ClientesService {
 
     // --- Opción "agrupar": deriva al alta de Dispositivo adicional (flujo 4.4) --
     if (dto.agrupar_en_cliente_id) {
-      const resultado = await this.dispositivos.altaAdicional(
-        dto.agrupar_en_cliente_id,
-        dto.dispositivo.tipo,
-        {
-          mac: dto.dispositivo.mac,
-          notaDescriptiva: dto.dispositivo.nota_descriptiva,
-          operadorPrincipalId,
-        },
-      );
-
-      if (resultado.pendienteDeAutoprovision) {
-        await this.cola.encolarReconciliacion({
-          cuentaId: resultado.cuenta.id,
-          operadorPrincipalId,
-        });
-      }
+      const resultado = await this.dispositivos.altaAdicional(dto.agrupar_en_cliente_id, {
+        notaDescriptiva: dto.dispositivo.nota_descriptiva,
+        operadorPrincipalId,
+      });
 
       return {
         agrupado_en: dto.agrupar_en_cliente_id,
@@ -302,6 +331,13 @@ export class ClientesService {
         dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
       };
     }
+
+    const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
+    const servicios =
+      dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva
+        ? serviciosContratados(licencias)
+        : normalizarServicios(dto.servicios ?? []);
+    validarServiciosContratados(servicios, licencias);
 
     // --- Alta normal ---------------------------------------------------------
     const cliente = await this.prisma.transaction(async (tx) => {
@@ -329,11 +365,10 @@ export class ClientesService {
     try {
       const resultado = await this.dispositivos.alta({
         clienteFinal: cliente,
-        tipo: dto.dispositivo.tipo,
-        mac: dto.dispositivo.mac,
         notaDescriptiva: dto.dispositivo.nota_descriptiva,
         cuentaExclusiva: dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva,
         operadorPrincipalId,
+        servicios,
       });
 
       await this.audit.registrar({
@@ -344,24 +379,18 @@ export class ClientesService {
         detalle: {
           numero_cliente: cliente.numeroCliente,
           tipo_alta: dto.tipo_alta,
-          tipo_dispositivo: dto.dispositivo.tipo,
+          servicios,
           cuenta_id: resultado.cuenta.id,
           cuenta_creada: resultado.cuentaCreada,
           duplicado_confirmado: Boolean(dto.confirmar_duplicado),
         },
       });
 
-      if (resultado.pendienteDeAutoprovision) {
-        await this.cola.encolarReconciliacion({
-          cuentaId: resultado.cuenta.id,
-          operadorPrincipalId,
-        });
-      }
-
       return {
         cliente: await this.obtener(cliente.id),
         cuenta_creada: resultado.cuentaCreada,
         dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
+        solicitud_vinculacion_id: resultado.solicitudVinculacionId,
       };
     } catch (error) {
       // Compensación: si no se pudo activar el Dispositivo, no queda un Cliente
@@ -477,17 +506,9 @@ export class ClientesService {
 
     for (const dispositivo of reservados) {
       await this.dispositivos
-        .reasignar(
-          dispositivo.id,
-          id,
-          operadorPrincipalId,
-          // Se reutiliza la MAC conocida para que el equipo del cliente vuelva a
-          // quedar habilitado tal como estaba.
-          {
-            mac: dispositivo.mac ?? undefined,
-            notaDescriptiva: dispositivo.notaDescriptiva ?? undefined,
-          },
-        )
+        .reasignar(dispositivo.id, id, operadorPrincipalId, {
+          notaDescriptiva: dispositivo.notaDescriptiva ?? undefined,
+        })
         .catch(async (error) => {
           // El Dispositivo estaba reservado, así que la reactivación es un alta
           // sobre su propia Cuenta. Si el Proveedor falla, se informa y se corta.
@@ -606,7 +627,7 @@ export class ClientesService {
    */
   private mapClienteParaOperador(
     cliente: ClienteFinal & {
-      dispositivos: { id: string; tipo: string; estado: string; cuentaId: string }[];
+      dispositivos: { id: string; tipo: string | null; estado: string; cuentaId: string }[];
     },
   ) {
     return {
@@ -633,7 +654,7 @@ export class ClientesService {
 
   private mapCliente(
     cliente: ClienteFinal & {
-      dispositivos: { id: string; tipo: string; estado: string; cuentaId: string }[];
+      dispositivos: { id: string; tipo: string | null; estado: string; cuentaId: string }[];
     },
   ) {
     return {

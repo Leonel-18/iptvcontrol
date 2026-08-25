@@ -46,11 +46,37 @@
 - **Reintento infinito de DNI** (`04_Esqueleto_Tecnico_Inicial.md`, sección 6): si SENSA rechaza
   muchos DNIs consecutivos por "ID (DNI) repetido", ¿hay un límite de reintentos antes de alertar
   al soporte, o el sistema reintenta indefinidamente? Sin definir.
+- **Validación externa de reservas y autoprovisión antes del deploy:** está autorizada una prueba
+  sobre una Cuenta SENSA productiva dedicada, pero todavía no fue ejecutada de forma exhaustiva.
+  Debe confirmar cómo actúan en conjunto `auto_provision_count`, `auto_provision_count_stationary`
+  y `auto_provision_count_mobile`. Esta validación técnica no reabre la decisión de negocio ya
+  confirmada: el máximo comercial es de 3 Dispositivos por Cuenta, indistintamente del tipo.
+- **Confirmado por prueba real de Bruno (21/08/2026): el reproductor web de SENSA (`cloud_client`)
+  no respeta los Dispositivos de reserva.** Con la Cuenta llena de reservas técnicas, iniciar
+  sesión en `player.sensa.com.ar` con las credenciales igual auto-provisiona un Dispositivo nuevo.
+  Conclusión: los tres contadores `auto_provision_count*` **no bloquean** este tipo de sesión — la
+  capacidad reservada evita el alta explícita vía `Create Device` y probablemente los tipos "phone"
+  / "stationary", pero no el reproductor web. **Por lo tanto, las reservas técnicas son una
+  mitigación parcial, no una garantía**, y la defensa real contra "más de 1 Dispositivo en una venta
+  unitaria" es la **detección activa**, no el bloqueo de capacidad:
+  - Botón "Consultar al proveedor" en `/accounts/:id` → pestaña "En el proveedor": trae el
+    inventario real de SENSA bajo pedido y clasifica cada Dispositivo (vendido / reserva técnica /
+    no autorizado). Endpoint `POST /accounts/:id/sync-devices`.
+  - Barrido periódico best-effort (`barrer_inventario_cuentas`, cada 5 minutos, lote al azar por
+    Operador Principal) que hace lo mismo en segundo plano, sin depender de que la Empresa
+    Revendedora abra el botón.
+  - En ambos casos, un Dispositivo no autorizado **nunca se elimina solo**: queda como incidencia
+    pendiente (`IncidenciaDispositivoProveedor`) para revisión manual vía
+    `/device-incidents/:id/resolve`, igual que la vinculación ambigua.
+  - **Sigue pendiente:** decidir si conviene, además, intentar acortar la ventana de exposición
+    (ej. barrido más frecuente para Cuentas compartidas recién vendidas) y si vale la pena
+    investigar con SENSA si existe algún parámetro adicional que sí limite `cloud_client`.
 
 ## 5. Parametrización — umbrales y validaciones
 
 - **Umbral de la alerta de Cuenta cerca del tope** (`03_Reglas_de_Negocio.md`, sección 12): el
-  valor **2 de 3** dispositivos habilitados es un valor inicial sugerido. Falta validar con
+  valor **2 de 3** ventas/Dispositivos comerciales globales, sin contar reservas técnicas, es un
+  valor inicial sugerido. Falta validar con
   Federico si conviene que sea **configurable por el Operador Principal** en una etapa posterior,
   en vez de quedar fijo en el código.
 - **Formato exacto del CUIT de la Empresa Revendedora** (`04_Esqueleto_Tecnico_Inicial.md`,

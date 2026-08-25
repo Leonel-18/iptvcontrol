@@ -61,8 +61,8 @@ técnicos (rutas, componentes, variables). La traducción vive centralizada en
 
 - Sustantivos en plural, inglés genérico, kebab-case si son compuestos.
 - **Anidamiento de un nivel como máximo**: la relación Cuenta → Dispositivo se resuelve con
-  `?account_id=`, no con `/accounts/:id/devices/:id`. Un Dispositivo puede migrar de Cuenta, y con
-  URLs profundas los enlaces guardados se romperían.
+  `?account_id=`, no con `/accounts/:id/devices/:id`. Así los recursos conservan rutas planas y
+  estables aunque un Cliente Final tenga Dispositivos en Cuentas distintas.
 - **Multi-tenancy invisible en la URL**: la misma ruta sirve a los dos paneles.
 - `format=csv` cambia el formato de la respuesta en lugar de exponer una ruta de exportación aparte.
 

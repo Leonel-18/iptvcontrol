@@ -48,7 +48,7 @@ ClienteFinal
 ├── id_gestion_externo (opcional — ID del cliente en el sistema de gestión propio de la Empresa
 │                         Revendedora, para vincular con su CRM/facturación externa; validado
 │                         contra duplicados dentro de la misma Empresa Revendedora al momento del
-│                         alta — ver 03_Reglas_de_Negocio.md, sección 2.4)
+│                         alta — ver 03_Reglas_de_Negocio.md, sección 2.5)
 ├── nombre / datos de contacto
 ├── tipo_alta (ENUM: "cuenta_exclusiva" | "dispositivo_compartido")
 └── estado (activo/suspendido/dado de baja)
@@ -61,19 +61,24 @@ Cuenta
 ├── usuario / password / pin (credenciales de la cuenta en SENSA)
 ├── email_contacto (correo derivado del de la Empresa Revendedora + número creciente — sección 3.2)
 ├── es_exclusiva (boolean — true si fue creada para un único Cliente Final vía "cuenta exclusiva")
-├── dispositivos_fijos_habilitados (0-3, arranca en 1)
-├── dispositivos_moviles_habilitados (0-3, arranca en 1)
+├── firma_servicios (firma canónica; obliga compatibilidad exacta en Cuentas compartidas)
+├── dispositivos_fijos_habilitados (contador nativo de SENSA; exclusiva: fijo en 3; compartida:
+│                                    igual a la cantidad de ventas activas, ver sección 2.2 de
+│                                    03_Reglas_de_Negocio.md)
+├── dispositivos_moviles_habilitados (ídem, para la categoría móvil)
 └── estado (activa/cerrada)
 
 Dispositivo
 ├── id
 ├── cuenta_id (FK)
-├── cliente_final_id (FK, nullable — null cuando el Dispositivo está bloqueado por suspensión y
-│                       no tiene cliente activo asociado)
-├── proveedor_device_id (ID que devuelve SENSA al activar)
-├── tipo (ENUM: "fijo" | "movil")
+├── cliente_final_id (FK, nullable — null cuando está disponible o dado de baja)
+├── proveedor_device_id (ID que SENSA reporta después del primer login)
+├── mac (reportada por SENSA al detectar el primer inicio de sesión)
+├── tipo (informado por SENSA después del primer login; no se pide en el alta)
 ├── nota_descriptiva (texto libre de la Empresa Revendedora, ej. "TV living" — no se envía a SENSA)
-└── estado (ENUM: "activo" | "bloqueado_por_suspension" | "disponible" | "dado_de_baja")
+└── estado (ENUM: "pendiente" | "activo" | "bloqueado_por_suspension" | "disponible" |
+            "dado_de_baja"; la ambigüedad de vinculación vive en la Solicitud de
+            Vinculación / Incidencia de Dispositivo, no en este estado)
 
 TeamMember (login con permisos — ver 02_Glosario, sección "Team Member")
 ├── id
@@ -90,7 +95,7 @@ TeamMember (login con permisos — ver 02_Glosario, sección "Team Member")
 AuditLog (registro de auditoría — ver 03_Reglas_de_Negocio, sección 11)
 ├── id
 ├── team_member_id (FK — quién ejecutó la acción)
-├── accion (ENUM: "alta_cliente" | "suspension_cliente" | "baja_cliente" | "reasignacion_dispositivo"
+├── accion (ENUM: "alta_cliente" | "suspension_cliente" | "baja_cliente" | "alta_dispositivo"
 │           | "cambio_modalidad_comercial" | "cambio_precio" | "alta_empresa_revendedora"
 │           | "cambio_configuracion_proveedor" | ...)
 ├── entidad_afectada (ENUM: "ClienteFinal" | "Dispositivo" | "Cuenta" | "EmpresaRevendedora" | "ModalidadComercial")
@@ -136,11 +141,13 @@ integración es por consulta activa (polling) desde IPTVControl.
 
 - Un **Operador Principal** tiene muchas **Empresas Revendedoras**.
 - Una **Empresa Revendedora** tiene muchos **Clientes Finales** y muchas **Cuentas**.
-- Una **Cuenta** tiene hasta 6 **Dispositivos** (máx. 3 fijos + 3 móviles).
+- Una **Cuenta** exclusiva admite hasta 3 fijos + 3 móviles para su único Cliente Final; una Cuenta
+  compartida admite hasta 3 ventas, cada una con hasta 1 fijo + 1 móvil.
 - Un **Dispositivo** pertenece a una única **Cuenta**, y a un único **Cliente Final** mientras esté
   activo (puede quedar sin Cliente Final asociado si está bloqueado por suspensión).
-- Un **Cliente Final** puede tener uno o más **Dispositivos**, incluso en **Cuentas distintas** si
-  tuvo que migrar de Cuenta por falta de capacidad (ver sección 4.4).
+- Un **Cliente Final** puede tener uno o más **Dispositivos**, incluso en **Cuentas distintas**. Si
+  una Cuenta llega a su tope (ventas o categoría según el modo), una venta adicional usa otra Cuenta
+  compatible (ver sección 4.4).
 - Un **Team Member** pertenece a un único tenant: **o bien** a un Operador Principal, **o bien** a
   una Empresa Revendedora — nunca a ambos. Un Operador Principal o una Empresa Revendedora pueden
   tener uno o más Team Members (en el MVP, una Empresa Revendedora tiene como máximo uno).
@@ -177,6 +184,11 @@ contacto**. Como IPTVControl no gestiona DNIs reales de personas físicas, ambos
   al usuario final (ver flujo 4.1).
 - **Correo de contacto:** `email_contacto` de la Empresa Revendedora + un número creciente antes
   de la arroba (ej. `contacto1@isp.com`, `contacto2@isp.com`, ...).
+- **Credenciales:** contraseña de exactamente 8 dígitos numéricos y PIN de exactamente 6 dígitos
+  numéricos.
+- **Datos personales:** SENSA recibe nombre y apellido del contacto de la Empresa Revendedora;
+  teléfono y dirección del Cliente Final con fallback a los datos de la empresa. El nombre real del
+  Cliente Final y `id_gestion_externo` permanecen locales.
 
 ## 4. Flujos principales (a diagramar en Mermaid en la documentación Obsidian)
 
@@ -187,50 +199,70 @@ contacto**. Como IPTVControl no gestiona DNIs reales de personas físicas, ambos
    Final activo con ese mismo ID dentro de la misma Empresa Revendedora. Si hay coincidencia,
    muestra una advertencia con dos opciones: **agrupar** (deriva al flujo 4.4, alta de Dispositivo
    adicional para el Cliente Final ya existente) o **crear de todos modos** (continúa el flujo
-   normal como Cliente Final nuevo e independiente) — ver `03_Reglas_de_Negocio.md`, sección 2.4.
-3. **Si es `cuenta_exclusiva`:** el sistema salta directo al paso 5 (crear Cuenta nueva), sin
-   buscar Cuentas existentes.
-4. **Si es `dispositivo_compartido`:** el sistema busca una Cuenta propia de esa Empresa
-   Revendedora con Dispositivo disponible del tipo requerido (fijo/móvil). Si existe → API a
-   SENSA: actualizar parametrización +1 dispositivo, y continuar en el paso 6.
-5. Si no hay Cuenta disponible (o el método es `cuenta_exclusiva`) → generar `dni_alta_sensa`
-   (ver 3.1) → API a SENSA: crear Cuenta nueva (1 fijo + 1 móvil, con `email_contacto` generado).
-   Si SENSA responde "DNI repetido" → incrementar DNI y reintentar este paso.
-6. API a SENSA: activar el dispositivo correspondiente.
-7. SENSA devuelve `proveedor_device_id` → se guarda y se vincula Dispositivo ↔ Cliente Final ↔
-   Cuenta.
-8. Si la API falla en cualquier paso (fuera del caso "DNI repetido", que se maneja internamente)
+   normal como Cliente Final nuevo e independiente) — ver `03_Reglas_de_Negocio.md`, sección 2.5.
+3. El wizard no pide tipo ni MAC. Si es `dispositivo_compartido`, permite elegir servicios y agrega
+   siempre el básico código 1; después calcula la firma canónica.
+4. **Si es `cuenta_exclusiva`:** crea una Cuenta nueva para ese único Cliente Final, con todos los
+   servicios contratados y capacidad comercial de hasta 3 fijos + 3 móviles.
+5. **Si es `dispositivo_compartido`:** busca una Cuenta propia con menos de 3 ventas y firma de
+   servicios idéntica. Si existe, sube los contadores `dispositivos_fijos`/`dispositivos_moviles`
+   de SENSA a la cantidad de ventas + 1 antes de abrir la ventana; si no, crea una Cuenta nueva
+   (arranca en 1/1).
+6. Al crear Cuenta, genera `dni_alta_sensa` y `email_contacto` (ver 3.1). Si SENSA responde "DNI
+   repetido", incrementa el DNI y reintenta.
+7. Toma una instantánea de Dispositivos, abre una ventana de 10 minutos y consulta a SENSA cada 30
+   segundos desde el primer login. En una venta unitaria, se pueden vincular hasta 1 candidato fijo
+   + 1 candidato móvil al mismo Cliente Final; en Cuenta completa, hasta 3 fijos + 3 móviles.
+8. Si vence la ventana de una venta nueva sin ningún candidato, el Dispositivo vuelve a `disponible`
+   y el contador de SENSA se resincroniza contra las ventas activas reales (baja solo).
+9. Si la API falla en cualquier paso (fuera del caso "DNI repetido", que se maneja internamente)
    → notificación al usuario ("sistema congestionado...") sin dejar estado inconsistente en la
    base local.
 
+**Detección activa de Dispositivos no autorizados (confirmado 21/08/2026):** los contadores del
+paso 5 no bloquean un inicio de sesión por el reproductor web de SENSA (`cloud_client`), que
+auto-provisiona igual un Dispositivo nuevo aunque la Cuenta esté al tope de sus contadores. La
+defensa real es comparar activamente el inventario de SENSA contra lo vendido:
+
+- `POST /accounts/:id/sync-devices` — bajo pedido, desde la pestaña "En el proveedor" de la vista
+  de Cuenta. Clasifica cada Dispositivo reportado por SENSA como `vinculado` o `desconocido`.
+- Job repetible `barrer_inventario_cuentas` (cada 5 minutos, lote al azar por Operador Principal) —
+  hace lo mismo en segundo plano, sin depender de que la Empresa Revendedora abra el botón.
+- Un Dispositivo `desconocido` nunca se elimina solo: queda como `IncidenciaDispositivoProveedor`
+  pendiente, resuelta manualmente por la Empresa Revendedora vía
+  `POST /device-incidents/:id/resolve` (eliminarlo, o vincularlo si corresponde a una vinculación
+  ambigua en curso).
+
 ### 4.2. Baja definitiva de Cliente Final
 1. Empresa Revendedora marca la baja definitiva del Cliente Final.
-2. Sistema elimina el/los Dispositivo(s) asociados y actualiza vía API la parametrización de la
-   Cuenta en SENSA, restando 1 dispositivo habilitado por cada uno (lógica inversa exacta al alta).
-3. El/los Dispositivo(s) pasan a estado `disponible` — **quedan liberados y disponibles** para
-   asignarse a un Cliente Final nuevo, siguiendo el flujo 4.1 normal (búsqueda de Cuenta con
-   Dispositivo disponible, o creación de Cuenta nueva si corresponde).
+2. Sistema elimina el/los Dispositivo(s) asociados en SENSA y los marca como dados de baja
+   localmente; nunca reutiliza su MAC ni los reasigna por una colisión.
+3. En una Cuenta compartida, si ese Cliente Final se queda sin Dispositivos, los contadores de SENSA
+   se sincronizan hacia abajo contra las ventas activas reales (nunca por debajo de 1).
 
 ### 4.3. Suspensión de Cliente Final
 1. Empresa Revendedora marca la suspensión del Cliente Final.
-2. Sistema elimina el/los Dispositivo(s) asociados y resta 1 dispositivo habilitado en la Cuenta
-   vía API a SENSA (mismo mecanismo que la baja).
+2. Sistema elimina el/los Dispositivo(s) asociados en SENSA y conserva bloqueada su capacidad
+   comercial para el mismo Cliente Final.
 3. El/los Dispositivo(s) pasan a estado `bloqueado_por_suspension` — **no** se ofrecen en el flujo
-   4.1 de búsqueda de Cuenta disponible mientras estén en este estado.
-4. **Única salida de este estado:** que la Empresa Revendedora ejecute la transición explícita de
-   "suspendido" a "baja definitiva" sobre ese Cliente Final (dispara el flujo 4.2, y recién ahí el
-   Dispositivo pasa a `disponible`).
+   4.1 de búsqueda de Cuenta disponible mientras estén en este estado (siguen contando como venta
+   activa a efectos de los contadores de SENSA).
+4. **Única salida de este estado:** que la Empresa Revendedora reactive al Cliente Final o ejecute
+   la transición explícita a "baja definitiva"; recién entonces se libera la capacidad comercial y,
+   en una Cuenta compartida, se sincronizan los contadores hacia abajo si corresponde.
 
-### 4.4. Alta de Dispositivo adicional / migración de Cuenta
+### 4.4. Alta o venta adicional sin migración imposible
 1. Empresa Revendedora pide agregar un Dispositivo adicional a un Cliente Final que ya tiene
    Dispositivo(s) — ya sea de forma manual, o derivado automáticamente del paso 2 del flujo 4.1
    (coincidencia de `id_gestion_externo`, opción "agrupar").
-2. Sistema verifica si la Cuenta actual del Cliente Final tiene lugar disponible del tipo pedido.
-3. Si hay lugar → sigue el flujo normal de alta de Dispositivo (paso 4 del flujo 4.1).
-4. Si **no** hay lugar (Cuenta en tope 3+3) → el sistema debe crear/asignar una **Cuenta nueva**
-   con capacidad suficiente para la cantidad total de Dispositivos del Cliente Final, y **migrar**
-   ahí los Dispositivos existentes de ese cliente (actualizando `cuenta_id` en cada Dispositivo, y
-   la parametrización correspondiente en SENSA para ambas Cuentas).
+2. Si es una Cuenta completa con menos de 3 fijos o menos de 3 móviles para ese cliente, abre el
+   flujo de descubrimiento de la sección 4.1 sin pedir tipo ni MAC.
+3. Si es una venta unitaria y el cliente todavía no completó su par (1 fijo + 1 móvil) en esa misma
+   Cuenta compartida, el Dispositivo adicional se suma ahí mismo, sin crear una venta nueva.
+4. Si la Cuenta exclusiva ya llegó a 3 fijos y 3 móviles, o el cliente de una venta unitaria ya
+   completó su par, el Dispositivo adicional constituye una venta nueva: usa otra Cuenta compatible
+   con la misma firma de servicios o crea una nueva. Los Dispositivos existentes permanecen donde
+   están: nunca se fuerza un cupo imposible en la Cuenta actual.
 
 ### 4.5. Cambio de modalidad comercial o escala
 1. Solo ejecutable por el Operador Principal (no autogestionable por la Empresa Revendedora),
@@ -373,7 +405,8 @@ export class TeamMembersService {
   responsive** — los Revendedores operan mayormente desde el celular.
 - **Alta de Cliente Final:** implementada como **wizard** (asistente paso a paso), no como un
   formulario único, dados los dos métodos de alta (sección 2.1 de `03_Reglas_de_Negocio.md`) y la
-  validación de `id_gestion_externo` (sección 2.4 de `03_Reglas_de_Negocio.md`).
+  validación de `id_gestion_externo` (sección 2.5 de `03_Reglas_de_Negocio.md`). La venta unitaria
+  permite elegir servicios y fuerza el básico código 1; el formulario no solicita tipo ni MAC.
 - **Vista por Cuenta:** usuario, contraseña, PIN, parametrización de contenido, y listado de
   Clientes Finales + Dispositivos relacionados con esa Cuenta.
 - **Vista por Cliente:** usuario, contraseña y PIN de la Cuenta del cliente, parametrización de
@@ -383,7 +416,7 @@ export class TeamMembersService {
   del Cliente Final, y sin `nota_descriptiva`** — ver tabla normativa de campos permitidos en
   `03_Reglas_de_Negocio.md`, sección 4.2.
 - **Alerta de Cuenta cerca del tope:** aviso visual en el panel de la Empresa Revendedora cuando
-  una Cuenta llega a 2 de 3 dispositivos habilitados en alguna categoría (ver
+  una Cuenta llega a 2 de 3 ventas/Dispositivos comerciales globales, sin contar reservas (ver
   `03_Reglas_de_Negocio.md`, sección 12).
 - **Exportación a CSV:** botón en el listado de Clientes Finales y de Dispositivos del panel de la
   Empresa Revendedora (ver `03_Reglas_de_Negocio.md`, sección 13).
@@ -421,6 +454,11 @@ export class TeamMembersService {
 - **Formato exacto del CUIT de la Empresa Revendedora** (sección 1 de este documento): se asumió
   string de 11 dígitos sin guiones, por consistencia con el campo `cuit` que usa SENSA para sus
   "hoteles" — **a confirmar con Federico** si conviene aplicar la misma validación a nivel backend.
+- **Validación externa de reservas y autoprovisión antes del deploy:** ejecutar la prueba ya
+  autorizada en una Cuenta SENSA productiva dedicada para confirmar cómo interactúan
+  `auto_provision_count`, `auto_provision_count_stationary` y `auto_provision_count_mobile`. La
+  prueba todavía no fue ejecutada; no cambia el máximo comercial confirmado de 3 Dispositivos por
+  Cuenta.
 
 ## 7. Pendientes para completar esta documentación
 

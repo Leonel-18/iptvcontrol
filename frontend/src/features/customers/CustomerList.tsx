@@ -28,14 +28,18 @@ export const CustomerList = () => {
   const [params, setParams] = useSearchParams();
 
   const pagina = Number(params.get('page') ?? 1);
-  const estado = params.get('status') ?? '';
+  // Por defecto se muestran sólo los activos: los suspendidos/dados de baja no
+  // tienen por qué aparecer en el día a día, pero se pueden ver eligiendo
+  // "Todos los estados" — no se borran de la base, sólo se filtran (mismo
+  // criterio que /accounts).
+  const estado = params.get('status') ?? 'activo';
   const busqueda = params.get('q') ?? '';
   const accountId = params.get('account_id') ?? '';
 
   const filtros = {
     page: pagina,
     per_page: 25,
-    status: estado || undefined,
+    status: estado === 'todos' ? undefined : estado,
     q: busqueda || undefined,
     account_id: accountId || undefined,
   };
@@ -94,8 +98,8 @@ export const CustomerList = () => {
             />
           ) : null}
           <Select
-            value={estado || 'todos'}
-            onChange={(valor) => actualizar('status', valor === 'todos' ? '' : valor)}
+            value={estado}
+            onChange={(valor) => actualizar('status', valor)}
             className="max-w-44"
             opciones={[
               { value: 'todos', label: 'Todos los estados' },
