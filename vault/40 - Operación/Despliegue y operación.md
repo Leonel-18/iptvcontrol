@@ -1,15 +1,14 @@
 ---
 tags: [operacion, despliegue]
 deriva-de: docs/01_Instrucciones_del_Proyecto.md
-implementado-en: docker-compose.prod.yml · docker/caddy/Caddyfile · backend/Dockerfile · frontend/Dockerfile
+implementado-en: docker-compose.prod.yml · deploy/nginx/iptvcontrol.com.ar.conf · backend/Dockerfile · frontend/Dockerfile
 ---
 
 # Despliegue y operación
 
-VPS propia con **Ubuntu 24.04 LTS AMD64**, Docker Compose y Caddy detrás del proxy de Cloudflare.
-Producción controlada desde el arranque, sin staging separado. Dominio público:
-`https://iptvcontrol.com.ar`; Cloudflare usa Full (strict) contra el certificado de Let's Encrypt
-que Caddy emite y renueva automáticamente.
+VPS propia con **Ubuntu 24.04 LTS AMD64** y Docker Compose detrás del Nginx compartido del host y
+del proxy de Cloudflare. Producción controlada desde el arranque, sin staging separado. Dominio
+público: `https://iptvcontrol.com.ar`; Certbot administra el certificado de Let's Encrypt.
 
 ## Servicios
 
@@ -17,7 +16,7 @@ que Caddy emite y renueva automáticamente.
 graph TB
     CF["Cloudflare<br/>DNS + proxy"]
     subgraph VPS["VPS · Docker Compose"]
-        CADDY["Caddy<br/>HTTPS :80/:443"]
+        HOSTNGINX["Nginx del host<br/>HTTPS :80/:443"]
         NGINX["frontend<br/>Nginx + build de Vite"]
         API["backend<br/>NestJS<br/>:3000"]
         PG[("postgres<br/>PostgreSQL 16")]
@@ -26,9 +25,9 @@ graph TB
     SENSA["API de SENSA"]
     AUTH0["Auth0"]
 
-    CF -->|"HTTPS Full strict"| CADDY
-    CADDY -->|"panel"| NGINX
-    CADDY -->|"/api"| API
+    CF -->|"HTTPS Full strict"| HOSTNGINX
+    HOSTNGINX -->|"127.0.0.1:8080"| NGINX
+    NGINX -->|"/api"| API
     API --> PG
     API --> REDIS
     API -->|"HTTPS"| SENSA

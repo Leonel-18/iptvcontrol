@@ -1,7 +1,7 @@
 # IPTVControl — Despliegue en producción sobre VPS Ubuntu
 
 > Documento operativo para desplegar IPTVControl sobre una **VPS Ubuntu 24.04 LTS AMD64** con
-> Docker Compose y HTTPS administrado por Caddy. Describe **qué existe hoy**, qué
+> Docker Compose detrás del Nginx y Certbot ya instalados en el host. Describe **qué existe hoy**, qué
 > restricciones impone el diseño (RLS, encriptación, Auth0) y qué decisiones siguen abiertas.
 > Cuando este documento y `docs/05_Decisiones_Pendientes.md` difieran en algo, manda el de
 > pendientes como "no decidido".
@@ -24,7 +24,7 @@ el ciclo de vida de **Cuentas / Dispositivos / Clientes Finales** entre un **Ope
   frontend). La suite vigente tiene **119 tests de backend y 23 de frontend**.
 - **Producción confirmada (26/08/2026):** VPS propia con Ubuntu 24.04 LTS, arquitectura AMD64,
   dominio `iptvcontrol.com.ar` administrado y proxied por Cloudflare, base PostgreSQL nueva y
-  HTTPS en origen con Caddy + Let's Encrypt.
+  HTTPS en origen con el Nginx del host + Let's Encrypt/Certbot.
 - **Administradores iniciales:** Bruno es el primer `operator_admin` creado por el seed. Después
   de ingresar, invita a Leonel como segundo `operator_admin` desde `/team-members`.
 - **Repositorio:** `github.com/Leonel-18/iptvcontrol`; producción se despliega desde `main`.
@@ -65,8 +65,8 @@ para `/api/`. Los assets estáticos llevan hash y se cachean 1 año en `frontend
    Swagger no se expone.
 
 La definición de producción es `docker-compose.prod.yml` y se ejecuta de manera independiente del
-Compose local. No incluye pgAdmin ni publica puertos de PostgreSQL, Redis, backend o frontend. El
-único servicio expuesto es Caddy en `80/443`; Caddy envía `/api/*` al backend y el resto al frontend.
+Compose local. No incluye pgAdmin ni publica puertos de PostgreSQL, Redis o backend. El frontend se
+enlaza solamente a `127.0.0.1:8080`; el Nginx existente del host recibe `80/443` y lo proxea.
 
 ---
 
@@ -108,11 +108,13 @@ Valores de referencia actuales (Auth0, públicos y ya usados): Client ID de la S
 3. Dar permisos al archivo: `chmod 600 .env.production`.
 4. Arrancar con
    `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`.
-5. Una sola vez, provisionar el primer Team Member root (arranque en frío):
+5. Reemplazar el placeholder de Nginx por `deploy/nginx/iptvcontrol.com.ar.conf`, validar con
+   `sudo nginx -t` y recargar con `sudo systemctl reload nginx`.
+6. Una sola vez, provisionar el primer Team Member root (arranque en frío):
    `docker compose --env-file .env.production -f docker-compose.prod.yml exec backend npm run seed:root`.
    Si `SEED_ROOT_AUTH0_USER_ID` queda vacío, el seed usa la Management API para crear o encontrar
    a Bruno, completar sus metadatos y mostrar un link de un solo uso para definir la contraseña.
-6. Bruno inicia sesión e invita a Leonel como `operator_admin` desde `/team-members`.
+7. Bruno inicia sesión e invita a Leonel como `operator_admin` desde `/team-members`.
 
 ### 4.2. Actualización de código
 
@@ -135,24 +137,25 @@ Nada de deploy de código: se hace desde el panel (**Configuración → Conexió
 - Dominio público: **`iptvcontrol.com.ar`**.
 - Los nameservers ya delegan en Cloudflare (`dorthy.ns.cloudflare.com` y
   `thomas.ns.cloudflare.com`) y el proxy naranja está activo.
-- El registro `A` de `@` debe apuntar a la IP pública de la VPS. Para la primera emisión del
-  certificado conviene dejarlo temporalmente en **DNS only**, levantar Caddy y comprobar HTTPS;
-  después se vuelve a activar **Proxied**.
-- Caddy escucha en `80/443`, solicita y renueva automáticamente un certificado público de Let's
-  Encrypt. Cloudflare debe usar **SSL/TLS = Full (strict)**; no hace falta instalar un Origin CA.
+- El registro `A` de `@` debe apuntar a la IP pública de la VPS (`38.51.27.217`).
+- El Nginx del host ya escucha en `80/443`; Certbot ya emitió un certificado para
+  `iptvcontrol.com.ar` y `www.iptvcontrol.com.ar`, válido hasta el 24/11/2026.
+- Cloudflare debe usar **SSL/TLS = Full (strict)**. La configuración pendiente en Cloudflare no
+  bloquea levantar y validar la aplicación directamente en `127.0.0.1:8080`.
 - En Cloudflare se activa **Always Use HTTPS** y se crea una regla de caché para omitir `/api/*`.
 - La API usa el mismo dominio bajo `/api`; no requiere un subdominio público.
 
 ### 5.2. VPS y firewall
 
 - Sistema confirmado: Ubuntu 24.04.1 LTS, arquitectura AMD64/x86_64.
-- Exponer únicamente `22/tcp`, `80/tcp`, `443/tcp` y `443/udp` (HTTP/3 opcional).
+- Nginx ya comparte `80/443` con otras aplicaciones de la VPS; Docker no debe intentar ocuparlos.
 - Restringir SSH a las IP autorizadas siempre que sean estables.
-- Después de comprobar el proxy puede restringirse `80/443` a los rangos oficiales de Cloudflare,
-  manteniendo actualizada esa lista. No hacerlo antes de emitir y probar el certificado.
-- PostgreSQL, Redis, backend y frontend no publican puertos en `docker-compose.prod.yml`.
-- Los datos persisten en los volúmenes `postgres_data`, `redis_data`, `caddy_data` y
-  `caddy_config`. Los backups de infraestructura deben incluir PostgreSQL y los secretos externos.
+- UFW permanece pendiente: existen servicios ajenos en `3000`, `8000`, `8443` y `18789`; no debe
+  activarse hasta que infraestructura confirme cuáles necesitan acceso público.
+- PostgreSQL, Redis y backend no publican puertos. El frontend publica sólo
+  `127.0.0.1:8080`, inaccesible directamente desde Internet.
+- Los datos persisten en `postgres_data` y `redis_data`. Los backups deben incluir PostgreSQL y
+  los secretos externos.
 
 ---
 
@@ -192,12 +195,14 @@ Ver el detalle completo en `docs/05_Decisiones_Pendientes.md`. Los que impactan 
 
 - [x] Nameservers de `iptvcontrol.com.ar` delegados en Cloudflare.
 - [ ] Registro DNS `A` de `iptvcontrol.com.ar` apuntando a la IP pública correcta de la VPS.
-- [ ] Cloudflare en DNS only durante el primer certificado; después Proxied + Full (strict).
+- [x] Certificado Let's Encrypt válido instalado en el Nginx del host.
+- [ ] Cloudflare Proxied + Full (strict).
 - [ ] Always Use HTTPS activo y caché omitida para `/api/*`.
-- [ ] VPS Ubuntu 24.04 con Docker y firewall; sólo SSH, 80 y 443 públicos.
+- [x] VPS Ubuntu 24.04 con Docker y Compose activos.
+- [ ] Política de firewall revisada con infraestructura, sin afectar otros servicios de la VPS.
 - [x] `docker-compose.prod.yml` sin pgAdmin ni puertos internos publicados.
 - [ ] `.env.production` completo y con permisos `600`.
-- [ ] Caddy obtiene un certificado válido de Let's Encrypt.
+- [ ] Nginx del host proxea `iptvcontrol.com.ar` hacia `127.0.0.1:8080`.
 - [ ] Auth0: agregar las URLs de callback/logout de producción a la SPA (hoy solo apuntan a
       localhost). Verificar audience.
 - [ ] Arrancar, validar `/api/v1/health` y hacer `seed:root` una sola vez para Bruno.

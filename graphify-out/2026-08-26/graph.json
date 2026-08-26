@@ -513,8 +513,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "backend_package_dependencies_nestjs_platform_express",
-      "community": 94,
-      "community_name": "auth0",
+      "community": 4,
+      "community_name": "dependencies",
       "norm_label": "@nestjs/platform-express"
     },
     {
@@ -524,8 +524,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "nestjs_platform_express",
-      "community": 94,
-      "community_name": "auth0",
+      "community": 4,
+      "community_name": "dependencies",
       "norm_label": "@nestjs/platform-express"
     },
     {
@@ -601,8 +601,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "backend_package_dependencies_auth0",
-      "community": 4,
-      "community_name": "dependencies",
+      "community": 62,
+      "community_name": "sensa.adapter.spec.ts",
       "norm_label": "auth0"
     },
     {
@@ -612,8 +612,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "auth0",
-      "community": 4,
-      "community_name": "dependencies",
+      "community": 62,
+      "community_name": "sensa.adapter.spec.ts",
       "norm_label": "auth0"
     },
     {
@@ -1951,7 +1951,7 @@
       "label": "main()",
       "file_type": "code",
       "source_file": "backend/prisma/seed-root.ts",
-      "source_location": "L101",
+      "source_location": "L115",
       "_origin": "ast",
       "id": "backend_prisma_seed_root_main",
       "community": 76,
@@ -1987,8 +1987,8 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "backend_src_app_module_appmodule",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "appmodule"
     },
     {
@@ -1998,8 +1998,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_app_module_ts_module",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "module"
     },
     {
@@ -2009,8 +2009,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "backend_src_app_module_appmodule_configure",
-      "community": 120,
-      "community_name": "HttpExceptionFilter",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": ".configure()"
     },
     {
@@ -2020,8 +2020,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_module",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "audit.module.ts"
     },
     {
@@ -2031,8 +2031,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_module_auditmodule",
-      "community": 125,
-      "community_name": "AuditModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "auditmodule"
     },
     {
@@ -2042,8 +2042,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_module_ts_global",
-      "community": 125,
-      "community_name": "AuditModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "global"
     },
     {
@@ -2053,8 +2053,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_module_ts_module",
-      "community": 125,
-      "community_name": "AuditModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "module"
     },
     {
@@ -2064,8 +2064,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "audit.service.ts"
     },
     {
@@ -2075,8 +2075,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service_registroauditoria",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "registroauditoria"
     },
     {
@@ -2086,8 +2086,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service_auditservice",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "auditservice"
     },
     {
@@ -2097,8 +2097,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service_ts_injectable",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "injectable"
     },
     {
@@ -2108,8 +2108,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service_auditservice_constructor",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -2119,8 +2119,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service_auditservice_registrarentx",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".registrarentx()"
     },
     {
@@ -2130,8 +2130,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service_auditservice_registrar",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".registrar()"
     },
     {
@@ -2141,8 +2141,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "backend_src_common_audit_audit_service_auditservice_armardata",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".armardata()"
     },
     {
@@ -2317,8 +2317,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_auth_decorators",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 26,
+      "community_name": "csv.util.ts",
       "norm_label": "decorators.ts"
     },
     {
@@ -2339,8 +2339,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "backend_src_common_auth_decorators_roles",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 26,
+      "community_name": "csv.util.ts",
       "norm_label": "roles()"
     },
     {
@@ -2350,8 +2350,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "backend_src_common_auth_decorators_solooperador",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 26,
+      "community_name": "csv.util.ts",
       "norm_label": "solooperador()"
     },
     {
@@ -2372,8 +2372,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "backend_src_common_auth_decorators_currentuser",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 26,
+      "community_name": "csv.util.ts",
       "norm_label": "currentuser"
     },
     {
@@ -2504,8 +2504,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_auth_swagger_guard_spec",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "swagger.guard.spec.ts"
     },
     {
@@ -2515,8 +2515,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_auth_swagger_guard",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "swagger.guard.ts"
     },
     {
@@ -2526,8 +2526,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "backend_src_common_auth_swagger_guard_opcionesswagger",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "opcionesswagger"
     },
     {
@@ -2537,8 +2537,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "backend_src_common_auth_swagger_guard_logger",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "logger"
     },
     {
@@ -2548,8 +2548,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "backend_src_common_auth_swagger_guard_iguales",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "iguales()"
     },
     {
@@ -2559,8 +2559,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "backend_src_common_auth_swagger_guard_crearproteccionswagger",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "crearproteccionswagger()"
     },
     {
@@ -2625,8 +2625,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_config_configuration",
-      "community": 122,
-      "community_name": "configuration.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "configuration.ts"
     },
     {
@@ -2636,8 +2636,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "backend_src_common_config_configuration_appconfig",
-      "community": 122,
-      "community_name": "configuration.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "appconfig"
     },
     {
@@ -2647,8 +2647,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "backend_src_common_config_configuration_toint",
-      "community": 122,
-      "community_name": "configuration.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "toint()"
     },
     {
@@ -2658,8 +2658,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "backend_src_common_config_configuration_configuration",
-      "community": 122,
-      "community_name": "configuration.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "configuration()"
     },
     {
@@ -2669,8 +2669,8 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "backend_src_common_config_configuration_validateconfig",
-      "community": 122,
-      "community_name": "configuration.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "validateconfig()"
     },
     {
@@ -2680,8 +2680,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_context_context_module",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "context.module.ts"
     },
     {
@@ -2691,8 +2691,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "backend_src_common_context_context_module_contextmodule",
-      "community": 126,
-      "community_name": "ContextModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "contextmodule"
     },
     {
@@ -2702,8 +2702,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_context_context_module_ts_global",
-      "community": 126,
-      "community_name": "ContextModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "global"
     },
     {
@@ -2713,8 +2713,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_context_context_module_ts_module",
-      "community": 126,
-      "community_name": "ContextModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "module"
     },
     {
@@ -2724,8 +2724,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_context_request_context_middleware",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "request-context.middleware.ts"
     },
     {
@@ -2779,8 +2779,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_context_request_context_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "request-context.service.ts"
     },
     {
@@ -2790,8 +2790,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "backend_src_common_context_request_context_service_requestcontext",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "requestcontext"
     },
     {
@@ -2900,8 +2900,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_module",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "crypto.module.ts"
     },
     {
@@ -2911,8 +2911,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_module_cryptomodule",
-      "community": 127,
-      "community_name": "CryptoModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "cryptomodule"
     },
     {
@@ -2922,8 +2922,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_module_ts_global",
-      "community": 127,
-      "community_name": "CryptoModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "global"
     },
     {
@@ -2933,8 +2933,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_module_ts_module",
-      "community": 127,
-      "community_name": "CryptoModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "module"
     },
     {
@@ -2944,8 +2944,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_spec",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "crypto.service.spec.ts"
     },
     {
@@ -2955,8 +2955,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "crypto.service.ts"
     },
     {
@@ -2966,8 +2966,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "cryptoservice"
     },
     {
@@ -2977,8 +2977,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_ts_injectable",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "injectable"
     },
     {
@@ -2988,8 +2988,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_constructor",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".constructor()"
     },
     {
@@ -2999,8 +2999,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_encrypt",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".encrypt()"
     },
     {
@@ -3010,8 +3010,8 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_decrypt",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".decrypt()"
     },
     {
@@ -3021,8 +3021,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_trydecrypt",
-      "community": 51,
-      "community_name": ".transaction",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".trydecrypt()"
     },
     {
@@ -3032,8 +3032,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_generarpasswordnumerica",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".generarpasswordnumerica()"
     },
     {
@@ -3043,8 +3043,8 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_generarpinnumerico",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".generarpinnumerico()"
     },
     {
@@ -3054,8 +3054,8 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_comparacionsegura",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".comparacionsegura()"
     },
     {
@@ -3065,8 +3065,8 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "backend_src_common_crypto_crypto_service_cryptoservice_digitosaleatorios",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".digitosaleatorios()"
     },
     {
@@ -3142,8 +3142,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_dto_pagination_dto",
-      "community": 11,
-      "community_name": "PaginationQueryDto",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": "pagination.dto.ts"
     },
     {
@@ -3296,8 +3296,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "backend_src_common_dto_pagination_dto_paginatedresponse_build",
-      "community": 64,
-      "community_name": "CrearTeamMemberDto",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".build()"
     },
     {
@@ -3318,8 +3318,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "backend_src_common_errors_http_exception_filter_httpexceptionfilter",
-      "community": 0,
-      "community_name": "RequestContextService",
+      "community": 55,
+      "community_name": ".consumo",
       "norm_label": "httpexceptionfilter"
     },
     {
@@ -3329,8 +3329,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "catch",
-      "community": 0,
-      "community_name": "RequestContextService",
+      "community": 55,
+      "community_name": ".consumo",
       "norm_label": "catch"
     },
     {
@@ -3340,8 +3340,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "backend_src_common_errors_http_exception_filter_httpexceptionfilter_constructor",
-      "community": 0,
-      "community_name": "RequestContextService",
+      "community": 55,
+      "community_name": ".consumo",
       "norm_label": ".constructor()"
     },
     {
@@ -3351,8 +3351,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "backend_src_common_errors_http_exception_filter_httpexceptionfilter_catch",
-      "community": 0,
-      "community_name": "RequestContextService",
+      "community": 55,
+      "community_name": ".consumo",
       "norm_label": ".catch()"
     },
     {
@@ -3362,8 +3362,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "backend_src_common_errors_http_exception_filter_httpexceptionfilter_traducirprisma",
-      "community": 0,
-      "community_name": "RequestContextService",
+      "community": 55,
+      "community_name": ".consumo",
       "norm_label": ".traducirprisma()"
     },
     {
@@ -3494,8 +3494,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_module",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "prisma.module.ts"
     },
     {
@@ -3505,8 +3505,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_module_prismamodule",
-      "community": 128,
-      "community_name": "PrismaModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "prismamodule"
     },
     {
@@ -3516,8 +3516,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_module_ts_global",
-      "community": 128,
-      "community_name": "PrismaModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "global"
     },
     {
@@ -3527,8 +3527,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_module_ts_module",
-      "community": 128,
-      "community_name": "PrismaModule",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "module"
     },
     {
@@ -3538,8 +3538,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "prisma.service.ts"
     },
     {
@@ -3560,8 +3560,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "prismaservice"
     },
     {
@@ -3571,8 +3571,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_ts_injectable",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "injectable"
     },
     {
@@ -3582,8 +3582,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_constructor",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -3593,8 +3593,8 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_onmoduleinit",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".onmoduleinit()"
     },
     {
@@ -3604,8 +3604,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_onmoduledestroy",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".onmoduledestroy()"
     },
     {
@@ -3615,8 +3615,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_transaction",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".transaction()"
     },
     {
@@ -3637,8 +3637,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_transactioncomotenant",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".transactioncomotenant()"
     },
     {
@@ -3648,8 +3648,8 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_sincontexto",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".sincontexto()"
     },
     {
@@ -3659,8 +3659,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_contextoactual",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".contextoactual()"
     },
     {
@@ -3670,8 +3670,8 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_aplicarcontexto",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".aplicarcontexto()"
     },
     {
@@ -3681,8 +3681,8 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "backend_src_common_prisma_prisma_service_prismaservice_construirclienteconrls",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".construirclienteconrls()"
     },
     {
@@ -3692,8 +3692,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_main",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "main.ts"
     },
     {
@@ -3703,8 +3703,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "backend_src_main_bootstrap",
-      "community": 77,
-      "community_name": "crearProteccionSwagger",
+      "community": 51,
+      "community_name": ".transaction",
       "norm_label": "bootstrap()"
     },
     {
@@ -4341,8 +4341,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_spec",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "clientes.service.spec.ts"
     },
     {
@@ -4352,8 +4352,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "clientes.service.ts"
     },
     {
@@ -4363,8 +4363,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_coincidenciagestionexterna",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "coincidenciagestionexterna"
     },
     {
@@ -4374,8 +4374,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": "clientesservice"
     },
     {
@@ -4385,8 +4385,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_ts_injectable",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": "injectable"
     },
     {
@@ -4396,8 +4396,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_constructor",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -4407,8 +4407,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_listar",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".listar()"
     },
     {
@@ -4418,8 +4418,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_obtener",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".obtener()"
     },
     {
@@ -4429,8 +4429,8 @@
       "source_location": "L257",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_buscarcoincidenciasgestionexterna",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 48,
+      "community_name": "SoloRevendedor",
       "norm_label": ".buscarcoincidenciasgestionexterna()"
     },
     {
@@ -4440,8 +4440,8 @@
       "source_location": "L292",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_crear",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".crear()"
     },
     {
@@ -4462,8 +4462,8 @@
       "source_location": "L437",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_suspender",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".suspender()"
     },
     {
@@ -4473,8 +4473,8 @@
       "source_location": "L492",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_reactivar",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".reactivar()"
     },
     {
@@ -4484,8 +4484,8 @@
       "source_location": "L550",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_dardebaja",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".dardebaja()"
     },
     {
@@ -4495,8 +4495,8 @@
       "source_location": "L605",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_obtenerparatransicion",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".obtenerparatransicion()"
     },
     {
@@ -4506,8 +4506,8 @@
       "source_location": "L628",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_mapclienteparaoperador",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".mapclienteparaoperador()"
     },
     {
@@ -4517,8 +4517,8 @@
       "source_location": "L647",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_contardispositivosocupados",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".contardispositivosocupados()"
     },
     {
@@ -4528,8 +4528,8 @@
       "source_location": "L655",
       "_origin": "ast",
       "id": "backend_src_modules_clientes_clientes_service_clientesservice_mapcliente",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".mapcliente()"
     },
     {
@@ -5001,8 +5001,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_configuracion_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "configuracion.service.ts"
     },
     {
@@ -5034,8 +5034,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_configuracion_service_configuracionservice_constructor",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".constructor()"
     },
     {
@@ -5265,8 +5265,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 26,
+      "community_name": "csv.util.ts",
       "norm_label": "proveedores.controller.ts"
     },
     {
@@ -5276,8 +5276,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_proveedorescontroller",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "proveedorescontroller"
     },
     {
@@ -5287,8 +5287,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_ts_apitags",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "apitags"
     },
     {
@@ -5298,8 +5298,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_ts_controller",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "controller"
     },
     {
@@ -5309,8 +5309,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_ts_get",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "get"
     },
     {
@@ -5320,8 +5320,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_ts_solooperador",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "solooperador"
     },
     {
@@ -5331,8 +5331,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_ts_apioperation",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "apioperation"
     },
     {
@@ -5342,8 +5342,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_ts_post",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "post"
     },
     {
@@ -5353,8 +5353,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_ts_param",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "param"
     },
     {
@@ -5364,8 +5364,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_proveedorescontroller_constructor",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".constructor()"
     },
     {
@@ -5375,8 +5375,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_proveedorescontroller_listar",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".listar()"
     },
     {
@@ -5386,8 +5386,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_proveedorescontroller_catalogo",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".catalogo()"
     },
     {
@@ -5397,8 +5397,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_proveedorescontroller_licencias",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".licencias()"
     },
     {
@@ -5408,8 +5408,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_controller_proveedorescontroller_activar",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".activar()"
     },
     {
@@ -5419,8 +5419,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "proveedores.service.ts"
     },
     {
@@ -5430,8 +5430,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "proveedoresservice"
     },
     {
@@ -5441,8 +5441,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_ts_injectable",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": "injectable"
     },
     {
@@ -5452,8 +5452,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice_constructor",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -5463,8 +5463,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice_listar",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".listar()"
     },
     {
@@ -5474,8 +5474,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice_catalogoservicios",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".catalogoservicios()"
     },
     {
@@ -5485,8 +5485,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice_catalogoserviciosdisponibles",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".catalogoserviciosdisponibles()"
     },
     {
@@ -5496,8 +5496,8 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice_licencias",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".licencias()"
     },
     {
@@ -5507,8 +5507,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice_activar",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".activar()"
     },
     {
@@ -5518,8 +5518,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "backend_src_modules_configuracion_proveedores_service_proveedoresservice_exigiroperador",
-      "community": 30,
-      "community_name": "ActualizarConexionProveedorDto",
+      "community": 12,
+      "community_name": "ProveedorAdapter",
       "norm_label": ".exigiroperador()"
     },
     {
@@ -5672,8 +5672,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service_spec",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "cuentas-provisioning.service.spec.ts"
     },
     {
@@ -5683,8 +5683,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "cuentas-provisioning.service.ts"
     },
     {
@@ -5694,8 +5694,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service_sincapacidadencuentaerror",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "sincapacidadencuentaerror"
     },
     {
@@ -5705,8 +5705,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service_sincapacidadencuentaerror_constructor",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".constructor()"
     },
     {
@@ -5716,8 +5716,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service_crearcuentaopciones",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "crearcuentaopciones"
     },
     {
@@ -5727,8 +5727,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service_cuentasprovisioningservice",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "cuentasprovisioningservice"
     },
     {
@@ -5738,8 +5738,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service_ts_injectable",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "injectable"
     },
     {
@@ -5749,8 +5749,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_provisioning_service_cuentasprovisioningservice_constructor",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".constructor()"
     },
     {
@@ -5936,8 +5936,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_controller_cuentascontroller_constructor",
-      "community": 55,
-      "community_name": ".consumo",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -6200,8 +6200,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_spec",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "cuentas.service.spec.ts"
     },
     {
@@ -6222,8 +6222,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice",
-      "community": 55,
-      "community_name": ".consumo",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": "cuentasservice"
     },
     {
@@ -6233,8 +6233,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_ts_injectable",
-      "community": 55,
-      "community_name": ".consumo",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": "injectable"
     },
     {
@@ -6244,8 +6244,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_constructor",
-      "community": 62,
-      "community_name": "sensa.adapter.spec.ts",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".constructor()"
     },
     {
@@ -6277,8 +6277,8 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_obtenercredenciales",
-      "community": 51,
-      "community_name": ".transaction",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".obtenercredenciales()"
     },
     {
@@ -6288,8 +6288,8 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_sincronizarservicios",
-      "community": 68,
-      "community_name": "clientes.controller.ts",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".sincronizarservicios()"
     },
     {
@@ -6299,8 +6299,8 @@
       "source_location": "L217",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_cerrar",
-      "community": 68,
-      "community_name": "clientes.controller.ts",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".cerrar()"
     },
     {
@@ -6310,8 +6310,8 @@
       "source_location": "L269",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_alertascapacidad",
-      "community": 55,
-      "community_name": ".consumo",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".alertascapacidad()"
     },
     {
@@ -6321,8 +6321,8 @@
       "source_location": "L300",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_umbralalerta",
-      "community": 55,
-      "community_name": ".consumo",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".umbralalerta()"
     },
     {
@@ -6332,8 +6332,8 @@
       "source_location": "L310",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_operadordecuenta",
-      "community": 68,
-      "community_name": "clientes.controller.ts",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".operadordecuenta()"
     },
     {
@@ -6343,8 +6343,8 @@
       "source_location": "L320",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_cuentas_service_cuentasservice_resumirclientes",
-      "community": 55,
-      "community_name": ".consumo",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".resumirclientes()"
     },
     {
@@ -6354,8 +6354,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_dto_listar_cuentas_query",
-      "community": 11,
-      "community_name": "PaginationQueryDto",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": "listar-cuentas.query.ts"
     },
     {
@@ -6552,8 +6552,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_spec",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "inventario-proveedor.service.spec.ts"
     },
     {
@@ -6563,8 +6563,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "inventario-proveedor.service.ts"
     },
     {
@@ -6574,8 +6574,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_clasificaciondispositivoproveedor",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "clasificaciondispositivoproveedor"
     },
     {
@@ -6585,8 +6585,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_dispositivoinventariodto",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "dispositivoinventariodto"
     },
     {
@@ -6596,8 +6596,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_inventarioproveedordto",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "inventarioproveedordto"
     },
     {
@@ -6607,8 +6607,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_inventarioproveedorservice",
-      "community": 121,
-      "community_name": "InventarioProveedorService",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": "inventarioproveedorservice"
     },
     {
@@ -6618,8 +6618,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_ts_injectable",
-      "community": 121,
-      "community_name": "InventarioProveedorService",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": "injectable"
     },
     {
@@ -6629,8 +6629,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_inventarioproveedorservice_constructor",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -6640,8 +6640,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_inventarioproveedorservice_sincronizar",
-      "community": 121,
-      "community_name": "InventarioProveedorService",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".sincronizar()"
     },
     {
@@ -6651,8 +6651,8 @@
       "source_location": "L208",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_inventarioproveedorservice_autocurarincidenciasvinculadas",
-      "community": 121,
-      "community_name": "InventarioProveedorService",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".autocurarincidenciasvinculadas()"
     },
     {
@@ -6662,8 +6662,8 @@
       "source_location": "L252",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_inventarioproveedorservice_registrarincidencia",
-      "community": 121,
-      "community_name": "InventarioProveedorService",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".registrarincidencia()"
     },
     {
@@ -6673,8 +6673,8 @@
       "source_location": "L329",
       "_origin": "ast",
       "id": "backend_src_modules_cuentas_inventario_proveedor_service_inventarioproveedorservice_operadordecuenta",
-      "community": 121,
-      "community_name": "InventarioProveedorService",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".operadordecuenta()"
     },
     {
@@ -6684,8 +6684,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_dashboard_dashboard_controller",
-      "community": 32,
-      "community_name": "ColaProveedorService",
+      "community": 26,
+      "community_name": "csv.util.ts",
       "norm_label": "dashboard.controller.ts"
     },
     {
@@ -6849,8 +6849,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_dashboard_dashboard_service",
-      "community": 32,
-      "community_name": "ColaProveedorService",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "dashboard.service.ts"
     },
     {
@@ -6882,8 +6882,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "backend_src_modules_dashboard_dashboard_service_dashboardservice_constructor",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".constructor()"
     },
     {
@@ -6970,8 +6970,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_query_service_dispositivosqueryservice_constructor",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".constructor()"
     },
     {
@@ -6992,8 +6992,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_query_service_dispositivosqueryservice_obtener",
-      "community": 43,
-      "community_name": "DispositivosController",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": ".obtener()"
     },
     {
@@ -7212,8 +7212,8 @@
       "source_location": "L155",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_controller_dispositivoscontroller_corregirvinculacion",
-      "community": 43,
-      "community_name": "DispositivosController",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".corregirvinculacion()"
     },
     {
@@ -7278,8 +7278,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_spec",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "dispositivos.service.spec.ts"
     },
     {
@@ -7289,8 +7289,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "dispositivos.service.ts"
     },
     {
@@ -7300,8 +7300,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_altadispositivoparams",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "altadispositivoparams"
     },
     {
@@ -7311,8 +7311,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_resultadoaltadispositivo",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "resultadoaltadispositivo"
     },
     {
@@ -7322,8 +7322,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "dispositivosservice"
     },
     {
@@ -7333,8 +7333,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_ts_injectable",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "injectable"
     },
     {
@@ -7344,8 +7344,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_constructor",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -7355,8 +7355,8 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_alta",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".alta()"
     },
     {
@@ -7366,8 +7366,8 @@
       "source_location": "L262",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_corregirvinculacion",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".corregirvinculacion()"
     },
     {
@@ -7377,8 +7377,8 @@
       "source_location": "L369",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_reabrirventana",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".reabrirventana()"
     },
     {
@@ -7388,8 +7388,8 @@
       "source_location": "L444",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_altaadicional",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".altaadicional()"
     },
     {
@@ -7399,8 +7399,8 @@
       "source_location": "L528",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_liberar",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".liberar()"
     },
     {
@@ -7432,8 +7432,8 @@
       "source_location": "L631",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_reasignar",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".reasignar()"
     },
     {
@@ -7443,8 +7443,8 @@
       "source_location": "L669",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_umbralalerta",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".umbralalerta()"
     },
     {
@@ -7454,8 +7454,8 @@
       "source_location": "L677",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dispositivos_service_dispositivosservice_operadorprincipalid",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".operadorprincipalid()"
     },
     {
@@ -7465,8 +7465,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dto_corregir_vinculacion_dto",
-      "community": 118,
-      "community_name": "CorregirVinculacionDto",
+      "community": 54,
+      "community_name": "dispositivos.controller.ts",
       "norm_label": "corregir-vinculacion.dto.ts"
     },
     {
@@ -7476,8 +7476,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dto_corregir_vinculacion_dto_corregirvinculaciondto",
-      "community": 118,
-      "community_name": "CorregirVinculacionDto",
+      "community": 54,
+      "community_name": "dispositivos.controller.ts",
       "norm_label": "corregirvinculaciondto"
     },
     {
@@ -7487,8 +7487,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dto_corregir_vinculacion_dto_ts_apiproperty",
-      "community": 118,
-      "community_name": "CorregirVinculacionDto",
+      "community": 54,
+      "community_name": "dispositivos.controller.ts",
       "norm_label": "apiproperty"
     },
     {
@@ -7498,8 +7498,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dto_corregir_vinculacion_dto_ts_isin",
-      "community": 118,
-      "community_name": "CorregirVinculacionDto",
+      "community": 54,
+      "community_name": "dispositivos.controller.ts",
       "norm_label": "isin"
     },
     {
@@ -7509,8 +7509,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dto_corregir_vinculacion_dto_ts_apipropertyoptional",
-      "community": 118,
-      "community_name": "CorregirVinculacionDto",
+      "community": 54,
+      "community_name": "dispositivos.controller.ts",
       "norm_label": "apipropertyoptional"
     },
     {
@@ -7520,8 +7520,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dto_corregir_vinculacion_dto_ts_isoptional",
-      "community": 118,
-      "community_name": "CorregirVinculacionDto",
+      "community": 54,
+      "community_name": "dispositivos.controller.ts",
       "norm_label": "isoptional"
     },
     {
@@ -7531,8 +7531,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_dto_corregir_vinculacion_dto_ts_isuuid",
-      "community": 118,
-      "community_name": "CorregirVinculacionDto",
+      "community": 54,
+      "community_name": "dispositivos.controller.ts",
       "norm_label": "isuuid"
     },
     {
@@ -7883,8 +7883,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_incidencias_dispositivos_service_spec",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "incidencias-dispositivos.service.spec.ts"
     },
     {
@@ -7894,8 +7894,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_incidencias_dispositivos_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "incidencias-dispositivos.service.ts"
     },
     {
@@ -7905,8 +7905,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_incidencias_dispositivos_service_incidenciasdispositivosservice",
-      "community": 42,
-      "community_name": "Dashboard.tsx",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "incidenciasdispositivosservice"
     },
     {
@@ -7916,8 +7916,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_incidencias_dispositivos_service_ts_injectable",
-      "community": 42,
-      "community_name": "Dashboard.tsx",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "injectable"
     },
     {
@@ -7927,8 +7927,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_incidencias_dispositivos_service_incidenciasdispositivosservice_constructor",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -7949,8 +7949,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_incidencias_dispositivos_service_incidenciasdispositivosservice_resolver",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".resolver()"
     },
     {
@@ -7960,8 +7960,8 @@
       "source_location": "L217",
       "_origin": "ast",
       "id": "backend_src_modules_dispositivos_incidencias_dispositivos_service_incidenciasdispositivosservice_tipolocal",
-      "community": 42,
-      "community_name": "Dashboard.tsx",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".tipolocal()"
     },
     {
@@ -7971,8 +7971,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_health_health_controller",
-      "community": 60,
-      "community_name": "HealthController",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "health.controller.ts"
     },
     {
@@ -8081,8 +8081,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_health_health_module",
-      "community": 129,
-      "community_name": "health.module.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "health.module.ts"
     },
     {
@@ -8092,8 +8092,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "backend_src_modules_health_health_module_healthmodule",
-      "community": 129,
-      "community_name": "health.module.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "healthmodule"
     },
     {
@@ -8103,8 +8103,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_health_health_module_ts_module",
-      "community": 129,
-      "community_name": "health.module.ts",
+      "community": 50,
+      "community_name": "app.module.ts",
       "norm_label": "module"
     },
     {
@@ -8499,8 +8499,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_module",
-      "community": 130,
-      "community_name": "modalidades.module.ts",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": "modalidades.module.ts"
     },
     {
@@ -8510,8 +8510,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_module_modalidadesmodule",
-      "community": 130,
-      "community_name": "modalidades.module.ts",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": "modalidadesmodule"
     },
     {
@@ -8521,8 +8521,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_module_ts_module",
-      "community": 130,
-      "community_name": "modalidades.module.ts",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": "module"
     },
     {
@@ -8532,8 +8532,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": "modalidades.service.ts"
     },
     {
@@ -8543,8 +8543,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_modalidadesservice",
-      "community": 119,
-      "community_name": "ModalidadesService",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": "modalidadesservice"
     },
     {
@@ -8554,8 +8554,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_ts_injectable",
-      "community": 119,
-      "community_name": "ModalidadesService",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": "injectable"
     },
     {
@@ -8565,8 +8565,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_modalidadesservice_constructor",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -8587,8 +8587,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_modalidadesservice_obtener",
-      "community": 119,
-      "community_name": "ModalidadesService",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": ".obtener()"
     },
     {
@@ -8598,8 +8598,8 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_modalidadesservice_crear",
-      "community": 119,
-      "community_name": "ModalidadesService",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": ".crear()"
     },
     {
@@ -8609,8 +8609,8 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_modalidadesservice_actualizar",
-      "community": 119,
-      "community_name": "ModalidadesService",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": ".actualizar()"
     },
     {
@@ -8631,8 +8631,8 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_modalidadesservice_map",
-      "community": 119,
-      "community_name": "ModalidadesService",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": ".map()"
     },
     {
@@ -8642,8 +8642,8 @@
       "source_location": "L253",
       "_origin": "ast",
       "id": "backend_src_modules_modalidades_modalidades_service_modalidadesservice_exigiroperador",
-      "community": 119,
-      "community_name": "ModalidadesService",
+      "community": 33,
+      "community_name": "CrearModalidadDto",
       "norm_label": ".exigiroperador()"
     },
     {
@@ -8829,8 +8829,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_reportes_reportes_service",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "reportes.service.ts"
     },
     {
@@ -8840,8 +8840,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "backend_src_modules_reportes_reportes_service_reportesservice",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": "reportesservice"
     },
     {
@@ -8851,8 +8851,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_modules_reportes_reportes_service_ts_injectable",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": "injectable"
     },
     {
@@ -8862,8 +8862,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "backend_src_modules_reportes_reportes_service_reportesservice_constructor",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -8884,8 +8884,8 @@
       "source_location": "L148",
       "_origin": "ast",
       "id": "backend_src_modules_reportes_reportes_service_reportesservice_licencias",
-      "community": 66,
-      "community_name": "TeamMembersController",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": ".licencias()"
     },
     {
@@ -9357,8 +9357,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "backend_src_modules_revendedoras_revendedoras_service_revendedorasservice_constructor",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -9786,8 +9786,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_modules_team_members_team_members_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": "team-members.service.ts"
     },
     {
@@ -9797,8 +9797,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "backend_src_modules_team_members_team_members_service_resultadoinvitacion",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 64,
+      "community_name": "CrearTeamMemberDto",
       "norm_label": "resultadoinvitacion"
     },
     {
@@ -9830,8 +9830,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "backend_src_modules_team_members_team_members_service_teammembersservice_constructor",
-      "community": 95,
-      "community_name": "eslint-plugin-react-hooks",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -9896,8 +9896,8 @@
       "source_location": "L244",
       "_origin": "ast",
       "id": "backend_src_modules_team_members_team_members_service_teammembersservice_desactivar",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".desactivar()"
     },
     {
@@ -9929,8 +9929,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_proveedor_configuracion_proveedor_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "configuracion-proveedor.service.ts"
     },
     {
@@ -9940,8 +9940,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "backend_src_proveedor_configuracion_proveedor_service_configuracionproveedorresuelta",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "configuracionproveedorresuelta"
     },
     {
@@ -9951,8 +9951,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "backend_src_proveedor_configuracion_proveedor_service_configuracionproveedorservice",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "configuracionproveedorservice"
     },
     {
@@ -9962,8 +9962,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_proveedor_configuracion_proveedor_service_ts_injectable",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "injectable"
     },
     {
@@ -9973,8 +9973,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "backend_src_proveedor_configuracion_proveedor_service_configuracionproveedorservice_constructor",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".constructor()"
     },
     {
@@ -9984,8 +9984,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "backend_src_proveedor_configuracion_proveedor_service_configuracionproveedorservice_obtener",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".obtener()"
     },
     {
@@ -9995,8 +9995,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "backend_src_proveedor_configuracion_proveedor_service_configuracionproveedorservice_obteneropcional",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": ".obteneropcional()"
     },
     {
@@ -10006,8 +10006,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_adapter_interface",
-      "community": 116,
-      "community_name": "ColaProveedorService",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "proveedor-adapter.interface.ts"
     },
     {
@@ -10050,8 +10050,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_adapter_interface_actualizarcapacidadparams",
-      "community": 116,
-      "community_name": "ColaProveedorService",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "actualizarcapacidadparams"
     },
     {
@@ -10061,8 +10061,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_adapter_interface_activardispositivoparams",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "activardispositivoparams"
     },
     {
@@ -10072,8 +10072,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_adapter_interface_dispositivoproveedor",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": "dispositivoproveedor"
     },
     {
@@ -10094,8 +10094,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_adapter_interface_licenciasproveedor",
-      "community": 116,
-      "community_name": "ColaProveedorService",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "licenciasproveedor"
     },
     {
@@ -10105,8 +10105,8 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_adapter_interface_servicioscuenta",
-      "community": 116,
-      "community_name": "ColaProveedorService",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "servicioscuenta"
     },
     {
@@ -10248,8 +10248,8 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_adapter_interface_proveedor_adapters",
-      "community": 116,
-      "community_name": "ColaProveedorService",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "proveedor_adapters"
     },
     {
@@ -10281,8 +10281,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_telemetry_service_proveedortelemetryservice",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": "proveedortelemetryservice"
     },
     {
@@ -10292,8 +10292,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_telemetry_service_ts_injectable",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": "injectable"
     },
     {
@@ -10303,8 +10303,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_telemetry_service_proveedortelemetryservice_constructor",
-      "community": 40,
-      "community_name": "clientes.service.ts",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": ".constructor()"
     },
     {
@@ -10314,8 +10314,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_telemetry_service_proveedortelemetryservice_registrar",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": ".registrar()"
     },
     {
@@ -10358,8 +10358,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "proveedor.service.ts"
     },
     {
@@ -10369,8 +10369,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service_proveedorservice",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": "proveedorservice"
     },
     {
@@ -10380,8 +10380,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service_ts_injectable",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": "injectable"
     },
     {
@@ -10391,8 +10391,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "inject",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": "inject"
     },
     {
@@ -10402,8 +10402,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service_proveedorservice_constructor",
-      "community": 81,
-      "community_name": "sensa.constants.ts",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -10468,8 +10468,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service_proveedorservice_actualizarcapacidaddispositivos",
-      "community": 63,
-      "community_name": "cuentas.mapper.ts",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": ".actualizarcapacidaddispositivos()"
     },
     {
@@ -10479,8 +10479,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service_proveedorservice_activardispositivo",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": ".activardispositivo()"
     },
     {
@@ -10490,8 +10490,8 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service_proveedorservice_eliminardispositivo",
-      "community": 12,
-      "community_name": "ProveedorAdapter",
+      "community": 34,
+      "community_name": "revendedoras.service.ts",
       "norm_label": ".eliminardispositivo()"
     },
     {
@@ -10556,8 +10556,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "backend_src_proveedor_proveedor_service_proveedorservice_consultarlicencias",
-      "community": 66,
-      "community_name": "TeamMembersController",
+      "community": 68,
+      "community_name": "clientes.controller.ts",
       "norm_label": ".consultarlicencias()"
     },
     {
@@ -10578,8 +10578,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "backend_src_proveedor_rate_limiter_service_proveedorratelimiterservice",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": "proveedorratelimiterservice"
     },
     {
@@ -10589,8 +10589,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_proveedor_rate_limiter_service_ts_injectable",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": "injectable"
     },
     {
@@ -10600,8 +10600,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "backend_src_proveedor_rate_limiter_service_proveedorratelimiterservice_constructor",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": ".constructor()"
     },
     {
@@ -10611,8 +10611,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "backend_src_proveedor_rate_limiter_service_proveedorratelimiterservice_ejecutar",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": ".ejecutar()"
     },
     {
@@ -10622,8 +10622,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "backend_src_proveedor_rate_limiter_service_proveedorratelimiterservice_tomarficha",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": ".tomarficha()"
     },
     {
@@ -10633,8 +10633,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "backend_src_proveedor_rate_limiter_service_proveedorratelimiterservice_esperarficha",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": ".esperarficha()"
     },
     {
@@ -10644,8 +10644,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "backend_src_proveedor_rate_limiter_service_proveedorratelimiterservice_reponer",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": ".reponer()"
     },
     {
@@ -10710,8 +10710,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_constructor",
-      "community": 2,
-      "community_name": "sensa.adapter.ts",
+      "community": 24,
+      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
       "norm_label": ".constructor()"
     },
     {
@@ -10732,8 +10732,8 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_consultarlicencias",
-      "community": 116,
-      "community_name": "ColaProveedorService",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": ".consultarlicencias()"
     },
     {
@@ -10776,8 +10776,8 @@
       "source_location": "L225",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_consultarservicios",
-      "community": 116,
-      "community_name": "ColaProveedorService",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": ".consultarservicios()"
     },
     {
@@ -10798,8 +10798,8 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_activardispositivo",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": ".activardispositivo()"
     },
     {
@@ -10809,8 +10809,8 @@
       "source_location": "L304",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_reasignardispositivo",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": ".reasignardispositivo()"
     },
     {
@@ -10831,8 +10831,8 @@
       "source_location": "L342",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_listardispositivos",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": ".listardispositivos()"
     },
     {
@@ -10842,8 +10842,8 @@
       "source_location": "L369",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_llamar",
-      "community": 17,
-      "community_name": "decorators.ts",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": ".llamar()"
     },
     {
@@ -10853,8 +10853,8 @@
       "source_location": "L448",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_construirurl",
-      "community": 17,
-      "community_name": "decorators.ts",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": ".construirurl()"
     },
     {
@@ -10864,8 +10864,8 @@
       "source_location": "L456",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_parsearenvelope",
-      "community": 17,
-      "community_name": "decorators.ts",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": ".parsearenvelope()"
     },
     {
@@ -10875,8 +10875,8 @@
       "source_location": "L478",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_traducircodigo",
-      "community": 84,
-      "community_name": "Auth0ManagementService",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": ".traducircodigo()"
     },
     {
@@ -10908,8 +10908,8 @@
       "source_location": "L548",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_mapeardispositivo",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": ".mapeardispositivo()"
     },
     {
@@ -10963,8 +10963,8 @@
       "source_location": "L609",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_adapter_sensaadapter_normalizarmac",
-      "community": 115,
-      "community_name": "DispositivoProveedor",
+      "community": 17,
+      "community_name": "decorators.ts",
       "norm_label": ".normalizarmac()"
     },
     {
@@ -10985,8 +10985,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_constants",
-      "community": 84,
-      "community_name": "Auth0ManagementService",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": "sensa.constants.ts"
     },
     {
@@ -10996,8 +10996,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_constants_sensa_codigos",
-      "community": 84,
-      "community_name": "Auth0ManagementService",
+      "community": 2,
+      "community_name": "sensa.adapter.ts",
       "norm_label": "sensa_codigos"
     },
     {
@@ -11007,8 +11007,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_constants_codigos_dni_repetido",
-      "community": 84,
-      "community_name": "Auth0ManagementService",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": "codigos_dni_repetido"
     },
     {
@@ -11018,8 +11018,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_constants_codigos_email_repetido",
-      "community": 84,
-      "community_name": "Auth0ManagementService",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": "codigos_email_repetido"
     },
     {
@@ -11029,8 +11029,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_constants_codigos_validacion",
-      "community": 84,
-      "community_name": "Auth0ManagementService",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": "codigos_validacion"
     },
     {
@@ -11040,8 +11040,8 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_constants_codigos_transitorios",
-      "community": 84,
-      "community_name": "Auth0ManagementService",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": "codigos_transitorios"
     },
     {
@@ -11051,8 +11051,8 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_constants_sensa_servicios",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 0,
+      "community_name": "RequestContextService",
       "norm_label": "sensa_servicios"
     },
     {
@@ -11073,8 +11073,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "backend_src_proveedor_sensa_sensa_types_sensaenvelope",
-      "community": 17,
-      "community_name": "decorators.ts",
+      "community": 40,
+      "community_name": "clientes.service.ts",
       "norm_label": "sensaenvelope"
     },
     {
@@ -11172,8 +11172,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_proveedor_servicios_util_spec",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "servicios.util.spec.ts"
     },
     {
@@ -11183,8 +11183,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_proveedor_servicios_util",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "servicios.util.ts"
     },
     {
@@ -11194,8 +11194,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "backend_src_proveedor_servicios_util_normalizarservicios",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "normalizarservicios()"
     },
     {
@@ -11205,8 +11205,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "backend_src_proveedor_servicios_util_servicioscontratados",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "servicioscontratados()"
     },
     {
@@ -11216,8 +11216,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "backend_src_proveedor_servicios_util_validarservicioscontratados",
-      "community": 69,
-      "community_name": "TeamMembersService",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": "validarservicioscontratados()"
     },
     {
@@ -11315,8 +11315,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_queues_cola_proveedor_processor_spec",
-      "community": 24,
-      "community_name": "Instructivo \u2014 Cargar IPTVControl en OpenCode",
+      "community": 10,
+      "community_name": "CryptoService",
       "norm_label": "cola-proveedor.processor.spec.ts"
     },
     {
@@ -11359,8 +11359,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "backend_src_queues_cola_proveedor_processor_colaproveedorprocessor_constructor",
-      "community": 67,
-      "community_name": "RequestContextMiddleware",
+      "community": 63,
+      "community_name": "cuentas.mapper.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -11656,8 +11656,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "backend_src_queues_queues_module",
-      "community": 50,
-      "community_name": "app.module.ts",
+      "community": 32,
+      "community_name": "ColaProveedorService",
       "norm_label": "queues.module.ts"
     },
     {
@@ -11667,8 +11667,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "backend_src_queues_queues_module_queuesmodule",
-      "community": 131,
-      "community_name": "QueuesModule",
+      "community": 32,
+      "community_name": "ColaProveedorService",
       "norm_label": "queuesmodule"
     },
     {
@@ -11678,8 +11678,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_queues_queues_module_ts_global",
-      "community": 131,
-      "community_name": "QueuesModule",
+      "community": 32,
+      "community_name": "ColaProveedorService",
       "norm_label": "global"
     },
     {
@@ -11689,8 +11689,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "backend_src_queues_queues_module_ts_module",
-      "community": 131,
-      "community_name": "QueuesModule",
+      "community": 32,
+      "community_name": "ColaProveedorService",
       "norm_label": "module"
     },
     {
@@ -13028,8 +13028,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "frontend_package_devdependencies_autoprefixer",
-      "community": 105,
-      "community_name": "vite",
+      "community": 61,
+      "community_name": "devDependencies",
       "norm_label": "autoprefixer"
     },
     {
@@ -13039,8 +13039,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "autoprefixer",
-      "community": 105,
-      "community_name": "vite",
+      "community": 61,
+      "community_name": "devDependencies",
       "norm_label": "autoprefixer"
     },
     {
@@ -13072,8 +13072,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "frontend_package_devdependencies_eslint_plugin_react_hooks",
-      "community": 61,
-      "community_name": "devDependencies",
+      "community": 67,
+      "community_name": "RequestContextMiddleware",
       "norm_label": "eslint-plugin-react-hooks"
     },
     {
@@ -13083,8 +13083,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "eslint_plugin_react_hooks",
-      "community": 61,
-      "community_name": "devDependencies",
+      "community": 67,
+      "community_name": "RequestContextMiddleware",
       "norm_label": "eslint-plugin-react-hooks"
     },
     {
@@ -16919,7 +16919,7 @@
       "label": "Configurar Auth0 (paso previo al primer login)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L199",
+      "source_location": "L203",
       "_origin": "ast",
       "id": "readme_configurar_auth0_paso_previo_al_primer_login",
       "community": 72,
@@ -16930,7 +16930,7 @@
       "label": "Comandos habituales",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L225",
+      "source_location": "L229",
       "_origin": "ast",
       "id": "readme_comandos_habituales",
       "community": 72,
@@ -16941,7 +16941,7 @@
       "label": "Variables de entorno",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L243",
+      "source_location": "L247",
       "_origin": "ast",
       "id": "readme_variables_de_entorno",
       "community": 72,
@@ -16952,7 +16952,7 @@
       "label": "Desarrollo sin Docker",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L263",
+      "source_location": "L267",
       "_origin": "ast",
       "id": "readme_desarrollo_sin_docker",
       "community": 72,
@@ -16963,7 +16963,7 @@
       "label": "Aislamiento multi-tenant: c\u00f3mo est\u00e1 garantizado",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L288",
+      "source_location": "L292",
       "_origin": "ast",
       "id": "readme_aislamiento_multi_tenant_c\u00f3mo_est\u00e1_garantizado",
       "community": 72,
@@ -16974,7 +16974,7 @@
       "label": "Convenciones de c\u00f3digo (l\u00e9elo antes de tocar algo)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L316",
+      "source_location": "L320",
       "_origin": "ast",
       "id": "readme_convenciones_de_c\u00f3digo_l\u00e9elo_antes_de_tocar_algo",
       "community": 72,
@@ -16985,7 +16985,7 @@
       "label": "Testing",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L338",
+      "source_location": "L342",
       "_origin": "ast",
       "id": "readme_testing",
       "community": 72,
@@ -16996,7 +16996,7 @@
       "label": "Documentaci\u00f3n",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L354",
+      "source_location": "L358",
       "_origin": "ast",
       "id": "readme_documentaci\u00f3n",
       "community": 72,
@@ -17007,7 +17007,7 @@
       "label": "Preguntas frecuentes (soluci\u00f3n de problemas)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L369",
+      "source_location": "L373",
       "_origin": "ast",
       "id": "readme_preguntas_frecuentes_soluci\u00f3n_de_problemas",
       "community": 72,
@@ -17018,7 +17018,7 @@
       "label": "Acerca de",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L381",
+      "source_location": "L385",
       "_origin": "ast",
       "id": "readme_acerca_de",
       "community": 72,
@@ -17972,21 +17972,21 @@
       "norm_label": "06_despliegue_en_produccion.md"
     },
     {
-      "label": "IPTVControl \u2014 Contexto para la implementaci\u00f3n en producci\u00f3n (Cloudflare + Oracle)",
+      "label": "IPTVControl \u2014 Despliegue en producci\u00f3n sobre VPS Ubuntu",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "id": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "community": 25,
       "community_name": "configuration.ts",
-      "norm_label": "iptvcontrol \u2014 contexto para la implementacion en produccion (cloudflare + oracle)"
+      "norm_label": "iptvcontrol \u2014 despliegue en produccion sobre vps ubuntu"
     },
     {
       "label": "1. \u00bfQu\u00e9 es IPTVControl y en qu\u00e9 estado est\u00e1?",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L16",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_1_qu\u00e9_es_iptvcontrol_y_en_qu\u00e9_estado_est\u00e1",
       "community": 25,
@@ -18008,7 +18008,7 @@
       "label": "3. Variables de entorno",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L69",
+      "source_location": "L73",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_3_variables_de_entorno",
       "community": 25,
@@ -18019,7 +18019,7 @@
       "label": "4. Procedimientos de arranque / mantenimiento",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L97",
+      "source_location": "L102",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_4_procedimientos_de_arranque_mantenimiento",
       "community": 25,
@@ -18027,21 +18027,21 @@
       "norm_label": "4. procedimientos de arranque / mantenimiento"
     },
     {
-      "label": "4.1. Primer despliegue en Verde (VM nueva)",
+      "label": "4.1. Primer despliegue en una VPS nueva",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L99",
+      "source_location": "L104",
       "_origin": "ast",
-      "id": "docs_06_despliegue_en_produccion_4_1_primer_despliegue_en_verde_vm_nueva",
+      "id": "docs_06_despliegue_en_produccion_4_1_primer_despliegue_en_una_vps_nueva",
       "community": 25,
       "community_name": "configuration.ts",
-      "norm_label": "4.1. primer despliegue en verde (vm nueva)"
+      "norm_label": "4.1. primer despliegue en una vps nueva"
     },
     {
       "label": "4.2. Actualizaci\u00f3n de c\u00f3digo",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L109",
+      "source_location": "L117",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_4_2_actualizaci\u00f3n_de_c\u00f3digo",
       "community": 25,
@@ -18052,7 +18052,7 @@
       "label": "4.3. Cambio de datos de conexi\u00f3n SENSA / planes / modalidades",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L116",
+      "source_location": "L124",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_4_3_cambio_de_datos_de_conexi\u00f3n_sensa_planes_modalidades",
       "community": 25,
@@ -18060,65 +18060,43 @@
       "norm_label": "4.3. cambio de datos de conexion sensa / planes / modalidades"
     },
     {
-      "label": "5. Definici\u00f3n de la infraestructura objetivo (Cloudflare + Oracle)",
+      "label": "5. Infraestructura de producci\u00f3n confirmada",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L123",
+      "source_location": "L131",
       "_origin": "ast",
-      "id": "docs_06_despliegue_en_produccion_5_definici\u00f3n_de_la_infraestructura_objetivo_cloudflare_oracle",
+      "id": "docs_06_despliegue_en_produccion_5_infraestructura_de_producci\u00f3n_confirmada",
       "community": 25,
       "community_name": "configuration.ts",
-      "norm_label": "5. definicion de la infraestructura objetivo (cloudflare + oracle)"
+      "norm_label": "5. infraestructura de produccion confirmada"
     },
     {
-      "label": "5.1. Dominio y DNS",
+      "label": "5.1. Dominio, DNS y HTTPS",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L125",
+      "source_location": "L133",
       "_origin": "ast",
-      "id": "docs_06_despliegue_en_produccion_5_1_dominio_y_dns",
+      "id": "docs_06_despliegue_en_produccion_5_1_dominio_dns_y_https",
       "community": 25,
       "community_name": "configuration.ts",
-      "norm_label": "5.1. dominio y dns"
+      "norm_label": "5.1. dominio, dns y https"
     },
     {
-      "label": "5.2. Cloudflare (configuraci\u00f3n sugerida, a validar)",
+      "label": "5.2. VPS y firewall",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L136",
+      "source_location": "L146",
       "_origin": "ast",
-      "id": "docs_06_despliegue_en_produccion_5_2_cloudflare_configuraci\u00f3n_sugerida_a_validar",
+      "id": "docs_06_despliegue_en_produccion_5_2_vps_y_firewall",
       "community": 25,
       "community_name": "configuration.ts",
-      "norm_label": "5.2. cloudflare (configuracion sugerida, a validar)"
-    },
-    {
-      "label": "5.3. Oracle Cloud Infrastructure (OCI)",
-      "file_type": "document",
-      "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L148",
-      "_origin": "ast",
-      "id": "docs_06_despliegue_en_produccion_5_3_oracle_cloud_infrastructure_oci",
-      "community": 25,
-      "community_name": "configuration.ts",
-      "norm_label": "5.3. oracle cloud infrastructure (oci)"
-    },
-    {
-      "label": "5.4. HTTPS y TLS en origen",
-      "file_type": "document",
-      "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L171",
-      "_origin": "ast",
-      "id": "docs_06_despliegue_en_produccion_5_4_https_y_tls_en_origen",
-      "community": 25,
-      "community_name": "configuration.ts",
-      "norm_label": "5.4. https y tls en origen"
+      "norm_label": "5.2. vps y firewall"
     },
     {
       "label": "6. Manejo de secretos en producci\u00f3n",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L181",
+      "source_location": "L159",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_6_manejo_de_secretos_en_producci\u00f3n",
       "community": 25,
@@ -18129,7 +18107,7 @@
       "label": "7. Pendientes que afectan el despliegue (no asumir como resueltos)",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L193",
+      "source_location": "L170",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_7_pendientes_que_afectan_el_despliegue_no_asumir_como_resueltos",
       "community": 25,
@@ -18140,7 +18118,7 @@
       "label": "8. Checklist de puesta en producci\u00f3n (borrador para validar con la IA)",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L214",
+      "source_location": "L191",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_8_checklist_de_puesta_en_producci\u00f3n_borrador_para_validar_con_la_ia",
       "community": 25,
@@ -18151,7 +18129,7 @@
       "label": "9. C\u00f3mo usar este documento",
       "file_type": "document",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L233",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "docs_06_despliegue_en_produccion_9_c\u00f3mo_usar_este_documento",
       "community": 25,
@@ -19515,7 +19493,7 @@
       "label": "Servicios",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L11",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_servicios",
       "community": 56,
@@ -19526,7 +19504,7 @@
       "label": "Primer despliegue",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L35",
+      "source_location": "L42",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_primer_despliegue",
       "community": 56,
@@ -19537,7 +19515,7 @@
       "label": "Dos usuarios de base de datos, a prop\u00f3sito",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L53",
+      "source_location": "L61",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_dos_usuarios_de_base_de_datos_a_prop\u00f3sito",
       "community": 56,
@@ -19548,7 +19526,7 @@
       "label": "Qu\u00e9 configurar en el panel despu\u00e9s del seed",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L63",
+      "source_location": "L71",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_qu\u00e9_configurar_en_el_panel_despu\u00e9s_del_seed",
       "community": 56,
@@ -19559,7 +19537,7 @@
       "label": "Verificaciones",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L70",
+      "source_location": "L79",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_verificaciones",
       "community": 56,
@@ -19570,7 +19548,7 @@
       "label": "Problemas que ya nos pasaron",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L85",
+      "source_location": "L94",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_problemas_que_ya_nos_pasaron",
       "community": 56,
@@ -19581,7 +19559,7 @@
       "label": "Backups",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L94",
+      "source_location": "L103",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_backups",
       "community": 56,
@@ -19592,7 +19570,7 @@
       "label": "Ver tambi\u00e9n",
       "file_type": "document",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L100",
+      "source_location": "L109",
       "_origin": "ast",
       "id": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_ver_tambi\u00e9n",
       "community": 56,
@@ -21919,7 +21897,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "backend/prisma/seed-root.ts",
-      "source_location": "L101",
+      "source_location": "L115",
       "weight": 1.0,
       "source": "backend_prisma_seed_root",
       "target": "backend_prisma_seed_root_main",
@@ -21940,7 +21918,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "backend/prisma/seed-root.ts",
-      "source_location": "L173",
+      "source_location": "L187",
       "weight": 1.0,
       "source": "backend_prisma_seed_root_main",
       "target": "backend_prisma_seed_root_cifrar",
@@ -21951,7 +21929,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "backend/prisma/seed-root.ts",
-      "source_location": "L194",
+      "source_location": "L208",
       "weight": 1.0,
       "source": "backend_prisma_seed_root_main",
       "target": "backend_prisma_seed_root_crearusuarioauth0",
@@ -62621,7 +62599,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L381",
+      "source_location": "L385",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_acerca_de",
@@ -62631,7 +62609,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L288",
+      "source_location": "L292",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_aislamiento_multi_tenant_c\u00f3mo_est\u00e1_garantizado",
@@ -62641,7 +62619,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L225",
+      "source_location": "L229",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_comandos_habituales",
@@ -62651,7 +62629,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L199",
+      "source_location": "L203",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_configurar_auth0_paso_previo_al_primer_login",
@@ -62661,7 +62639,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L316",
+      "source_location": "L320",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_convenciones_de_c\u00f3digo_l\u00e9elo_antes_de_tocar_algo",
@@ -62671,7 +62649,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L263",
+      "source_location": "L267",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_desarrollo_sin_docker",
@@ -62681,7 +62659,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L354",
+      "source_location": "L358",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_documentaci\u00f3n",
@@ -62711,7 +62689,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L369",
+      "source_location": "L373",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_preguntas_frecuentes_soluci\u00f3n_de_problemas",
@@ -62751,7 +62729,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L338",
+      "source_location": "L342",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_testing",
@@ -62761,7 +62739,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L243",
+      "source_location": "L247",
       "weight": 1.0,
       "source": "readme",
       "target": "readme_variables_de_entorno",
@@ -63584,16 +63562,16 @@
       "source_location": "L1",
       "weight": 1.0,
       "source": "docs_06_despliegue_en_produccion",
-      "target": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "target": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L16",
+      "source_location": "L15",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_1_qu\u00e9_es_iptvcontrol_y_en_qu\u00e9_estado_est\u00e1",
       "confidence_score": 1.0
     },
@@ -63603,7 +63581,7 @@
       "source_file": "docs/06_Despliegue_en_Produccion.md",
       "source_location": "L34",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_2_stack_y_topolog\u00eda_actuales_docker_compose_local",
       "confidence_score": 1.0
     },
@@ -63611,9 +63589,9 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L69",
+      "source_location": "L73",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_3_variables_de_entorno",
       "confidence_score": 1.0
     },
@@ -63621,9 +63599,9 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L97",
+      "source_location": "L102",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_4_procedimientos_de_arranque_mantenimiento",
       "confidence_score": 1.0
     },
@@ -63631,19 +63609,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L123",
+      "source_location": "L131",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
-      "target": "docs_06_despliegue_en_produccion_5_definici\u00f3n_de_la_infraestructura_objetivo_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
+      "target": "docs_06_despliegue_en_produccion_5_infraestructura_de_producci\u00f3n_confirmada",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L181",
+      "source_location": "L159",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_6_manejo_de_secretos_en_producci\u00f3n",
       "confidence_score": 1.0
     },
@@ -63651,9 +63629,9 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L193",
+      "source_location": "L170",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_7_pendientes_que_afectan_el_despliegue_no_asumir_como_resueltos",
       "confidence_score": 1.0
     },
@@ -63661,9 +63639,9 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L214",
+      "source_location": "L191",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_8_checklist_de_puesta_en_producci\u00f3n_borrador_para_validar_con_la_ia",
       "confidence_score": 1.0
     },
@@ -63671,9 +63649,9 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L233",
+      "source_location": "L212",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_iptvcontrol_contexto_para_la_implementaci\u00f3n_en_producci\u00f3n_cloudflare_oracle",
+      "source": "docs_06_despliegue_en_produccion_iptvcontrol_despliegue_en_producci\u00f3n_sobre_vps_ubuntu",
       "target": "docs_06_despliegue_en_produccion_9_c\u00f3mo_usar_este_documento",
       "confidence_score": 1.0
     },
@@ -63681,17 +63659,17 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L99",
+      "source_location": "L104",
       "weight": 1.0,
       "source": "docs_06_despliegue_en_produccion_4_procedimientos_de_arranque_mantenimiento",
-      "target": "docs_06_despliegue_en_produccion_4_1_primer_despliegue_en_verde_vm_nueva",
+      "target": "docs_06_despliegue_en_produccion_4_1_primer_despliegue_en_una_vps_nueva",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L109",
+      "source_location": "L117",
       "weight": 1.0,
       "source": "docs_06_despliegue_en_produccion_4_procedimientos_de_arranque_mantenimiento",
       "target": "docs_06_despliegue_en_produccion_4_2_actualizaci\u00f3n_de_c\u00f3digo",
@@ -63701,7 +63679,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L116",
+      "source_location": "L124",
       "weight": 1.0,
       "source": "docs_06_despliegue_en_produccion_4_procedimientos_de_arranque_mantenimiento",
       "target": "docs_06_despliegue_en_produccion_4_3_cambio_de_datos_de_conexi\u00f3n_sensa_planes_modalidades",
@@ -63711,40 +63689,20 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L125",
+      "source_location": "L133",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_5_definici\u00f3n_de_la_infraestructura_objetivo_cloudflare_oracle",
-      "target": "docs_06_despliegue_en_produccion_5_1_dominio_y_dns",
+      "source": "docs_06_despliegue_en_produccion_5_infraestructura_de_producci\u00f3n_confirmada",
+      "target": "docs_06_despliegue_en_produccion_5_1_dominio_dns_y_https",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L136",
+      "source_location": "L146",
       "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_5_definici\u00f3n_de_la_infraestructura_objetivo_cloudflare_oracle",
-      "target": "docs_06_despliegue_en_produccion_5_2_cloudflare_configuraci\u00f3n_sugerida_a_validar",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L148",
-      "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_5_definici\u00f3n_de_la_infraestructura_objetivo_cloudflare_oracle",
-      "target": "docs_06_despliegue_en_produccion_5_3_oracle_cloud_infrastructure_oci",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "docs/06_Despliegue_en_Produccion.md",
-      "source_location": "L171",
-      "weight": 1.0,
-      "source": "docs_06_despliegue_en_produccion_5_definici\u00f3n_de_la_infraestructura_objetivo_cloudflare_oracle",
-      "target": "docs_06_despliegue_en_produccion_5_4_https_y_tls_en_origen",
+      "source": "docs_06_despliegue_en_produccion_5_infraestructura_de_producci\u00f3n_confirmada",
+      "target": "docs_06_despliegue_en_produccion_5_2_vps_y_firewall",
       "confidence_score": 1.0
     },
     {
@@ -64941,7 +64899,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L94",
+      "source_location": "L103",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_backups",
@@ -64951,7 +64909,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L53",
+      "source_location": "L61",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_dos_usuarios_de_base_de_datos_a_prop\u00f3sito",
@@ -64961,7 +64919,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L35",
+      "source_location": "L42",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_primer_despliegue",
@@ -64971,7 +64929,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L85",
+      "source_location": "L94",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_problemas_que_ya_nos_pasaron",
@@ -64981,7 +64939,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L63",
+      "source_location": "L71",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_qu\u00e9_configurar_en_el_panel_despu\u00e9s_del_seed",
@@ -64991,7 +64949,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L11",
+      "source_location": "L14",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_servicios",
@@ -65001,7 +64959,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L100",
+      "source_location": "L109",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_ver_tambi\u00e9n",
@@ -65011,7 +64969,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md",
-      "source_location": "L70",
+      "source_location": "L79",
       "weight": 1.0,
       "source": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_despliegue_y_operaci\u00f3n",
       "target": "vault_40_operaci\u00f3n_despliegue_y_operaci\u00f3n_verificaciones",
@@ -65359,5 +65317,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "46904f3db44e9b55af1e2a4c53defed1866c3ce0"
+  "built_at_commit": "db25b186a4f39e4cb6db55376a1dca4cd30d90f9"
 }
