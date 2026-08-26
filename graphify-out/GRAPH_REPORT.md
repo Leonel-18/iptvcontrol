@@ -1,16 +1,16 @@
 # Graph Report - iptvcontrol-opencode  (2026-08-26)
 
 ## Corpus Check
-- 207 files · ~125,933 words
+- 207 files · ~125,939 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1815 nodes · 4236 edges · 115 communities (84 shown, 31 thin omitted)
+- 1815 nodes · 4236 edges · 117 communities (85 shown, 32 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `db25b186`
+- Built from commit: `bff7d20e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -83,6 +83,7 @@
 - TeamMembersController
 - RequestContextMiddleware
 - clientes.controller.ts
+- JwtAuthGuard
 - scripts
 - app.json
 - IPTVControl
@@ -90,6 +91,7 @@
 - package.json
 - IPTVControl — Índice del vault
 - seed-root.ts
+- @nestjs/platform-express
 - Vault de Obsidian — IPTVControl
 - AuditModule
 - utils.ts
@@ -148,7 +150,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (115 total, 31 thin omitted)
+## Communities (117 total, 32 thin omitted)
 
 ### Community 0 - "RequestContextService"
 Cohesion: 0.08
@@ -164,7 +166,7 @@ Nodes (45): devDependencies, eslint, eslint-config-prettier, eslint-plugin-prett
 
 ### Community 4 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, bullmq, class-transformer, class-validator, helmet, jwks-rsa, @nestjs/core, @nestjs/passport (+15 more)
+Nodes (23): auth0, dependencies, auth0, bullmq, class-transformer, class-validator, helmet, jwks-rsa (+15 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.12
@@ -251,8 +253,8 @@ Cohesion: 0.12
 Nodes (15): 1. ¿Qué es IPTVControl y en qué estado está?, 2. Stack y topología actuales (Docker Compose local), 3. Variables de entorno, 4.1. Primer despliegue en una VPS nueva, 4.2. Actualización de código, 4.3. Cambio de datos de conexión SENSA / planes / modalidades, 4. Procedimientos de arranque / mantenimiento, 5.1. Dominio, DNS y HTTPS (+7 more)
 
 ### Community 26 - "csv.util.ts"
-Cohesion: 0.24
-Nodes (5): CurrentUser, Roles(), SoloOperador(), JwtAuthGuard, Injectable
+Cohesion: 0.22
+Nodes (8): CurrentUser, Roles(), SoloOperador(), generarCsv(), responderCsv(), Fila, Res, CsvDispositivo
 
 ### Community 30 - "ActualizarConexionProveedorDto"
 Cohesion: 0.10
@@ -351,8 +353,8 @@ Cohesion: 0.15
 Nodes (16): ArrayUnique, CrearClienteDto, DispositivoAltaDto, ApiProperty, ApiPropertyOptional, IsBoolean, IsEmail, IsEnum (+8 more)
 
 ### Community 54 - "dispositivos.controller.ts"
-Cohesion: 0.18
-Nodes (18): CsvDispositivo, CorregirVinculacionDto, ApiProperty, ApiPropertyOptional, IsIn, IsOptional, IsUUID, ActualizarDispositivoDto (+10 more)
+Cohesion: 0.36
+Nodes (11): ActualizarDispositivoDto, CrearDispositivoDto, ListarDispositivosQueryDto, ReasignarDispositivoDto, ApiProperty, ApiPropertyOptional, IsEnum, IsOptional (+3 more)
 
 ### Community 56 - "Despliegue y operación"
 Cohesion: 0.12
@@ -377,6 +379,10 @@ Nodes (7): ApiExcludeEndpoint, Public(), HealthController, ApiOperation, ApiTags
 ### Community 61 - "devDependencies"
 Cohesion: 0.15
 Nodes (13): autoprefixer, @eslint/js, devDependencies, autoprefixer, eslint, @eslint/js, tailwindcss, @types/react-dom (+5 more)
+
+### Community 62 - "sensa.adapter.spec.ts"
+Cohesion: 0.29
+Nodes (6): CorregirVinculacionDto, ApiProperty, ApiPropertyOptional, IsIn, IsOptional, IsUUID
 
 ### Community 63 - "cuentas.mapper.ts"
 Cohesion: 0.10
@@ -443,13 +449,13 @@ Cohesion: 0.60
 Nodes (5): "cuenta", "dispositivo", "incidencia_dispositivo_proveedor", "reserva_tecnica_dispositivo", "solicitud_vinculacion_dispositivo"
 
 ### Community 117 - "generarCsv"
-Cohesion: 0.17
-Nodes (13): ColumnaCsv, generarCsv(), responderCsv(), Fila, CsvCliente, Res, ActualizarClienteDto, ListarClientesQueryDto (+5 more)
+Cohesion: 0.24
+Nodes (9): ColumnaCsv, CsvCliente, ActualizarClienteDto, ListarClientesQueryDto, ApiPropertyOptional, IsEnum, IsOptional, IsString (+1 more)
 
 ## Knowledge Gaps
 - **494 isolated node(s):** `docker-entrypoint.sh script`, `$schema`, `collection`, `sourceRoot`, `deleteOutDir` (+489 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **31 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_

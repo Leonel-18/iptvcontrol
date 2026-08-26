@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "backend/prisma/seed-root.ts": {
-    "mtime": 1787748969.1009226,
-    "ast_hash": "30255d6c31fddcf1e2ec3032e5b0449f",
+    "mtime": 1787750986.415028,
+    "ast_hash": "3aaf43904fbf92cc6249a4254dc6535c",
     "semantic_hash": ""
   },
   "backend/prisma/verificar-rls.sql": {
@@ -815,8 +815,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1787749093.202509,
-    "ast_hash": "94f5b245985a0360d2405f05022efb7c",
+    "mtime": 1787751026.627074,
+    "ast_hash": "b6d030f14e1ffc89d89a9650be5b4ffa",
     "semantic_hash": ""
   },
   "frontend/index.html": {
@@ -900,8 +900,8 @@
     "semantic_hash": ""
   },
   "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md": {
-    "mtime": 1787749875.3065674,
-    "ast_hash": "f5c51fb5416cde6ed3a6c52c2e892d39",
+    "mtime": 1787751062.3640537,
+    "ast_hash": "f9d4bcaa05d86cf4e89f8574d805aa72",
     "semantic_hash": ""
   },
   "vault/40 - Operaci\u00f3n/Registro de auditor\u00eda.md": {
@@ -1005,8 +1005,8 @@
     "semantic_hash": ""
   },
   "docs/06_Despliegue_en_Produccion.md": {
-    "mtime": 1787749875.304573,
-    "ast_hash": "7e0f9fc414f0a679765ef2917eb0a227",
+    "mtime": 1787751062.354059,
+    "ast_hash": "45efe8349418605c308c5bdcdd46eaa4",
     "semantic_hash": ""
   },
   "docs/API Sensa V4.1.4.pdf": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "docker-compose.prod.yml": {
-    "mtime": 1787748969.0765648,
-    "ast_hash": "994bcf790f8fa6bd44b3a46eb0cc5778",
+    "mtime": 1787751026.6130743,
+    "ast_hash": "566697d80dd8532e08808f30c125c680",
     "semantic_hash": ""
   }
 }
