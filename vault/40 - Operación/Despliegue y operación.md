@@ -1,19 +1,24 @@
 ---
 tags: [operacion, despliegue]
 deriva-de: docs/01_Instrucciones_del_Proyecto.md
-implementado-en: docker-compose.yml · backend/Dockerfile · frontend/Dockerfile
+implementado-en: docker-compose.prod.yml · docker/caddy/Caddyfile · backend/Dockerfile · frontend/Dockerfile
 ---
 
 # Despliegue y operación
 
-VPS propio con Docker Compose. **Producción controlada desde el arranque**, sin staging separado.
+VPS propia con **Ubuntu 24.04 LTS AMD64**, Docker Compose y Caddy detrás del proxy de Cloudflare.
+Producción controlada desde el arranque, sin staging separado. Dominio público:
+`https://iptvcontrol.com.ar`; Cloudflare usa Full (strict) contra el certificado de Let's Encrypt
+que Caddy emite y renueva automáticamente.
 
 ## Servicios
 
 ```mermaid
 graph TB
+    CF["Cloudflare<br/>DNS + proxy"]
     subgraph VPS["VPS · Docker Compose"]
-        NGINX["frontend<br/>Nginx + build de Vite<br/>:80"]
+        CADDY["Caddy<br/>HTTPS :80/:443"]
+        NGINX["frontend<br/>Nginx + build de Vite"]
         API["backend<br/>NestJS<br/>:3000"]
         PG[("postgres<br/>PostgreSQL 16")]
         REDIS[("redis<br/>BullMQ")]
@@ -21,7 +26,9 @@ graph TB
     SENSA["API de SENSA"]
     AUTH0["Auth0"]
 
-    NGINX -->|"proxy /api"| API
+    CF -->|"HTTPS Full strict"| CADDY
+    CADDY -->|"panel"| NGINX
+    CADDY -->|"/api"| API
     API --> PG
     API --> REDIS
     API -->|"HTTPS"| SENSA
@@ -36,7 +43,8 @@ graph TB
 
 ```bash
 # 1. Variables de entorno
-cp .env.example .env
+cp .env.production.example .env.production
+chmod 600 .env.production
 #    y completar, como mínimo:
 #      POSTGRES_PASSWORD, APP_DB_PASSWORD
 #      ENCRYPTION_MASTER_KEY   (openssl rand -hex 32)
@@ -44,10 +52,10 @@ cp .env.example .env
 #      SEED_ROOT_EMAIL
 
 # 2. Levantar todo (el backend aplica las migraciones al arrancar)
-docker compose up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
 # 3. Provisionar el primer acceso, UNA sola vez
-docker compose exec backend npm run seed:root
+docker compose --env-file .env.production -f docker-compose.prod.yml exec backend npm run seed:root
 ```
 
 ## Dos usuarios de base de datos, a propósito
@@ -66,15 +74,16 @@ nunca. El script `docker/postgres/init/01-app-user.sh` crea el usuario de aplica
    conexión antes de guardar.
 2. **Planes comerciales**: cargar los precios reales (el seed los deja en 0).
 3. **Empresas Revendedoras**: dar de alta la primera. El sistema envía la invitación de acceso.
+4. **Usuarios del panel**: Bruno invita a Leonel como segundo `operator_admin`.
 
 ## Verificaciones
 
 ```bash
 # Estado del backend y de la base
-curl http://localhost:3000/api/v1/health
+curl https://iptvcontrol.com.ar/api/v1/health
 
 # Documentación de la API (requiere login)
-#   http://localhost:3000/api/docs
+#   https://iptvcontrol.com.ar/api/docs
 
 # Aislamiento multi-tenant, como el usuario de aplicación
 docker compose exec -T -e PGPASSWORD=<app_pass> postgres \

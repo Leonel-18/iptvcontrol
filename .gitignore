@@ -10,6 +10,7 @@ build/
 
 # Variables de entorno / secretos (clave maestra AES fuera del repo)
 .env
+.env.production
 .env.local
 .env.*.local
 !.env.example
