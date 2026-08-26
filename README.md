@@ -188,6 +188,10 @@ Cuando todo esté arriba, tenés estos servicios:
 | PostgreSQL | localhost:55432 (fuera del contenedor) / postgres:5432 (dentro de la red) |
 | Redis | localhost:56379 (fuera del contenedor) / redis:6379 (dentro de la red) |
 
+Esta tabla corresponde al entorno local. Producción usa `docker-compose.prod.yml`, Caddy con HTTPS
+y `.env.production`; no publica PostgreSQL, Redis, backend, frontend ni pgAdmin directamente. Ver
+el procedimiento completo en `docs/06_Despliegue_en_Produccion.md`.
+
 **Primeros pasos dentro del panel:**
 1. **Configuración → Conexión con el proveedor**: servidor, puerto, usuario y token de SENSA.
    Probar la conexión antes de guardar (el test corre del lado del servidor, nunca se expone el token).

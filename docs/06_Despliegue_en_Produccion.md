@@ -1,8 +1,7 @@
-# IPTVControl — Contexto para la implementación en producción (Cloudflare + Oracle)
+# IPTVControl — Despliegue en producción sobre VPS Ubuntu
 
-> Documento de **contexto y transferencia** para una IA que va a colaborar en el despliegue en
-> producción de IPTVControl sobre **Cloudflare** (DNS/CDN/proxy) e **Oracle Cloud Infrastructure**
-> (VPS). Describe **qué existe hoy** (estado real del código y la infraestructura local), qué
+> Documento operativo para desplegar IPTVControl sobre una **VPS Ubuntu 24.04 LTS AMD64** con
+> Docker Compose y HTTPS administrado por Caddy. Describe **qué existe hoy**, qué
 > restricciones impone el diseño (RLS, encriptación, Auth0) y qué decisiones siguen abiertas.
 > Cuando este documento y `docs/05_Decisiones_Pendientes.md` difieran en algo, manda el de
 > pendientes como "no decidido".
@@ -21,13 +20,14 @@ el ciclo de vida de **Cuentas / Dispositivos / Clientes Finales** entre un **Ope
 
 - **Glosario** (nombres obligatorios en base y lógica): `docs/02_Glosario_de_Actores_y_Entidades.md`.
   La unidad oficial es **Dispositivo**; para capacidad libre se usa **cupo**.
-- **Estado actual:** el MVP funciona **localmente con Docker Compose** (stack completo arriba:
-  Postgres + Redis + backend + frontend). Login con Auth0 funcionando con `leomovio5@gmail.com`
-  (`operator_admin`, vinculado). `bruno.c@tecnologiaactiva.com.ar` sigue sin vincular (estado
-  invitado). Los **85 tests** del backend pasan.
-- **Base de datos:** existen tres migraciones de Prisma aplicadas (`20260814120000_init`,
-  `20260814120100_rls_multitenant`, `20260814120200_rls_team_member_operador`).
-- **Repositorio:** `github.com/Leonel-18/iptvcontrol` (rama `main`).
+- **Estado actual:** el MVP funciona localmente con Docker Compose (Postgres + Redis + backend +
+  frontend). La suite vigente tiene **119 tests de backend y 23 de frontend**.
+- **Producción confirmada (26/08/2026):** VPS propia con Ubuntu 24.04 LTS, arquitectura AMD64,
+  dominio `iptvcontrol.com.ar` administrado y proxied por Cloudflare, base PostgreSQL nueva y
+  HTTPS en origen con Caddy + Let's Encrypt.
+- **Administradores iniciales:** Bruno es el primer `operator_admin` creado por el seed. Después
+  de ingresar, invita a Leonel como segundo `operator_admin` desde `/team-members`.
+- **Repositorio:** `github.com/Leonel-18/iptvcontrol`; producción se despliega desde `main`.
 
 ---
 
@@ -64,11 +64,16 @@ para `/api/`. Los assets estáticos llevan hash y se cachean 1 año en `frontend
 5. **Swagger protegido** con HTTP Basic Auth (`SWAGGER_USER`/`SWAGGER_PASSWORD`). Si quedan vacías,
    Swagger no se expone.
 
+La definición de producción es `docker-compose.prod.yml` y se ejecuta de manera independiente del
+Compose local. No incluye pgAdmin ni publica puertos de PostgreSQL, Redis, backend o frontend. El
+único servicio expuesto es Caddy en `80/443`; Caddy envía `/api/*` al backend y el resto al frontend.
+
 ---
 
 ## 3. Variables de entorno
 
-Definidas en `.env.example` (plantilla versionada). El `.env` real **no se versiona**. Las que
+La plantilla de producción es `.env.production.example`. En la VPS se copia como
+`.env.production`; el archivo real **no se versiona**. Las que
 necesitan **sí o sí** definirse en producción:
 
 | Variable | Notas para producción |
@@ -96,21 +101,24 @@ Valores de referencia actuales (Auth0, públicos y ya usados): Client ID de la S
 
 ## 4. Procedimientos de arranque / mantenimiento
 
-### 4.1. Primer despliegue en Verde (VM nueva)
+### 4.1. Primer despliegue en una VPS nueva
 
-1. Instalar Docker Engine + Docker Compose en la VM de Oracle.
-2. Traer el repo (o imagen buildada) + `.env` con valores de producción.
-3. `docker compose up -d --build`.
-4. Una sola vez, provisionar el primer Team Member root (arranque en frío):
-   `docker compose exec backend npm run seed:root`.
-   - Si la base es nueva y no hay datos, el email del root ya debe estar creado en Auth0 y su
-     `auth0_user_id` en `SEED_ROOT_AUTH0_USER_ID` (formato `auth0|...`).
+1. Instalar Docker Engine + Docker Compose en Ubuntu 24.04.
+2. Clonar `main` y crear `.env.production` a partir de `.env.production.example`.
+3. Dar permisos al archivo: `chmod 600 .env.production`.
+4. Arrancar con
+   `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`.
+5. Una sola vez, provisionar el primer Team Member root (arranque en frío):
+   `docker compose --env-file .env.production -f docker-compose.prod.yml exec backend npm run seed:root`.
+   Si `SEED_ROOT_AUTH0_USER_ID` queda vacío, el seed usa la Management API para crear o encontrar
+   a Bruno, completar sus metadatos y mostrar un link de un solo uso para definir la contraseña.
+6. Bruno inicia sesión e invita a Leonel como `operator_admin` desde `/team-members`.
 
 ### 4.2. Actualización de código
 
-1. `git pull` en la VM.
-2. `docker compose up -d --build backend frontend` (el entrypoint corre migraciones nuevas al
-   arrancar). En el caso de no cambiar código en el backend, `docker compose up -d` solo.
+1. `git pull --ff-only origin main` en la VPS.
+2. `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build` (el
+   entrypoint aplica las migraciones nuevas antes de arrancar el backend).
 3. En el caso de modificar `VITE_AUTH0_*` o `VITE_API_BASE_URL` → reconstruir frontend (build-time).
 
 ### 4.3. Cambio de datos de conexión SENSA / planes / modalidades
@@ -120,61 +128,31 @@ Nada de deploy de código: se hace desde el panel (**Configuración → Conexió
 
 ---
 
-## 5. Definición de la infraestructura objetivo (Cloudflare + Oracle)
+## 5. Infraestructura de producción confirmada
 
-### 5.1. Dominio y DNS
+### 5.1. Dominio, DNS y HTTPS
 
-- Dominio ya decidido: **`iptvcontrol.com.ar`** (registrado a nombre de Tecnología Activa).
-- **Cloudflare** como DNS autoritativo y proxy del dominio: registrar el dominio en Cloudflare y
-  apuntar los nameservers hacia Cloudflare en el registrador.
-- Subdominios (esquema a confirmar con Bruno/Federico; hoy el código asume el panel en
-  `APP_PUBLIC_URL`, y `.env.example` sugiere `https://panel.iptvcontrol.com.ar`):
-  - `panel.iptvcontrol.com.ar` (o `iptvcontrol.com.ar` directo) → panel frontend.
-  - la API va por el mismo origen vía proxy de nginx (`/api/`), no requiere subdominio propio.
-  - No exponer Swagger por una URL pública sin auth HTTP Basic.
+- Dominio público: **`iptvcontrol.com.ar`**.
+- Los nameservers ya delegan en Cloudflare (`dorthy.ns.cloudflare.com` y
+  `thomas.ns.cloudflare.com`) y el proxy naranja está activo.
+- El registro `A` de `@` debe apuntar a la IP pública de la VPS. Para la primera emisión del
+  certificado conviene dejarlo temporalmente en **DNS only**, levantar Caddy y comprobar HTTPS;
+  después se vuelve a activar **Proxied**.
+- Caddy escucha en `80/443`, solicita y renueva automáticamente un certificado público de Let's
+  Encrypt. Cloudflare debe usar **SSL/TLS = Full (strict)**; no hace falta instalar un Origin CA.
+- En Cloudflare se activa **Always Use HTTPS** y se crea una regla de caché para omitir `/api/*`.
+- La API usa el mismo dominio bajo `/api`; no requiere un subdominio público.
 
-### 5.2. Cloudflare (configuración sugerida, a validar)
+### 5.2. VPS y firewall
 
-- **Proxy (naranja)** activo para el A record del panel → esconde la IP real del VPS y permite
-  reglas WAF/rate-limiting.
-- **SSL/TLS mode:** **Full (strict)** con certificado de origen de Cloudflare Origin CA instalado
-  en nginx de la VM (origen habla HTTPS; Cloudflare termina el TLS hacia el navegador). Alternativa
-  mínima (menos segura): Full sin strict. Decisión a validar.
-- **Always Use HTTPS** activo, HTTP/2/3 habilitados.
-- WAF y reglas de rate limiting opcionales (login de Auth0 ocurre en el tenant de Auth0, no en
-  nuestro origen; proteger las rutas `/api/*`).
-- Caché: solo assets estáticos del frontend (los hashes lo permiten); **nunca cachear `/api/*`**.
-
-### 5.3. Oracle Cloud Infrastructure (OCI)
-
-- VM sugerida: shape **Ampere A1 (ARM)** del Always Free tier (4 OCPU / 24 GB RAM) — suficiente
-  para la escala esperada (~10 Empresas Revendedoras, ~9.000 Clientes Finales, ~1.500 Cuentas);
-  alternativa pagada AMD con ≥4 vCPU / 8 GB RAM. Docker en ARM: las imágenes base
-  (`node:22-alpine`, `postgres:16-alpine`, `redis:7-alpine`, `nginx:1.27-alpine`) tienen variantes
-  arm64. Verificación previa: probar el arranque de todas las imágenes en la VM (las que hoy corren
-  en dev solo se probaron en x86).
-- **Red/seguridad en OCI (Security Lists / NSG):** solo exponer
-  - `22/tcp` (SSH, restringido a IPs de Tecnología Activa),
-  - `80/tcp` y `443/tcp` para el panel (idealmente permitir únicamente los rangos de IP de
-    Cloudflare, ver Cloudflare IP ranges, para que nadie llegue directo al origen sin pasar por el
-    proxy).
-- **NO exponer** los puertos de `backend:3000`, `postgres:5432/55432`, `redis:6379/56379` al
-  exterior: dejar esas publicaciones de puerto fuera del compose de producción (red interna de
-  Docker es suficiente). El compose local actual publica puertos para desarrollo: ajustar un
-  `docker-compose.prod.yml` que los elimine (solo `80/443` en nginx).
-- **Persistencia:** usar los named volumes de Docker en disco de la VM; backups los gestiona
-  infraestructura de Tecnología Activa (fuera del alcance de este proyecto — no implementar
-  nada de backups acá, solo documentar cómo quedaría el mapa de volúmenes).
-- **Ambiente:** producción controlada directamente, sin staging. Pruebas contra SENSA se hacen
-  contra la producción de SENSA.
-
-### 5.4. HTTPS y TLS en origen
-
-- nginx actual escucha solo `80`. En producción (con Cloudflare Full strict) instalar cert de
-  origen en nginx y habilitar `443`. Con la variante de Cloudflare Full (sin strict) se puede
-  dejar el origen en `80`, pero es la opción menos recomendable.
-- Si el panel terminara alojado **fuera de Cloudflare** en algún caso, usar Let's Encrypt
-  (certbot) — pero el objetivo declarado es Cloudflare delante, por lo que Origin CA es lo natural.
+- Sistema confirmado: Ubuntu 24.04.1 LTS, arquitectura AMD64/x86_64.
+- Exponer únicamente `22/tcp`, `80/tcp`, `443/tcp` y `443/udp` (HTTP/3 opcional).
+- Restringir SSH a las IP autorizadas siempre que sean estables.
+- Después de comprobar el proxy puede restringirse `80/443` a los rangos oficiales de Cloudflare,
+  manteniendo actualizada esa lista. No hacerlo antes de emitir y probar el certificado.
+- PostgreSQL, Redis, backend y frontend no publican puertos en `docker-compose.prod.yml`.
+- Los datos persisten en los volúmenes `postgres_data`, `redis_data`, `caddy_data` y
+  `caddy_config`. Los backups de infraestructura deben incluir PostgreSQL y los secretos externos.
 
 ---
 
@@ -182,9 +160,8 @@ Nada de deploy de código: se hace desde el panel (**Configuración → Conexió
 
 - Clave maestra AES (`ENCRYPTION_MASTER_KEY`), credenciales de SENSA (`user`/`token`), credenciales
   de la M2M de Auth0 y contraseñas de BDD **NUNCA en el repo** (`.gitignore` excluye `.env`).
-- Método propuesto para la VM: archivo `.env` en la VM con permisos `600` (fuera del repo) o un
-  gestor de secretos. Se deja la elección del mecanismo a la IA/equipo — NO se asume ninguno
-  todavía.
+- Método definido para la VPS: archivo `.env.production` con permisos `600` (fuera del repo).
+  Además debe existir una copia segura de sus secretos críticos fuera de la VPS.
 - Token de SENSA además viaja cifrado en la base (AES-256-GCM) y el test de conexión del panel se
   ejecuta server-side (nunca en el navegador).
 
@@ -213,16 +190,18 @@ Ver el detalle completo en `docs/05_Decisiones_Pendientes.md`. Los que impactan 
 
 ## 8. Checklist de puesta en producción (borrador para validar con la IA)
 
-- [ ] Dominio en Cloudflare (nameservers), A record proxied a la IP pública del VPS.
-- [ ] VM en OCI con Docker; reglas de seguridad aplicadas (SSH restringido, solo 80/443 con
-      rangos de Cloudflare; puertos internos cerrados).
-- [ ] `docker-compose.override.yml` o `docker-compose.prod.yml` que quite las publicaciones de
-      puertos de postgres/redis/backend y deje solo nginx 80/443 (+ pgadmin fuera).
-- [ ] `.env` de producción completo (secretos generados, `.env.example` como guía).
-- [ ] Certificado de origen (Cloudflare Origin CA o cero si se elige Full) en nginx.
+- [x] Nameservers de `iptvcontrol.com.ar` delegados en Cloudflare.
+- [ ] Registro DNS `A` de `iptvcontrol.com.ar` apuntando a la IP pública correcta de la VPS.
+- [ ] Cloudflare en DNS only durante el primer certificado; después Proxied + Full (strict).
+- [ ] Always Use HTTPS activo y caché omitida para `/api/*`.
+- [ ] VPS Ubuntu 24.04 con Docker y firewall; sólo SSH, 80 y 443 públicos.
+- [x] `docker-compose.prod.yml` sin pgAdmin ni puertos internos publicados.
+- [ ] `.env.production` completo y con permisos `600`.
+- [ ] Caddy obtiene un certificado válido de Let's Encrypt.
 - [ ] Auth0: agregar las URLs de callback/logout de producción a la SPA (hoy solo apuntan a
       localhost). Verificar audience.
-- [ ] Arrancar, validar healthcheck (`.api/v1/health`) y hacer `seed:root` una sola vez.
+- [ ] Arrancar, validar `/api/v1/health` y hacer `seed:root` una sola vez para Bruno.
+- [ ] Invitar a Leonel como segundo `operator_admin` desde `/team-members`.
 - [ ] Login real de punta a punta contra Auth0 en el dominio de producción.
 - [ ] Probar alta de Empresa Revendedora / invitación (email), modalidad y planes desde el panel.
 - [ ] Backup de volúmenes (Postgres + Redis) documentado para infraestructura.
@@ -233,7 +212,7 @@ Ver el detalle completo en `docs/05_Decisiones_Pendientes.md`. Los que impactan 
 ## 9. Cómo usar este documento
 
 - **Para la IA de despliegue:** leerlo junto con `AGENTS.md`, `docs/05_Decisiones_Pendientes.md` y
-  `.env.example`. No inventar valores secretos; pedirlos o marcarlos como "por cargar".
+  `.env.production.example`. No inventar valores secretos; pedirlos o marcarlos como "por cargar".
 - **Regla de oro:** cualquier dúbito entre lo que este documento dice y `docs/05_Decisiones_
   Pendientes.md` → lo de pendientes manda (nada está "resuelto" si figura ahí).
 - **Después de cambios de código/infra relevantes:** correr `graphify update .` y actualizar este

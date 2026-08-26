@@ -59,6 +59,7 @@ const cifrar = (valor: string, claveHex: string): string => {
 
 async function crearUsuarioAuth0(
   email: string,
+  operadorPrincipalId: string,
 ): Promise<{ auth0UserId: string | null; urlInvitacion: string | null }> {
   const dominio = process.env.AUTH0_DOMAIN;
   const clientId = process.env.AUTH0_MGMT_CLIENT_ID;
@@ -77,6 +78,12 @@ async function crearUsuarioAuth0(
     .then((respuesta) => respuesta.data?.[0])
     .catch(() => undefined);
 
+  const metadata = {
+    rol: RolTeamMember.operator_admin,
+    operador_principal_id: operadorPrincipalId,
+    empresa_revendedora_id: null,
+  };
+
   const usuario =
     existente ??
     (
@@ -85,9 +92,16 @@ async function crearUsuarioAuth0(
         email,
         password: `${randomUUID()}Aa1!`,
         email_verified: false,
-        app_metadata: { rol: RolTeamMember.operator_admin },
+        app_metadata: metadata,
       })
     ).data;
+
+  if (existente) {
+    await management.users.update(
+      { id: usuario.user_id },
+      { app_metadata: { ...(usuario.app_metadata ?? {}), ...metadata } },
+    );
+  }
 
   const ticket = await management.tickets.changePassword({
     user_id: usuario.user_id,
@@ -191,7 +205,7 @@ async function main(): Promise<void> {
     let urlInvitacion: string | null = null;
 
     if (!auth0UserId) {
-      const resultado = await crearUsuarioAuth0(email).catch((error) => {
+      const resultado = await crearUsuarioAuth0(email, operador.id).catch((error) => {
         console.warn(`   No se pudo crear el usuario en Auth0: ${(error as Error).message}`);
         return { auth0UserId: null, urlInvitacion: null };
       });
