@@ -156,6 +156,7 @@ export interface Customer {
   nombre: string;
   apellido: string | null;
   nombre_completo: string;
+  dni: string;
   telefono: string | null;
   email: string | null;
   direccion: string | null;

@@ -49,6 +49,8 @@ ClienteFinal
 │                         Revendedora, para vincular con su CRM/facturación externa; validado
 │                         contra duplicados dentro de la misma Empresa Revendedora al momento del
 │                         alta — ver 03_Reglas_de_Negocio.md, sección 2.5)
+├── dni (DNI real de la persona, obligatorio — dato local, nunca se envía a SENSA; no confundir
+│        con dni_alta_sensa de la Cuenta)
 ├── nombre / datos de contacto
 ├── tipo_alta (ENUM: "cuenta_exclusiva" | "dispositivo_compartido")
 └── estado (activo/suspendido/dado de baja)
@@ -186,9 +188,12 @@ contacto**. Como IPTVControl no gestiona DNIs reales de personas físicas, ambos
   de la arroba (ej. `contacto1@isp.com`, `contacto2@isp.com`, ...).
 - **Credenciales:** contraseña de exactamente 8 dígitos numéricos y PIN de exactamente 6 dígitos
   numéricos.
-- **Datos personales:** SENSA recibe nombre y apellido del contacto de la Empresa Revendedora;
-  teléfono y dirección del Cliente Final con fallback a los datos de la empresa. El nombre real del
-  Cliente Final y `id_gestion_externo` permanecen locales.
+- **Datos personales:** en Cuenta exclusiva, SENSA recibe nombre y apellido reales del Cliente
+  Final (fallback al contacto de la Empresa Revendedora si vinieran vacíos); en Cuenta compartida
+  sigue recibiendo el contacto de la Empresa Revendedora, porque no representa a un único cliente.
+  Teléfono y dirección del Cliente Final con fallback a los datos de la empresa en ambos casos.
+  `id_gestion_externo` permanece local siempre. El DNI real del Cliente Final (dato administrativo,
+  distinto del identificador sintético que exige SENSA para la Cuenta) también permanece local.
 
 ## 4. Flujos principales (a diagramar en Mermaid en la documentación Obsidian)
 

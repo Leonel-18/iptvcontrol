@@ -11,6 +11,7 @@ import {
   IsUUID,
   ArrayUnique,
   Length,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -46,6 +47,16 @@ export class CrearClienteDto {
   @IsString()
   @MaxLength(120)
   apellido?: string;
+
+  @ApiProperty({
+    description:
+      'DNI real de la persona. Es un dato administrativo de la Empresa Revendedora: nunca se ' +
+      'envía al Proveedor y no tiene relación con el identificador sintético que SENSA exige ' +
+      'para dar de alta la Cuenta.',
+  })
+  @IsString()
+  @Matches(/^\d{6,10}$/, { message: 'El DNI debe tener entre 6 y 10 dígitos numéricos.' })
+  dni!: string;
 
   @ApiPropertyOptional()
   @IsOptional()

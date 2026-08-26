@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EstadoClienteFinal } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 export class ListarClientesQueryDto extends PaginationQueryDto {
@@ -37,6 +37,12 @@ export class ActualizarClienteDto {
   @IsOptional()
   @IsString()
   apellido?: string;
+
+  @ApiPropertyOptional({ description: 'DNI real de la persona. No se envía al Proveedor.' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6,10}$/, { message: 'El DNI debe tener entre 6 y 10 dígitos numéricos.' })
+  dni?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

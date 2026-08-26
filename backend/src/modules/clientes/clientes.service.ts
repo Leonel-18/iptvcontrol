@@ -353,6 +353,7 @@ export class ClientesService {
           idGestionExterno: dto.id_gestion_externo?.trim() || null,
           nombre: dto.nombre.trim(),
           apellido: dto.apellido?.trim() || null,
+          dni: dto.dni.trim(),
           telefono: dto.telefono?.trim() || null,
           email: dto.email?.trim() || null,
           direccion: dto.direccion?.trim() || null,
@@ -418,6 +419,7 @@ export class ClientesService {
       data: {
         nombre: dto.nombre?.trim(),
         apellido: dto.apellido?.trim(),
+        dni: dto.dni?.trim(),
         telefono: dto.telefono?.trim(),
         email: dto.email?.trim(),
         direccion: dto.direccion?.trim(),
@@ -664,6 +666,7 @@ export class ClientesService {
       nombre: cliente.nombre,
       apellido: cliente.apellido,
       nombre_completo: [cliente.nombre, cliente.apellido].filter(Boolean).join(' '),
+      dni: cliente.dni,
       telefono: cliente.telefono,
       email: cliente.email,
       direccion: cliente.direccion,

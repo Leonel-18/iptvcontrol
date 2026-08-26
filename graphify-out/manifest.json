@@ -215,18 +215,18 @@
     "semantic_hash": ""
   },
   "docs/02_Glosario_de_Actores_y_Entidades.md": {
-    "mtime": 1787674895.9851682,
-    "ast_hash": "13b596922201b1e42229bbf7be3ab93c",
+    "mtime": 1787771492.9309695,
+    "ast_hash": "5059ff427f9e3f495097da3530ad0c10",
     "semantic_hash": ""
   },
   "docs/03_Reglas_de_Negocio.md": {
-    "mtime": 1787674895.9861672,
-    "ast_hash": "0157d011ba31b25dfb28603fa52d4468",
+    "mtime": 1787771418.6650412,
+    "ast_hash": "3c0b9de02e4c489d7db1579539abb2ef",
     "semantic_hash": ""
   },
   "docs/04_Esqueleto_Tecnico_Inicial.md": {
-    "mtime": 1787674895.9871712,
-    "ast_hash": "b97651b450a18af32aabdbfb6d01b352",
+    "mtime": 1787771510.8332717,
+    "ast_hash": "3a14ae744a760c564ff1dcf9b4025244",
     "semantic_hash": ""
   },
   "docs/05_Decisiones_Pendientes.md": {
@@ -310,18 +310,18 @@
     "semantic_hash": ""
   },
   "backend/src/modules/clientes/clientes.service.ts": {
-    "mtime": 1787674895.9571688,
-    "ast_hash": "05e293788fef38addb78a95a145cac2e",
+    "mtime": 1787771277.4052255,
+    "ast_hash": "1aae84a826d560ef44e05b0e49416053",
     "semantic_hash": ""
   },
   "backend/src/modules/clientes/dto/crear-cliente.dto.ts": {
-    "mtime": 1787674895.9581673,
-    "ast_hash": "90d45e74ff0030826c7b2177360032cb",
+    "mtime": 1787771191.3376427,
+    "ast_hash": "595acfee793fb0c6c5be3d65ef0f328b",
     "semantic_hash": ""
   },
   "backend/src/modules/clientes/dto/listar-clientes.query.ts": {
-    "mtime": 1786734052.6532023,
-    "ast_hash": "a2335089223504c7508793a5b4cf13b8",
+    "mtime": 1787771247.551625,
+    "ast_hash": "9a2c521bc037676716200da852f5d81b",
     "semantic_hash": ""
   },
   "backend/src/modules/configuracion/configuracion.controller.ts": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas-provisioning.service.ts": {
-    "mtime": 1787674895.9621668,
-    "ast_hash": "11102663dc9858fa462d1e36571cefa9",
+    "mtime": 1787771859.2895603,
+    "ast_hash": "e537748c2c06804279d51a1bfe5e9d7e",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.controller.ts": {
@@ -585,13 +585,13 @@
     "semantic_hash": ""
   },
   "frontend/src/components/common.tsx": {
-    "mtime": 1787674895.9961667,
-    "ast_hash": "909556333819e38c873f97d5fa405653",
+    "mtime": 1787771678.503781,
+    "ast_hash": "7e9eec6754a66d8ae4e4c29706589b4d",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1787674895.9961667,
-    "ast_hash": "d81c6855d07661c07394906b29fe554f",
+    "mtime": 1787771355.2655773,
+    "ast_hash": "a8c2933a94b235af9930eb76cd91cd76",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/Gates.tsx": {
@@ -615,8 +615,8 @@
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/AccountDetail.tsx": {
-    "mtime": 1787674895.9971676,
-    "ast_hash": "0e5b59d5cb67f1e9a9439b304cfa8e12",
+    "mtime": 1787771710.0650387,
+    "ast_hash": "bd0f1aa2916dec0dae3e08fa66e662fe",
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/AccountDevicesTab.tsx": {
@@ -650,13 +650,13 @@
     "semantic_hash": ""
   },
   "frontend/src/features/customers/CustomerDetail.tsx": {
-    "mtime": 1787674896.0016873,
-    "ast_hash": "dd9b36a5e8c885b359f0f836225035e9",
+    "mtime": 1787771749.1887615,
+    "ast_hash": "d3fab645c865a8cf2a644e4fb7dee838",
     "semantic_hash": ""
   },
   "frontend/src/features/customers/CustomerForm.tsx": {
-    "mtime": 1787674896.0026875,
-    "ast_hash": "ece55801da787006aaee677b43617d5b",
+    "mtime": 1787771590.7747054,
+    "ast_hash": "201b0a7fdc992545e7131e8807f78ab9",
     "semantic_hash": ""
   },
   "frontend/src/features/customers/CustomerList.tsx": {
@@ -755,8 +755,8 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/types.ts": {
-    "mtime": 1787674896.010686,
-    "ast_hash": "036e1191f1015a5ca59befc481d8cc9d",
+    "mtime": 1787771290.3790183,
+    "ast_hash": "92cd681ac4218ac596cc99367e57ffd1",
     "semantic_hash": ""
   },
   "frontend/src/lib/utils.spec.ts": {
@@ -765,8 +765,8 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/utils.ts": {
-    "mtime": 1786734321.1365895,
-    "ast_hash": "1c28f40db97ac7b22db872b0327ddf04",
+    "mtime": 1787771658.6445417,
+    "ast_hash": "724e477ead7cfb5f1124624aa7e06dfd",
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {
@@ -815,8 +815,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1787751026.627074,
-    "ast_hash": "b6d030f14e1ffc89d89a9650be5b4ffa",
+    "mtime": 1787771987.2739503,
+    "ast_hash": "c72a21c00474c494eeed49210f4d6eab",
     "semantic_hash": ""
   },
   "frontend/index.html": {
@@ -900,8 +900,8 @@
     "semantic_hash": ""
   },
   "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md": {
-    "mtime": 1787751062.3640537,
-    "ast_hash": "f9d4bcaa05d86cf4e89f8574d805aa72",
+    "mtime": 1787771987.3076224,
+    "ast_hash": "d1d1ab10e36e4468caa73e623698e831",
     "semantic_hash": ""
   },
   "vault/40 - Operaci\u00f3n/Registro de auditor\u00eda.md": {
@@ -1005,8 +1005,8 @@
     "semantic_hash": ""
   },
   "docs/06_Despliegue_en_Produccion.md": {
-    "mtime": 1787751062.354059,
-    "ast_hash": "45efe8349418605c308c5bdcdd46eaa4",
+    "mtime": 1787771987.2789478,
+    "ast_hash": "657130a5d351ae4435b778c2400583a1",
     "semantic_hash": ""
   },
   "docs/API Sensa V4.1.4.pdf": {
@@ -1075,8 +1075,13 @@
     "semantic_hash": ""
   },
   "docker-compose.prod.yml": {
-    "mtime": 1787751026.6130743,
-    "ast_hash": "566697d80dd8532e08808f30c125c680",
+    "mtime": 1787771987.27695,
+    "ast_hash": "4a49f49861fd1ead3eb418570be29867",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260826140000_agregar_dni_cliente_final/migration.sql": {
+    "mtime": 1787771176.034761,
+    "ast_hash": "8ab4c8e6c503c1c7bb6fd68518371b01",
     "semantic_hash": ""
   }
 }

@@ -321,8 +321,16 @@ model ClienteFinal {
   /// de la misma Empresa Revendedora, sin bloquear el alta (reglas 2.4).
   idGestionExterno String? @map("id_gestion_externo") @db.VarChar(40)
 
-  nombre    String  @db.VarChar(120)
-  apellido  String? @db.VarChar(120)
+  nombre String  @db.VarChar(120)
+  apellido String? @db.VarChar(120)
+
+  /// DNI real de la persona (dato administrativo de la Empresa Revendedora).
+  /// NO tiene relación con `Cuenta.dniAltaSensa` (identificador sintético
+  /// autoincremental que exige SENSA para el alta de la Cuenta) — este campo
+  /// nunca se envía al Proveedor, es sólo para uso interno/legal del
+  /// Revendedor (ver conversación del 26/08/2026, pedido explícito de Bruno).
+  dni String @db.VarChar(20)
+
   telefono  String? @db.VarChar(30)
   email     String? @db.VarChar(160)
   direccion String? @db.VarChar(200)

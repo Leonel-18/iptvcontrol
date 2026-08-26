@@ -119,9 +119,13 @@ La Empresa Revendedora puede sumarle a un Cliente Final que ya tiene Dispositivo
   identificar cada Cuenta de forma única sin que la Empresa Revendedora gestione casillas reales.
 - La contraseña generada para la Cuenta tiene exactamente **8 dígitos numéricos** y el PIN,
   exactamente **6 dígitos numéricos**.
-- El nombre y apellido reales del Cliente Final permanecen en IPTVControl. SENSA recibe el nombre y
-  apellido del contacto de la Empresa Revendedora. El teléfono y la dirección se toman del Cliente
-  Final cuando están disponibles y usan los datos de la Empresa Revendedora como fallback.
+- **Cuenta exclusiva:** SENSA recibe el nombre y apellido reales del Cliente Final (los cargados en
+  el wizard de alta), con el contacto de la Empresa Revendedora sólo como fallback si esos campos
+  vinieran vacíos (confirmado por Bruno, 26/08/2026 — la Cuenta le pertenece a un único cliente, así
+  que tiene sentido que SENSA lo identifique a él). **Cuenta compartida:** al no pertenecer a un
+  único cliente, SENSA sigue recibiendo el nombre y apellido del contacto de la Empresa Revendedora.
+  En ambos casos, el teléfono y la dirección se toman del Cliente Final cuando están disponibles y
+  usan los datos de la Empresa Revendedora como fallback.
 - `id_gestion_externo` permanece exclusivamente local y nunca se envía a SENSA.
 
 ### 2.5. Validación de duplicados por ID de sistema de gestión externo
