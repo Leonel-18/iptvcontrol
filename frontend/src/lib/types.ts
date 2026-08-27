@@ -156,7 +156,8 @@ export interface Customer {
   nombre: string;
   apellido: string | null;
   nombre_completo: string;
-  dni: string;
+  /** Puede venir null en Clientes Finales cargados antes de que este campo existiera. */
+  dni: string | null;
   telefono: string | null;
   email: string | null;
   direccion: string | null;
