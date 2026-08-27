@@ -330,7 +330,15 @@ model ClienteFinal {
   /// autoincremental que exige SENSA para el alta de la Cuenta) — este campo
   /// nunca se envía al Proveedor, es sólo para uso interno/legal del
   /// Revendedor (ver conversación del 26/08/2026, pedido explícito de Bruno).
-  dni String @db.VarChar(20)
+  /// Opcional a nivel de base a propósito: producción ya tenía Clientes
+  /// Finales cargados sin este dato cuando se agregó (26/08/2026), y un
+  /// NOT NULL directo rompió la migración (P3009, corregido 27/08/2026 en
+  /// el mismo migration.sql de 20260826140000_agregar_dni_cliente_final,
+  /// nunca llegó a aplicarse en producción). El wizard de alta lo sigue
+  /// pidiendo como obligatorio para todo Cliente Final nuevo
+  /// (`CrearClienteDto.dni`); los históricos quedan en null hasta que
+  /// alguien los complete a mano desde el panel.
+  dni String? @db.VarChar(20)
 
   telefono  String? @db.VarChar(30)
   email     String? @db.VarChar(160)
