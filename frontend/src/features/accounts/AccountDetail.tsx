@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, KeyRound, RefreshCw, XCircle } from "lucide-react";
+import { ArrowLeft, KeyRound, Lock, RefreshCw, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,10 +28,14 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Field,
+  Input,
   Skeleton,
 } from "@/components/ui/primitives";
 import {
   ConfirmDialog,
+  Dialog,
+  DialogContent,
   Tabs,
   TabsContent,
   TabsList,
@@ -58,6 +62,9 @@ export const AccountDetail = () => {
   const navigate = useNavigate();
   const [credencialesVisibles, setCredencialesVisibles] = useState(false);
   const [confirmarCierre, setConfirmarCierre] = useState(false);
+  const [cambiarPasswordAbierto, setCambiarPasswordAbierto] = useState(false);
+  const [passwordNueva, setPasswordNueva] = useState("");
+  const [errorPassword, setErrorPassword] = useState("");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["account", id],
@@ -91,6 +98,21 @@ export const AccountDetail = () => {
       setConfirmarCierre(false);
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
       navigate("/accounts");
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const cambiarPassword = useMutation({
+    mutationFn: () =>
+      api(`/accounts/${id}/password`, {
+        metodo: "PATCH",
+        body: { password: passwordNueva },
+      }),
+    onSuccess: () => {
+      toast.success("Contraseña actualizada en el proveedor.");
+      setCambiarPasswordAbierto(false);
+      setPasswordNueva("");
+      void queryClient.invalidateQueries({ queryKey: ["account-credentials", id] });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -169,6 +191,54 @@ export const AccountDetail = () => {
           abandonadas.
         </Alert>
       </ConfirmDialog>
+
+      <Dialog open={cambiarPasswordAbierto} onOpenChange={setCambiarPasswordAbierto}>
+        <DialogContent
+          titulo="Cambiar contraseña de la Cuenta"
+          descripcion="Reemplaza la contraseña generada automáticamente por una definida a mano. Debe ser numérica, de 8 a 20 dígitos."
+        >
+          <div className="space-y-4">
+            <Field label="Contraseña nueva" htmlFor="password-nueva" required error={errorPassword}>
+              <Input
+                id="password-nueva"
+                inputMode="numeric"
+                value={passwordNueva}
+                onChange={(evento) =>
+                  setPasswordNueva(evento.target.value.replace(/\D/g, "").slice(0, 20))
+                }
+                autoFocus
+              />
+            </Field>
+            <Alert tone="warning">
+              Los Clientes Finales que usan esta Cuenta van a necesitar la contraseña nueva para
+              seguir accediendo. Avíseles antes de cambiarla.
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setCambiarPasswordAbierto(false)}
+                disabled={cambiarPassword.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (!/^\d{8,20}$/.test(passwordNueva)) {
+                    setErrorPassword("Ingrese entre 8 y 20 dígitos numéricos.");
+                    return;
+                  }
+                  setErrorPassword("");
+                  cambiarPassword.mutate();
+                }}
+                disabled={cambiarPassword.isPending}
+              >
+                {cambiarPassword.isPending ? "Guardando…" : "Guardar contraseña"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -337,12 +407,27 @@ export const AccountDetail = () => {
                 )}
 
                 {credencialesVisibles ? (
-                  <WhatsappTemplateButton
-                    usuario={credenciales.data?.usuario}
-                    password={credenciales.data?.password}
-                    pin={credenciales.data?.pin}
-                    esExclusiva={data.es_exclusiva}
-                  />
+                  <div className="flex flex-wrap gap-2">
+                    <WhatsappTemplateButton
+                      usuario={credenciales.data?.usuario}
+                      password={credenciales.data?.password}
+                      pin={credenciales.data?.pin}
+                      esExclusiva={data.es_exclusiva}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setPasswordNueva("");
+                        setErrorPassword("");
+                        setCambiarPasswordAbierto(true);
+                      }}
+                    >
+                      <Lock className="size-3.5" />
+                      Cambiar contraseña
+                    </Button>
+                  </div>
                 ) : null}
 
                 {!data.es_exclusiva ? (

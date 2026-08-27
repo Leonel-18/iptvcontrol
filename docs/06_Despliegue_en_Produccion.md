@@ -65,8 +65,20 @@ para `/api/`. Los assets estáticos llevan hash y se cachean 1 año en `frontend
    Swagger no se expone.
 
 La definición de producción es `docker-compose.prod.yml` y se ejecuta de manera independiente del
-Compose local. No incluye pgAdmin ni publica puertos de PostgreSQL, Redis o backend. El frontend se
+Compose local. No publica puertos de PostgreSQL, Redis o backend. El frontend se
 enlaza solamente a `127.0.0.1:8080`; el Nginx existente del host recibe `80/443` y lo proxea.
+
+**pgAdmin (opcional, apagado por defecto):** vive detrás de un `profile` de Compose, así que
+`docker compose up -d` **no lo levanta** salvo que se pida explícitamente con
+`--profile pgadmin`. Cuando se levanta, publica en `127.0.0.1:5050` — nunca queda alcanzable desde
+Internet. Para usarlo, hay que abrir antes un túnel SSH desde la PC del operador:
+
+```bash
+ssh -L 5050:127.0.0.1:5050 <usuario>@38.51.27.217
+```
+
+y recién ahí entrar a `http://localhost:5050` desde el navegador local. Cerrar el túnel (o el
+contenedor con `docker compose --profile pgadmin down pgadmin`) cuando ya no haga falta.
 
 ---
 
@@ -200,7 +212,8 @@ Ver el detalle completo en `docs/05_Decisiones_Pendientes.md`. Los que impactan 
 - [ ] Always Use HTTPS activo y caché omitida para `/api/*`.
 - [x] VPS Ubuntu 24.04 con Docker y Compose activos.
 - [ ] Política de firewall revisada con infraestructura, sin afectar otros servicios de la VPS.
-- [x] `docker-compose.prod.yml` sin pgAdmin ni puertos internos publicados.
+- [x] `docker-compose.prod.yml` sin puertos internos publicados; pgAdmin apagado por defecto
+      (perfil `pgadmin`) y sólo accesible por túnel SSH si se activa.
 - [ ] `.env.production` completo y con permisos `600`.
 - [ ] Nginx del host proxea `iptvcontrol.com.ar` hacia `127.0.0.1:8080`.
 - [ ] Auth0: agregar las URLs de callback/logout de producción a la SPA (hoy solo apuntan a

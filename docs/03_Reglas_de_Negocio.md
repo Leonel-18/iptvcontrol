@@ -251,9 +251,14 @@ decide no afrontar en esta etapa**, como parte del trade-off para lograr mayor r
 **Este es un riesgo conocido y aceptado, no una pregunta abierta ni un bloqueante del MVP.** Para
 el caso de suspensión, el riesgo no aplica porque el Dispositivo queda bloqueado y no se reasigna
 mientras dure la suspensión. **Confirmación final de Bruno:** este comportamiento queda descartado
-para siempre como pendiente de "segunda etapa" — el sistema **no** implementa rotación ni
-notificación automática de contraseña. Si alguna vez hiciera falta cambiar la contraseña de una
-Cuenta puntual, **lo hace Bruno manualmente**, por fuera del sistema.
+para siempre como pendiente de "segunda etapa" — el sistema **no** implementa rotación automática
+ni notificación automática de contraseña ante una venta nueva. Lo que sí existe (agregado
+26/08/2026, a pedido de Bruno) es un cambio **manual y puntual** desde el panel de la Empresa
+Revendedora (`PATCH /accounts/:id/password`, botón "Cambiar contraseña" en la vista de Cuenta): la
+contraseña sigue generándose automáticamente en cada alta, pero la Empresa Revendedora puede
+reemplazarla a mano cuando lo necesite (ej. no se pudo comunicar la generada, o el Cliente Final ya
+tenía una acordada de antes). Es una acción explícita de la Empresa Revendedora, no un mecanismo de
+rotación del sistema: el riesgo aceptado de esta sección sigue vigente igual.
 
 ## 7. Fuera de alcance en la primera etapa (recordatorio)
 

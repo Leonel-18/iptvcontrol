@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   "backend/src/proveedor/proveedor-adapter.interface.ts": {
-    "mtime": 1787834397.2725153,
-    "ast_hash": "4b4fa0915172f23f694bce472134d6fe",
+    "mtime": 1787674895.9771667,
+    "ast_hash": "8be89574b1219b0faa676ba750262cb4",
     "semantic_hash": ""
   },
   "backend/src/proveedor/proveedor-telemetry.service.ts": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "backend/src/proveedor/proveedor.service.ts": {
-    "mtime": 1787834434.524433,
-    "ast_hash": "1bc14bac5a0ad8ad50e0798b90cdc3ed",
+    "mtime": 1787584086.0057757,
+    "ast_hash": "11c96ee8c4860c2103108e91589fac89",
     "semantic_hash": ""
   },
   "backend/src/proveedor/rate-limiter.service.ts": {
@@ -130,8 +130,8 @@
     "semantic_hash": ""
   },
   "backend/src/proveedor/sensa/sensa.adapter.ts": {
-    "mtime": 1787834415.2447402,
-    "ast_hash": "144dceead4e9eb436c752f73a2b3165a",
+    "mtime": 1787674895.979167,
+    "ast_hash": "dedeef193bbfd499b1672d351b1063b6",
     "semantic_hash": ""
   },
   "backend/src/proveedor/sensa/sensa.constants.ts": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "docs/03_Reglas_de_Negocio.md": {
-    "mtime": 1787835466.3832338,
-    "ast_hash": "501a13bdd8e8ec2f7b739ffc959f85bd",
+    "mtime": 1787771418.6650412,
+    "ast_hash": "3c0b9de02e4c489d7db1579539abb2ef",
     "semantic_hash": ""
   },
   "docs/04_Esqueleto_Tecnico_Inicial.md": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/auditoria/auditoria.service.ts": {
-    "mtime": 1787835159.7895877,
-    "ast_hash": "b3bdad9b99bf33e20345d7ce26148aa7",
+    "mtime": 1787674895.954171,
+    "ast_hash": "2c26425a11fd3c1c601be4bb732b8759",
     "semantic_hash": ""
   },
   "backend/src/modules/auditoria/dto/listar-auditoria.query.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.controller.ts": {
-    "mtime": 1787835558.555576,
-    "ast_hash": "22642e70ced8cc7394cba21365c92779",
+    "mtime": 1787674895.963167,
+    "ast_hash": "e3938fe804a3997355127df6a0fd55d4",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.mapper.spec.ts": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.service.ts": {
-    "mtime": 1787835114.1530678,
-    "ast_hash": "b188098890e2d9213a8b07d412316c12",
+    "mtime": 1787674895.966167,
+    "ast_hash": "eaa122bfa449a0b03ee49f301a6aad82",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/dto/listar-cuentas.query.ts": {
@@ -615,8 +615,8 @@
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/AccountDetail.tsx": {
-    "mtime": 1787835290.396024,
-    "ast_hash": "040905bfb498d72cf68499a8ec010181",
+    "mtime": 1787771710.0650387,
+    "ast_hash": "bd0f1aa2916dec0dae3e08fa66e662fe",
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/AccountDevicesTab.tsx": {
@@ -1005,8 +1005,8 @@
     "semantic_hash": ""
   },
   "docs/06_Despliegue_en_Produccion.md": {
-    "mtime": 1787835436.7723382,
-    "ast_hash": "fa29ca2f0687a9a6ed1a142135882a1b",
+    "mtime": 1787771987.2789478,
+    "ast_hash": "657130a5d351ae4435b778c2400583a1",
     "semantic_hash": ""
   },
   "docs/API Sensa V4.1.4.pdf": {
@@ -1065,8 +1065,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.service.spec.ts": {
-    "mtime": 1787835603.5215344,
-    "ast_hash": "1649875c1cf9b47f4dd1fbd08dbae4fe",
+    "mtime": 1787674895.9651666,
+    "ast_hash": "2aaed1f9b274cd32eb32c91ff030a6d7",
     "semantic_hash": ""
   },
   "backend/src/queues/cola-proveedor.processor.spec.ts": {
@@ -1075,23 +1075,13 @@
     "semantic_hash": ""
   },
   "docker-compose.prod.yml": {
-    "mtime": 1787835347.3427455,
-    "ast_hash": "b6f44465c9d14eb79a170952bd0eef71",
+    "mtime": 1787771987.27695,
+    "ast_hash": "4a49f49861fd1ead3eb418570be29867",
     "semantic_hash": ""
   },
   "backend/prisma/migrations/20260826140000_agregar_dni_cliente_final/migration.sql": {
     "mtime": 1787771176.034761,
     "ast_hash": "8ab4c8e6c503c1c7bb6fd68518371b01",
-    "semantic_hash": ""
-  },
-  "backend/prisma/migrations/20260826150000_agregar_cambio_password_cuenta/migration.sql": {
-    "mtime": 1787835055.2280319,
-    "ast_hash": "ca44f3bf1d22df3fc39a6d69240d9f54",
-    "semantic_hash": ""
-  },
-  "backend/src/modules/cuentas/dto/cambiar-password-cuenta.dto.ts": {
-    "mtime": 1787835093.6719165,
-    "ast_hash": "d21767b3669cbbaa780025282333672f",
     "semantic_hash": ""
   }
 }
