@@ -110,8 +110,13 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL es obligatoria}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD es obligatoria}
+      # OJO: usar ":-" y no ":?" acá a propósito. Un valor obligatorio con ":?"
+      # se evalúa al parsear el archivo aunque el servicio esté detrás de un
+      # profile no activo, y rompería el "docker compose up -d" normal (sin
+      # --profile pgadmin) si estas dos variables no están definidas. Si se va
+      # a usar pgAdmin de verdad, definir ambas en .env.production antes.
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@iptvcontrol.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-cambiar_esta_password}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
     volumes:
