@@ -33,7 +33,7 @@ export interface CrearCuentaOpciones {
   operadorPrincipalId: string;
   /** true si la Cuenta se crea para un único Cliente Final (cuenta exclusiva). */
   esExclusiva: boolean;
-  clienteFinal?: Pick<ClienteFinal, 'telefono' | 'direccion'>;
+  clienteFinal?: Pick<ClienteFinal, 'nombre' | 'apellido' | 'telefono' | 'direccion'>;
   /** Firma canónica de servicios. */
   servicios?: string;
   /**
@@ -152,8 +152,20 @@ export class CuentasProvisioningService {
           email: cuentaActual.emailContacto,
           password,
           pin,
-          nombre: empresaRevendedora.nombreContacto || empresaRevendedora.razonSocial,
-          apellido: empresaRevendedora.apellidoContacto || 'Revendedor',
+          // En una Cuenta exclusiva (un único Cliente Final) se prioriza el
+          // nombre y apellido cargados en el formulario del cliente: son los
+          // datos reales del titular del servicio, y una Cuenta compartida no
+          // podría usar este mismo criterio porque atañe a varios clientes
+          // distintos (confirmado con Bruno, 26/08/2026). El contacto de la
+          // Empresa Revendedora sigue siendo el fallback si el campo vino vacío.
+          nombre: esExclusiva
+            ? opciones.clienteFinal?.nombre ||
+              empresaRevendedora.nombreContacto ||
+              empresaRevendedora.razonSocial
+            : empresaRevendedora.nombreContacto || empresaRevendedora.razonSocial,
+          apellido: esExclusiva
+            ? opciones.clienteFinal?.apellido || empresaRevendedora.apellidoContacto || 'Revendedor'
+            : empresaRevendedora.apellidoContacto || 'Revendedor',
           direccion: opciones.clienteFinal?.direccion || empresaRevendedora.direccion,
           ciudad: config.ciudadPorDefecto,
           telefono: opciones.clienteFinal?.telefono || empresaRevendedora.telefonoContacto,

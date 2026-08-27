@@ -1,12 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  CircleAlert,
-  UserPlus,
-} from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, UserPlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
@@ -22,8 +16,47 @@ import {
   CardFooter,
   Field,
   Input,
+  Skeleton,
   Textarea,
 } from '@/components/ui/primitives';
+
+/** Leyendas que van rotando mientras se procesa el alta (mismo lenguaje que la
+ * pantalla de inicio de sesión: logo + texto suave + barras de progreso). */
+const LEYENDAS_ALTA = [
+  'Dando de alta al cliente…',
+  'Generando credenciales en el proveedor…',
+  'Sincronizando dispositivos…',
+  'Ya casi terminamos…',
+];
+
+const CargandoAlta = () => {
+  const [indice, setIndice] = useState(0);
+  useEffect(() => {
+    const intervalo = setInterval(
+      () => setIndice((actual) => (actual + 1) % LEYENDAS_ALTA.length),
+      2200,
+    );
+    return () => clearInterval(intervalo);
+  }, []);
+
+  return (
+    <div className="grid min-h-[360px] place-items-center p-6">
+      <div className="w-full max-w-sm space-y-4 text-center">
+        <img
+          src="/logo_iptvcontrol.png"
+          alt="IPTVControl"
+          className="mx-auto size-16 object-contain"
+        />
+        <p className="text-sm texto-suave">{LEYENDAS_ALTA[indice]}</p>
+        <div className="space-y-2">
+          <Skeleton className="h-2 w-full" />
+          <Skeleton className="mx-auto h-2 w-2/3" />
+        </div>
+        <p className="text-xs texto-suave">No cierre esta pantalla.</p>
+      </div>
+    </div>
+  );
+};
 
 /**
  * =============================================================================
@@ -48,6 +81,7 @@ type MetodoAlta = 'cuenta_exclusiva' | 'dispositivo_compartido';
 interface EstadoFormulario {
   nombre: string;
   apellido: string;
+  dni: string;
   telefono: string;
   email: string;
   direccion: string;
@@ -60,6 +94,7 @@ interface EstadoFormulario {
 const INICIAL: EstadoFormulario = {
   nombre: '',
   apellido: '',
+  dni: '',
   telefono: '',
   email: '',
   direccion: '',
@@ -93,6 +128,20 @@ export const CustomerForm = () => {
   const serviciosContratados = (catalogo.data ?? []).filter((servicio) => servicio.contratado);
   const catalogoDisponible = catalogo.isSuccess && serviciosContratados.length > 0;
 
+  // Por defecto se ofrece la venta unitaria con TODOS los servicios contratados
+  // marcados (igual que la Cuenta completa): la Empresa Revendedora desmarca lo
+  // que no corresponda, en vez de tener que marcar uno por uno. Sólo se aplica
+  // una vez, cuando el catálogo termina de cargar y todavía no se tocó nada.
+  useEffect(() => {
+    if (catalogoDisponible && valores.servicios.length <= 1) {
+      setValores((actual) => ({
+        ...actual,
+        servicios: serviciosContratados.map((servicio) => servicio.codigo),
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogoDisponible]);
+
   const actualizar = <K extends keyof EstadoFormulario>(clave: K, valor: EstadoFormulario[K]) => {
     setValores((actual) => ({ ...actual, [clave]: valor }));
     setErrores((actual) => ({ ...actual, [clave]: undefined }));
@@ -125,6 +174,7 @@ export const CustomerForm = () => {
           body: {
             nombre: valores.nombre.trim(),
             apellido: valores.apellido.trim() || undefined,
+            dni: valores.dni.trim(),
             telefono: valores.telefono.trim() || undefined,
             email: valores.email.trim() || undefined,
             direccion: valores.direccion.trim() || undefined,
@@ -184,6 +234,9 @@ export const CustomerForm = () => {
       const nuevos: typeof errores = {};
       if (valores.nombre.trim().length < 2) {
         nuevos.nombre = 'Ingrese el nombre del cliente.';
+      }
+      if (!/^\d{6,10}$/.test(valores.dni.trim())) {
+        nuevos.dni = 'Ingrese un DNI válido (6 a 10 dígitos, sin puntos).';
       }
       if (valores.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valores.email.trim())) {
         nuevos.email = 'Revise el correo: no parece válido.';
@@ -269,6 +322,11 @@ export const CustomerForm = () => {
       </ol>
 
       <Card className="max-w-3xl">
+        {crear.isPending ? (
+          <CardContent>
+            <CargandoAlta />
+          </CardContent>
+        ) : (
         <CardContent className="space-y-4">
           {/* ---------------------------------------------------------------- */}
           {/* Paso 1 — Datos del cliente                                       */}
@@ -289,6 +347,22 @@ export const CustomerForm = () => {
                     id="apellido"
                     value={valores.apellido}
                     onChange={(evento) => actualizar('apellido', evento.target.value)}
+                  />
+                </Field>
+                <Field
+                  label="DNI"
+                  htmlFor="dni"
+                  required
+                  error={errores.dni}
+                  help="Dato administrativo del cliente. No se envía al proveedor."
+                >
+                  <Input
+                    id="dni"
+                    inputMode="numeric"
+                    value={valores.dni}
+                    onChange={(evento) =>
+                      actualizar('dni', evento.target.value.replace(/\D/g, '').slice(0, 10))
+                    }
                   />
                 </Field>
                 <Field label="Teléfono" htmlFor="telefono">
@@ -597,6 +671,9 @@ export const CustomerForm = () => {
                 <Resumen etiqueta="Cliente">
                   {[valores.nombre, valores.apellido].filter(Boolean).join(' ')}
                 </Resumen>
+                <Resumen etiqueta="DNI">
+                  <span className="id-tecnico">{valores.dni}</span>
+                </Resumen>
                 {valores.idGestionExterno ? (
                   <Resumen etiqueta="ID de gestión">
                     <span className="id-tecnico">{valores.idGestionExterno}</span>
@@ -657,45 +734,35 @@ export const CustomerForm = () => {
             </div>
           ) : null}
         </CardContent>
+        )}
 
-        <CardFooter className="justify-between">
-          <Button variant="ghost" onClick={anterior} disabled={paso === 0 || crear.isPending}>
-            <ArrowLeft />
-            Atrás
-          </Button>
+        {!crear.isPending ? (
+          <CardFooter className="justify-between">
+            <Button variant="ghost" onClick={anterior} disabled={paso === 0}>
+              <ArrowLeft />
+              Atrás
+            </Button>
 
-          {paso < PASOS.length - 1 ? (
-            <Button
-              variant="primary"
-              onClick={siguiente}
-              disabled={
-                paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible
-              }
-            >
-              Continuar
-              <ArrowRight />
-            </Button>
-          ) : (
-            <Button variant="primary" onClick={() => crear.mutate()} disabled={crear.isPending}>
-              {crear.isPending ? (
-                'Dando de alta…'
-              ) : (
-                <>
-                  <UserPlus />
-                  Dar de alta
-                </>
-              )}
-            </Button>
-          )}
-        </CardFooter>
+            {paso < PASOS.length - 1 ? (
+              <Button
+                variant="primary"
+                onClick={siguiente}
+                disabled={
+                  paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible
+                }
+              >
+                Continuar
+                <ArrowRight />
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={() => crear.mutate()}>
+                <UserPlus />
+                Dar de alta
+              </Button>
+            )}
+          </CardFooter>
+        ) : null}
       </Card>
-
-      {crear.isPending ? (
-        <p className="mt-3 flex items-center gap-2 text-sm texto-suave">
-          <CircleAlert className="size-4" />
-          Estamos hablando con el proveedor. No cierre esta pantalla.
-        </p>
-      ) : null}
     </>
   );
 };

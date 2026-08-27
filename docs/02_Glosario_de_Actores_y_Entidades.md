@@ -41,7 +41,9 @@ los tiene cargados.
 Usuario que efectivamente consume el servicio IPTV. Es dado de alta por la Empresa Revendedora y
 asociado a uno o más Dispositivos dentro de una Cuenta. No tiene relación directa con el Operador
 Principal ni con el Proveedor, ni acceso propio al sistema. Su registro incluye un **número de
-cliente** interno de IPTVControl y, opcionalmente, un **ID de cliente en el sistema de gestión
+cliente** interno de IPTVControl, su **DNI real** (dato administrativo de la Empresa Revendedora,
+que nunca se envía al Proveedor — distinto del identificador sintético `dni_alta_sensa` que exige
+SENSA para la Cuenta) y, opcionalmente, un **ID de cliente en el sistema de gestión
 propio de la Empresa Revendedora** (para vincularlo con su CRM/facturación externa). Si la Empresa
 Revendedora carga ese ID y ya existe otro Cliente Final activo de esa misma Empresa Revendedora con
 el mismo valor, el sistema la avisa antes de confirmar el alta — ver `03_Reglas_de_Negocio.md`,

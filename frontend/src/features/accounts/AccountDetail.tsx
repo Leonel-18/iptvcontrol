@@ -15,6 +15,7 @@ import {
   DetailRow,
   PageHeader,
   SecretValue,
+  WhatsappTemplateButton,
 } from "@/components/common";
 import { AccountDevicesTab } from "./AccountDevicesTab";
 import { AccountProviderInventoryTab } from "./AccountProviderInventoryTab";
@@ -334,6 +335,15 @@ export const AccountDetail = () => {
                     </div>
                   </dl>
                 )}
+
+                {credencialesVisibles ? (
+                  <WhatsappTemplateButton
+                    usuario={credenciales.data?.usuario}
+                    password={credenciales.data?.password}
+                    pin={credenciales.data?.pin}
+                    esExclusiva={data.es_exclusiva}
+                  />
+                ) : null}
 
                 {!data.es_exclusiva ? (
                   <Alert tone="info">

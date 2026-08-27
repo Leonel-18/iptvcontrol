@@ -30,6 +30,7 @@ import {
   PageHeader,
   SecretValue,
   VinculacionEnCursoAlert,
+  WhatsappTemplateButton,
 } from "@/components/common";
 import { AddDeviceDialog } from "../devices/AddDeviceDialog";
 import {
@@ -400,6 +401,9 @@ export const CustomerDetail = () => {
                   <DetailRow etiqueta="Nombre">
                     {data.nombre_completo || "—"}
                   </DetailRow>
+                  <DetailRow etiqueta="DNI">
+                    <span className="id-tecnico">{data.dni || "—"}</span>
+                  </DetailRow>
                   <DetailRow etiqueta="Teléfono">
                     {data.telefono || "—"}
                   </DetailRow>
@@ -486,6 +490,13 @@ export const CustomerDetail = () => {
                     </dd>
                   </div>
                 </dl>
+
+                <WhatsappTemplateButton
+                  usuario={data.cuenta.usuario}
+                  password={data.cuenta.password}
+                  pin={data.cuenta.pin}
+                  esExclusiva={data.cuenta.es_exclusiva}
+                />
 
                 {!data.cuenta.es_exclusiva ? (
                   <Alert tone="info">

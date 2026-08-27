@@ -70,3 +70,40 @@ export const formatearMac = (mac?: string | null): string => {
   if (!mac) return '—';
   return mac.replace(/(.{2})(?=.)/g, '$1:');
 };
+
+/**
+ * Arma el texto listo para pegar en WhatsApp con las credenciales del cliente
+ * y un mini instructivo de acceso. El PIN sólo se incluye en una Cuenta
+ * exclusiva: en una Cuenta compartida, varios clientes usan el mismo PIN de
+ * control parental de la Cuenta, y no tiene sentido de negocio entregárselo a
+ * cada uno como si fuera propio.
+ */
+export const construirPlantillaWhatsApp = (params: {
+  usuario: string;
+  password: string;
+  pin?: string | null;
+  esExclusiva: boolean;
+}): string => {
+  const { usuario, password, pin, esExclusiva } = params;
+  const lineas = [
+    '¡Hola! 👋 Ya podés empezar a disfrutar tu servicio de IPTV.',
+    '',
+    '📺 *Datos de acceso*',
+    `Usuario: ${usuario}`,
+    `Contraseña: ${password}`,
+  ];
+  if (esExclusiva && pin) {
+    lineas.push(`PIN de control parental: ${pin}`);
+  }
+  lineas.push(
+    '',
+    '📲 *Cómo ingresar*',
+    '1. Si vas a mirar desde el celular, tablet o PC, entrá a player.sensa.com.ar desde el navegador.',
+    '2. Si tenés un decodificador/TV, encendelo: ya viene configurado con este mismo usuario.',
+    '3. Ingresá el Usuario y la Contraseña de arriba.',
+    '4. ¡Listo! Ya podés elegir qué mirar.',
+    '',
+    'Ante cualquier duda, escribinos por acá.',
+  );
+  return lineas.join('\n');
+};

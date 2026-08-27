@@ -259,9 +259,7 @@ export const AppLayout = () => {
         </main>
 
         <footer className="px-3 pb-5 pt-2 text-center sm:px-5">
-          <p className="text-2xs texto-suave">
-            IPTVControl · Godoy Cruz, Mendoza
-          </p>
+          <p className="text-2xs texto-suave">IPTVControl</p>
         </footer>
       </div>
     </div>

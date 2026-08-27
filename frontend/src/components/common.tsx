@@ -1,4 +1,4 @@
-import { Check, Copy, Eye, EyeOff } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, MessageCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
@@ -16,7 +16,7 @@ import {
   teamMemberStatusLabels,
   traducir,
 } from "@/i18n/entityLabels";
-import { cn, copiarAlPortapapeles } from "@/lib/utils";
+import { cn, construirPlantillaWhatsApp, copiarAlPortapapeles } from "@/lib/utils";
 import { Alert, Badge, Button, type BadgeProps } from "./ui/primitives";
 import { Tooltip } from "./ui/overlays";
 
@@ -161,6 +161,42 @@ export const SecretValue = ({
         />
       ) : null}
     </span>
+  );
+};
+
+/**
+ * "Copiar plantilla": arma el usuario/contraseña (+ PIN si corresponde) junto
+ * con un mini instructivo de acceso, listo para pegar en WhatsApp y mandarle
+ * al Cliente Final. No envía nada por sí solo — sólo copia el texto.
+ */
+export const WhatsappTemplateButton = ({
+  usuario,
+  password,
+  pin,
+  esExclusiva,
+}: {
+  usuario?: string | null;
+  password?: string | null;
+  pin?: string | null;
+  esExclusiva: boolean;
+}) => {
+  if (!usuario || !password) return null;
+
+  const copiar = async () => {
+    const texto = construirPlantillaWhatsApp({ usuario, password, pin, esExclusiva });
+    const ok = await copiarAlPortapapeles(texto);
+    if (!ok) {
+      toast.error("No se pudo copiar. Seleccione el texto y copie a mano.");
+      return;
+    }
+    toast.success("Plantilla copiada. Ya la puede pegar en WhatsApp.");
+  };
+
+  return (
+    <Button type="button" variant="secondary" size="sm" onClick={copiar}>
+      <MessageCircle className="size-3.5" />
+      Copiar plantilla
+    </Button>
   );
 };
 

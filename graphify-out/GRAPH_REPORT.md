@@ -1,16 +1,16 @@
 # Graph Report - iptvcontrol-opencode  (2026-08-26)
 
 ## Corpus Check
-- 207 files · ~125,939 words
+- 208 files · ~126,954 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1815 nodes · 4236 edges · 117 communities (85 shown, 32 thin omitted)
+- 1823 nodes · 4249 edges · 128 communities (92 shown, 36 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bff7d20e`
+- Built from commit: `9a543e88`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -94,6 +94,7 @@
 - @nestjs/platform-express
 - Vault de Obsidian — IPTVControl
 - AuditModule
+- team-members.service.ts
 - utils.ts
 - vite-env.d.ts
 - Auth0ManagementService
@@ -106,6 +107,8 @@
 - @nestjs/throttler
 - passport-jwt
 - rxjs
+- team-members.module.ts
+- ClientesService
 - eslint-plugin-react-refresh
 - globals
 - jsdom
@@ -115,11 +118,19 @@
 - @types/node
 - @types/react
 - typescript
+- crearProteccionSwagger
 - @vitejs/plugin-react
 - vitest
+- DashboardController
 - ColaProveedorService
 - generarCsv
+- Auth0ManagementService
+- CuentasProvisioningService
 - HttpExceptionFilter
+- ListarCuentasQueryDto
+- InventarioProveedorService
+- migration.sql
+- auth0
 - migration.sql
 - vite
 
@@ -138,23 +149,23 @@
 ## Surprising Connections (you probably didn't know these)
 - `MenuUsuario()` --calls--> `useSesion()`  [EXTRACTED]
   frontend/src/components/layout/AppLayout.tsx → frontend/src/lib/session.tsx
-- `CardDescription()` --calls--> `cn()`  [EXTRACTED]
-  frontend/src/components/ui/primitives.tsx → frontend/src/lib/utils.ts
-- `PanelOperador()` --calls--> `formatearNumero()`  [EXTRACTED]
-  frontend/src/features/dashboard/Dashboard.tsx → frontend/src/lib/utils.ts
-- `ReassignDialog()` --calls--> `api()`  [EXTRACTED]
-  frontend/src/features/devices/DeviceDetail.tsx → frontend/src/lib/api.ts
+- `DeviceDetailData` --inherits--> `AccountDevice`  [EXTRACTED]
+  frontend/src/features/devices/DeviceDetail.tsx → frontend/src/lib/types.ts
 - `bootstrap()` --indirect_call--> `AppModule`  [INFERRED]
   backend/src/main.ts → backend/src/app.module.ts
+- `IncidenciasDispositivosController` --references--> `SoloRevendedor()`  [EXTRACTED]
+  backend/src/modules/dispositivos/incidencias-dispositivos.controller.ts → backend/src/common/auth/decorators.ts
+- `ListarClientesQueryDto` --inherits--> `PaginationQueryDto`  [EXTRACTED]
+  backend/src/modules/clientes/dto/listar-clientes.query.ts → backend/src/common/dto/pagination.dto.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (117 total, 32 thin omitted)
+## Communities (128 total, 36 thin omitted)
 
 ### Community 0 - "RequestContextService"
-Cohesion: 0.08
-Nodes (17): AuditService, RegistroAuditoria, Injectable, TeamMemberGuard, Injectable, RequestContext, RequestContextService, Injectable (+9 more)
+Cohesion: 0.09
+Nodes (18): AuditService, RegistroAuditoria, Injectable, TeamMemberGuard, Injectable, RequestContext, RequestContextService, Injectable (+10 more)
 
 ### Community 2 - "sensa.adapter.ts"
 Cohesion: 0.19
@@ -166,7 +177,7 @@ Nodes (45): devDependencies, eslint, eslint-config-prettier, eslint-plugin-prett
 
 ### Community 4 - "dependencies"
 Cohesion: 0.09
-Nodes (23): auth0, dependencies, auth0, bullmq, class-transformer, class-validator, helmet, jwks-rsa (+15 more)
+Nodes (23): dependencies, bullmq, class-transformer, class-validator, helmet, jwks-rsa, @nestjs/core, @nestjs/passport (+15 more)
 
 ### Community 5 - "scripts"
 Cohesion: 0.12
@@ -185,12 +196,12 @@ Cohesion: 0.08
 Nodes (25): 10. Sobre el documento de tareas de Federico, 11. Registro de auditoría (Audit Log), 12. Alerta de Cuenta cerca del tope de capacidad, 13. Exportación de datos propios a CSV, 14. Datos registrados de la Empresa Revendedora, 1.1. Al menudeo (sin obligación de ventas mensuales), 1.2. Con obligación de ventas mensuales (escala creciente, ej. X5 / X10), 1.3. Precios (+17 more)
 
 ### Community 9 - "Auth0ManagementService"
-Cohesion: 0.05
-Nodes (32): Auth0ManagementService, InvitacionTeamMember, Injectable, AuthModule, Module, JwtPayload, JwtStrategy, Injectable (+24 more)
+Cohesion: 0.13
+Nodes (12): TeamMembersController, ApiOperation, ApiTags, Body, Controller, Delete, Get, Param (+4 more)
 
 ### Community 10 - "CryptoService"
 Cohesion: 0.08
-Nodes (15): CryptoService, Injectable, TransactionClient, CrearCuentaOpciones, SinCapacidadEnCuentaError, IdentificadoresService, Injectable, ConfiguracionProveedorResuelta (+7 more)
+Nodes (13): CryptoModule, Global, Module, CryptoService, Injectable, TransactionClient, CrearCuentaOpciones, SinCapacidadEnCuentaError (+5 more)
 
 ### Community 11 - "PaginationQueryDto"
 Cohesion: 0.11
@@ -253,28 +264,28 @@ Cohesion: 0.12
 Nodes (15): 1. ¿Qué es IPTVControl y en qué estado está?, 2. Stack y topología actuales (Docker Compose local), 3. Variables de entorno, 4.1. Primer despliegue en una VPS nueva, 4.2. Actualización de código, 4.3. Cambio de datos de conexión SENSA / planes / modalidades, 4. Procedimientos de arranque / mantenimiento, 5.1. Dominio, DNS y HTTPS (+7 more)
 
 ### Community 26 - "csv.util.ts"
-Cohesion: 0.22
-Nodes (8): CurrentUser, Roles(), SoloOperador(), generarCsv(), responderCsv(), Fila, Res, CsvDispositivo
+Cohesion: 0.36
+Nodes (5): ColumnaCsv, generarCsv(), responderCsv(), Fila, CsvCliente
 
 ### Community 30 - "ActualizarConexionProveedorDto"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (25): ConfiguracionController, ApiOperation, ApiTags, Body, Controller, Get, Patch, Post (+17 more)
 
 ### Community 31 - "primitives.tsx"
-Cohesion: 0.11
-Nodes (23): DialogContent(), Button, Field(), ClienteDeLaCuenta, CorrectDeviceBindingDialog(), TeamMemberForm(), roleLabels, ApiError (+15 more)
+Cohesion: 0.14
+Nodes (23): ExportCsvButton(), TeamMemberStatusBadge(), DialogContent(), Select(), EmptyState(), Input, Paginacion(), TableSkeleton() (+15 more)
 
 ### Community 32 - "ColaProveedorService"
-Cohesion: 0.07
-Nodes (24): DashboardController, ApiOperation, ApiTags, Controller, Get, Post, SoloOperador, DashboardService (+16 more)
+Cohesion: 0.12
+Nodes (12): DatosCerrarCuenta, DatosEliminarDispositivo, DatosReconciliarDispositivos, DatosSincronizarContadoresVenta, DatosSondearVinculacion, OPCIONES_REINTENTO, TRABAJOS_PROVEEDOR, ColaProveedorProcessor (+4 more)
 
 ### Community 33 - "CrearModalidadDto"
 Cohesion: 0.09
-Nodes (31): ActualizarModalidadDto, CrearModalidadDto, ListarModalidadesQueryDto, ApiProperty, ApiPropertyOptional, IsDateString, IsEnum, IsInt (+23 more)
+Nodes (29): ActualizarModalidadDto, CrearModalidadDto, ListarModalidadesQueryDto, ApiProperty, ApiPropertyOptional, IsDateString, IsEnum, IsInt (+21 more)
 
 ### Community 34 - "revendedoras.service.ts"
-Cohesion: 0.06
-Nodes (35): ClientesService, Injectable, InventarioProveedorService, Injectable, ActualizarRevendedoraDto, CambiarModalidadDto, CrearRevendedoraDto, ListarRevendedorasQueryDto (+27 more)
+Cohesion: 0.09
+Nodes (33): ActualizarRevendedoraDto, CambiarModalidadDto, CrearRevendedoraDto, ListarRevendedorasQueryDto, ApiProperty, ApiPropertyOptional, IsEmail, IsEnum (+25 more)
 
 ### Community 35 - "dependencies"
 Cohesion: 0.04
@@ -285,8 +296,8 @@ Cohesion: 0.05
 Nodes (38): Alerta de "cerca del tope", Baja y suspensión, Capacidad de una Cuenta, Cómo se decide dónde entra un alta, Cómo se ve en el panel, Descubrimiento después del primer login, El mecanismo real de bloqueo: contadores nativos de SENSA, Límite real de los contadores de SENSA (confirmado 21/08/2026) (+30 more)
 
 ### Community 37 - "api"
-Cohesion: 0.16
-Nodes (33): ResellerStatusBadge(), TeamMemberStatusBadge(), AppLayout(), NotFound(), RequiereSesion(), SoloOperador(), SoloRevendedora(), AccountDetail() (+25 more)
+Cohesion: 0.11
+Nodes (45): HealthBadge(), AppLayout(), NotFound(), RequiereSesion(), SoloOperador(), SoloRevendedora(), AccountDetail(), AccountList() (+37 more)
 
 ### Community 38 - "Integración con SENSA"
 Cohesion: 0.06
@@ -302,59 +313,59 @@ Nodes (5): CODIGOS_DNI_REPETIDO, CODIGOS_EMAIL_REPETIDO, CODIGOS_TRANSITORIOS, C
 
 ### Community 41 - "common.tsx"
 Cohesion: 0.13
-Nodes (27): CustomerStatusBadge(), DetailRow(), DeviceStatusBadge(), DeviceTypeBadge(), SecretValue(), tonoPorEstado, VinculacionEnCursoAlert(), AddDeviceDialog() (+19 more)
+Nodes (25): CustomerStatusBadge(), ProviderDeviceClassBadge(), ResellerStatusBadge(), tonoPorEstado, VinculacionEnCursoAlert(), DetalleItem(), formatearValor(), humanizar() (+17 more)
 
 ### Community 42 - "Dashboard.tsx"
-Cohesion: 0.12
-Nodes (14): ResolverIncidenciaDto, ApiProperty, ApiPropertyOptional, IsIn, IsOptional, IsUUID, IncidenciasDispositivosController, ApiOperation (+6 more)
+Cohesion: 0.11
+Nodes (16): ResolverIncidenciaDto, ApiProperty, ApiPropertyOptional, IsIn, IsOptional, IsUUID, IncidenciasDispositivosController, ApiOperation (+8 more)
 
 ### Community 43 - "DispositivosController"
-Cohesion: 0.15
+Cohesion: 0.16
 Nodes (12): DispositivosController, ApiOperation, ApiTags, Body, Controller, Delete, Get, Param (+4 more)
 
 ### Community 44 - "ListarAuditoriaQueryDto"
-Cohesion: 0.10
-Nodes (19): AuditoriaController, ApiOperation, ApiTags, Controller, Get, Query, Res, AuditoriaModule (+11 more)
+Cohesion: 0.15
+Nodes (11): AuditoriaController, ApiOperation, ApiTags, Controller, Get, Query, Res, AuditoriaModule (+3 more)
 
 ### Community 45 - "CustomerDetail.tsx"
 Cohesion: 0.11
-Nodes (23): ALTURAS_BARRA, CapacityMeter(), OcupacionCuenta, ItemMenu, ITEMS, MenuUsuario(), NavItems(), ConfirmDialog() (+15 more)
+Nodes (24): ALTURAS_BARRA, CapacityMeter(), OcupacionCuenta, ItemMenu, ITEMS, MenuUsuario(), NavItems(), DropdownMenuContent() (+16 more)
 
 ### Community 46 - "CommercialPlanList.tsx"
-Cohesion: 0.36
-Nodes (17): AccountStatusBadge(), CopyableId(), ExportCsvButton(), Select(), Card(), EmptyState(), Input, Paginacion() (+9 more)
+Cohesion: 0.24
+Nodes (20): AccountStatusBadge(), CopyableId(), DeviceStatusBadge(), DeviceTypeBadge(), SecretValue(), WhatsappTemplateButton(), ConfirmDialog(), Table() (+12 more)
 
 ### Community 47 - "CustomerDetail.tsx"
-Cohesion: 0.18
-Nodes (23): HealthBadge(), Metric(), PageHeader(), Alert(), Badge(), BadgeProps, badgeVariants, BotonProps (+15 more)
+Cohesion: 0.20
+Nodes (26): DetailRow(), Metric(), PageHeader(), Alert(), Badge(), BadgeProps, badgeVariants, BotonProps (+18 more)
 
 ### Community 48 - "SoloRevendedor"
-Cohesion: 0.19
-Nodes (12): SoloRevendedor(), ClientesController, ApiOperation, ApiQuery, ApiTags, Body, Controller, Get (+4 more)
+Cohesion: 0.17
+Nodes (13): SoloRevendedor(), ClientesController, ApiOperation, ApiQuery, ApiTags, Body, Controller, Get (+5 more)
 
 ### Community 49 - "types.ts"
 Cohesion: 0.07
-Nodes (31): ProviderDeviceClassBadge(), CardFooter(), Textarea, EstadoFormulario, INICIAL, MetodoAlta, PASOS, customerIntakeHelp (+23 more)
+Nodes (30): CardFooter(), EstadoFormulario, INICIAL, LEYENDAS_ALTA, MetodoAlta, PASOS, customerIntakeHelp, Account (+22 more)
 
 ### Community 50 - "app.module.ts"
-Cohesion: 0.07
-Nodes (32): AuditModule, Global, Module, AppConfig, configuration(), toInt(), validateConfig(), ContextModule (+24 more)
+Cohesion: 0.09
+Nodes (28): AuditModule, Global, Module, AppConfig, configuration(), toInt(), validateConfig(), ContextModule (+20 more)
 
 ### Community 51 - ".transaction"
-Cohesion: 0.14
-Nodes (16): AppModule, Module, crearProteccionSwagger(), iguales(), logger, OpcionesSwagger, bootstrap(), CuentasController (+8 more)
+Cohesion: 0.26
+Nodes (9): CuentasController, ApiOperation, ApiTags, Controller, Get, Param, Post, Query (+1 more)
 
 ### Community 52 - "Decisiones pendientes"
 Cohesion: 0.11
 Nodes (17): 1 · Comercial, 2 · Autenticación y provisioning (Auth0), 3 · Seguridad de datos sensibles, 4 · Integración SENSA — casos límite, 5 · Parametrización — umbrales y validaciones, 6 · Menú de Parametrización, 7 · Documentación, Decisiones pendientes (+9 more)
 
 ### Community 53 - "CrearClienteDto"
-Cohesion: 0.15
-Nodes (16): ArrayUnique, CrearClienteDto, DispositivoAltaDto, ApiProperty, ApiPropertyOptional, IsBoolean, IsEmail, IsEnum (+8 more)
+Cohesion: 0.14
+Nodes (17): ArrayUnique, CrearClienteDto, DispositivoAltaDto, ApiProperty, ApiPropertyOptional, IsBoolean, IsEmail, IsEnum (+9 more)
 
 ### Community 54 - "dispositivos.controller.ts"
-Cohesion: 0.36
-Nodes (11): ActualizarDispositivoDto, CrearDispositivoDto, ListarDispositivosQueryDto, ReasignarDispositivoDto, ApiProperty, ApiPropertyOptional, IsEnum, IsOptional (+3 more)
+Cohesion: 0.31
+Nodes (12): CsvDispositivo, ActualizarDispositivoDto, CrearDispositivoDto, ListarDispositivosQueryDto, ReasignarDispositivoDto, ApiProperty, ApiPropertyOptional, IsEnum (+4 more)
 
 ### Community 56 - "Despliegue y operación"
 Cohesion: 0.12
@@ -373,8 +384,8 @@ Cohesion: 0.15
 Nodes (11): Descubrimiento del Dispositivo, El identificador tipo DNI, Flujo — Alta de Cliente Final, Los cuatro pasos del asistente, Los dos métodos de alta, Si el Proveedor falla, Ver también, Flujo — Dispositivo adicional sin migración imposible (+3 more)
 
 ### Community 60 - "HealthController"
-Cohesion: 0.24
-Nodes (7): ApiExcludeEndpoint, Public(), HealthController, ApiOperation, ApiTags, Controller, Get
+Cohesion: 0.19
+Nodes (9): ApiExcludeEndpoint, Public(), HealthController, ApiOperation, ApiTags, Controller, Get, HealthModule (+1 more)
 
 ### Community 61 - "devDependencies"
 Cohesion: 0.15
@@ -385,24 +396,28 @@ Cohesion: 0.29
 Nodes (6): CorregirVinculacionDto, ApiProperty, ApiPropertyOptional, IsIn, IsOptional, IsUUID
 
 ### Community 63 - "cuentas.mapper.ts"
-Cohesion: 0.10
-Nodes (20): CoincidenciaGestionExterna, armarCategoria(), calcularCapacidad(), CapacidadCategoria, CapacidadCuenta, contarDispositivosCliente(), contarOcupados(), contarVentasActivas() (+12 more)
+Cohesion: 0.16
+Nodes (17): CoincidenciaGestionExterna, armarCategoria(), calcularCapacidad(), CapacidadCategoria, contarDispositivosCliente(), contarOcupados(), contarVentasActivas(), CuentaCapacidadInput (+9 more)
 
 ### Community 64 - "CrearTeamMemberDto"
-Cohesion: 0.12
-Nodes (17): PaginatedResponse, armarOcupacion(), CuentaOperadorDto, CuentaRevendedoraDto, mapCuentaParaOperador(), mapCuentaParaRevendedora(), mapDispositivoParaOperador(), mapDispositivoParaRevendedora() (+9 more)
+Cohesion: 0.17
+Nodes (14): CapacidadCuenta, armarOcupacion(), CuentaOperadorDto, CuentaRevendedoraDto, mapCuentaParaOperador(), mapCuentaParaRevendedora(), mapDispositivoParaOperador(), mapDispositivoParaRevendedora() (+6 more)
 
 ### Community 65 - "Registro de auditoría"
 Cohesion: 0.15
 Nodes (11): Lo que no incluye el MVP, Quién consulta qué, Qué se registra, Registro de auditoría, Regla de oro para escribir en el log, Ver también, Exportación a CSV, La pregunta que responde (+3 more)
 
 ### Community 66 - "TeamMembersController"
-Cohesion: 0.19
-Nodes (9): ReportesController, ApiOperation, ApiQuery, ApiTags, Controller, Get, Query, Res (+1 more)
+Cohesion: 0.17
+Nodes (11): ReportesController, ApiOperation, ApiQuery, ApiTags, Controller, Get, Query, Res (+3 more)
 
 ### Community 68 - "clientes.controller.ts"
-Cohesion: 0.17
-Nodes (6): ReportesService, Injectable, ResultadoPrueba, ProveedorService, Injectable, Inject
+Cohesion: 0.13
+Nodes (6): ConfiguracionProveedorResuelta, ActivarDispositivoParams, LicenciasProveedor, PROVEEDOR_ADAPTERS, ResultadoPrueba, ServiciosCuenta
+
+### Community 69 - "JwtAuthGuard"
+Cohesion: 0.19
+Nodes (7): CurrentUser, Roles(), SoloOperador(), JwtAuthGuard, Injectable, ConfiguracionModule, Module
 
 ### Community 70 - "scripts"
 Cohesion: 0.22
@@ -436,9 +451,13 @@ Nodes (4): cifrar(), crearUsuarioAuth0(), main(), prisma
 Cohesion: 0.40
 Nodes (4): Cómo abrirlo, Estructura, Relación con `docs/`, Vault de Obsidian — IPTVControl
 
+### Community 81 - "team-members.service.ts"
+Cohesion: 0.22
+Nodes (12): PaginatedResponse, CrearTeamMemberDto, ListarTeamMembersQueryDto, ApiProperty, ApiPropertyOptional, IsEmail, IsEnum, IsOptional (+4 more)
+
 ### Community 82 - "utils.ts"
-Cohesion: 0.20
-Nodes (13): AuditLogEntry(), DetalleItem(), formatearValor(), humanizar(), IntegrationHealthPanel(), ProviderSettings(), ReportsView(), auditEntityLabels (+5 more)
+Cohesion: 0.23
+Nodes (4): CuentasService, Injectable, DashboardService, Injectable
 
 ### Community 84 - "Auth0ManagementService"
 Cohesion: 0.33
@@ -448,28 +467,48 @@ Nodes (9): OpcionesLlamada, SensaAddUserRequest, SensaCreateDeviceRequest, Sensa
 Cohesion: 0.60
 Nodes (5): "cuenta", "dispositivo", "incidencia_dispositivo_proveedor", "reserva_tecnica_dispositivo", "solicitud_vinculacion_dispositivo"
 
+### Community 94 - "team-members.module.ts"
+Cohesion: 0.20
+Nodes (6): InvitacionTeamMember, AuthModule, Module, JwtPayload, JwtStrategy, Injectable
+
+### Community 105 - "crearProteccionSwagger"
+Cohesion: 0.31
+Nodes (7): AppModule, Module, crearProteccionSwagger(), iguales(), logger, OpcionesSwagger, bootstrap()
+
+### Community 115 - "DashboardController"
+Cohesion: 0.25
+Nodes (7): DashboardController, ApiOperation, ApiTags, Controller, Get, Post, SoloOperador
+
 ### Community 117 - "generarCsv"
-Cohesion: 0.24
-Nodes (9): ColumnaCsv, CsvCliente, ActualizarClienteDto, ListarClientesQueryDto, ApiPropertyOptional, IsEnum, IsOptional, IsString (+1 more)
+Cohesion: 0.31
+Nodes (8): ActualizarClienteDto, ListarClientesQueryDto, ApiPropertyOptional, IsEnum, IsOptional, IsString, IsUUID, Matches
+
+### Community 119 - "CuentasProvisioningService"
+Cohesion: 0.25
+Nodes (3): CuentasProvisioningService, Injectable, ActualizarCapacidadParams
+
+### Community 121 - "ListarCuentasQueryDto"
+Cohesion: 0.25
+Nodes (7): ListarCuentasQueryDto, ApiPropertyOptional, IsBoolean, IsEnum, IsOptional, IsUUID, Transform
 
 ## Knowledge Gaps
-- **494 isolated node(s):** `docker-entrypoint.sh script`, `$schema`, `collection`, `sourceRoot`, `deleteOutDir` (+489 more)
+- **496 isolated node(s):** `docker-entrypoint.sh script`, `$schema`, `collection`, `sourceRoot`, `deleteOutDir` (+491 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **36 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PrismaService` connect `RequestContextService` to `ColaProveedorService`, `CrearTeamMemberDto`, `revendedoras.service.ts`, `CrearModalidadDto`, `clientes.controller.ts`, `CryptoService`, `ListarAuditoriaQueryDto`, `app.module.ts`, `HealthController`, `cuentas.mapper.ts`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
-- **Why does `RequestContextService` connect `RequestContextService` to `CrearTeamMemberDto`, `CrearModalidadDto`, `revendedoras.service.ts`, `clientes.controller.ts`, `CryptoService`, `ListarAuditoriaQueryDto`, `SoloRevendedor`, `generarCsv`, `.consumo`, `HttpExceptionFilter`, `cuentas.mapper.ts`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
-- **Why does `CrearTeamMemberDto` connect `Auth0ManagementService` to `CrearTeamMemberDto`?**
+- **Why does `PrismaService` connect `RequestContextService` to `ColaProveedorService`, `CrearModalidadDto`, `revendedoras.service.ts`, `CryptoService`, `@nestjs/platform-express`, `team-members.service.ts`, `app.module.ts`, `utils.ts`, `dispositivos.controller.ts`, `CuentasProvisioningService`, `HealthController`, `cuentas.mapper.ts`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `RequestContextService` connect `RequestContextService` to `ColaProveedorService`, `CrearModalidadDto`, `revendedoras.service.ts`, `CryptoService`, `SoloRevendedor`, `team-members.service.ts`, `utils.ts`, `CuentasProvisioningService`, `dispositivos.controller.ts`, `.consumo`, `HttpExceptionFilter`, `csv.util.ts`, `cuentas.mapper.ts`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `AuditService` connect `RequestContextService` to `ColaProveedorService`, `CrearModalidadDto`, `revendedoras.service.ts`, `CryptoService`, `@nestjs/platform-express`, `team-members.service.ts`, `utils.ts`, `app.module.ts`, `CuentasProvisioningService`, `cuentas.mapper.ts`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **What connects `docker-entrypoint.sh script`, `$schema`, `collection` to the rest of the system?**
-  _494 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _496 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `RequestContextService` be split into smaller, more focused modules?**
-  _Cohesion score 0.0847457627118644 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08683853459972862 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.044444444444444446 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**
