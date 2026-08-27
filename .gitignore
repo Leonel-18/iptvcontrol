@@ -58,3 +58,8 @@ vault/.trash/
 
 # Instructivo de armado del paquete — no forma parte del repo (ver INSTRUCTIVO.md)
 INSTRUCTIVO.md
+
+# Datos reales de Clientes Finales usados por scripts de importación puntuales
+# (nombre, email, teléfono, dirección de terceros) — nunca al repo, se copian
+# a mano a la VPS. El script en sí (backend/prisma/importar-*.ts) sí se versiona.
+backend/prisma/data/
