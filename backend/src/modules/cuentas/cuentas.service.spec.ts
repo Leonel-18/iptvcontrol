@@ -126,3 +126,109 @@ describe('CuentasService — cerrar', () => {
     );
   });
 });
+
+/**
+ * =============================================================================
+ * Cambio manual de contraseña de Cuenta (pedido de Bruno, 26/08/2026)
+ * =============================================================================
+ * La contraseña se sigue generando automáticamente en el alta; esto es la
+ * posibilidad de reemplazarla a mano desde el panel de la Empresa Revendedora.
+ * =============================================================================
+ */
+describe('CuentasService — cambiarPassword', () => {
+  const crearServicio = (
+    cuenta: Record<string, unknown> | null,
+    opciones: { esOperador?: boolean } = {},
+  ) => {
+    const cuentaUpdate = jest.fn().mockResolvedValue(undefined);
+    const prisma = {
+      db: {
+        cuenta: {
+          findUnique: jest.fn().mockResolvedValue(cuenta),
+          update: cuentaUpdate,
+        },
+      },
+    } as unknown as PrismaService;
+
+    const actualizarPassword = jest.fn().mockResolvedValue(undefined);
+    const proveedor = { actualizarPassword } as unknown as ProveedorService;
+    const audit = { registrar: jest.fn() } as unknown as AuditService;
+    const contexto = {
+      operadorPrincipalId: 'operador-1',
+      esOperador: opciones.esOperador ?? false,
+    } as unknown as RequestContextService;
+    const crypto = {
+      encrypt: jest.fn((valor: string) => `cifrado:${valor}`),
+    } as unknown as CryptoService;
+
+    const servicio = new CuentasService(prisma, crypto, contexto, proveedor, audit);
+    return { servicio, cuentaUpdate, actualizarPassword, audit, crypto };
+  };
+
+  it('rechaza el cambio si lo pide el Operador Principal', async () => {
+    const { servicio } = crearServicio(
+      { id: 'cuenta-1', proveedorCuentaId: '30000043', empresaRevendedoraId: 'empresa-1' },
+      { esOperador: true },
+    );
+
+    await expect(servicio.cambiarPassword('cuenta-1', '12345678')).rejects.toThrow(
+      'El Operador Principal no administra las credenciales',
+    );
+  });
+
+  it('lanza NotFound si la Cuenta no existe', async () => {
+    const { servicio } = crearServicio(null);
+
+    await expect(servicio.cambiarPassword('cuenta-inexistente', '12345678')).rejects.toThrow(
+      'La cuenta no existe o no está disponible.',
+    );
+  });
+
+  it('rechaza si la Cuenta todavía no se confirmó en el Proveedor', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-1',
+      proveedorCuentaId: null,
+      empresaRevendedoraId: 'empresa-1',
+    });
+
+    await expect(servicio.cambiarPassword('cuenta-1', '12345678')).rejects.toThrow(
+      'todavía no se confirmó en el Proveedor',
+    );
+  });
+
+  it('actualiza la contraseña en SENSA, la cifra localmente y registra auditoría', async () => {
+    const { servicio, cuentaUpdate, actualizarPassword, audit, crypto } = crearServicio({
+      id: 'cuenta-1',
+      proveedorCuentaId: '30000043',
+      empresaRevendedoraId: 'empresa-1',
+    });
+
+    const resultado = await servicio.cambiarPassword('cuenta-1', '87654321');
+
+    expect(actualizarPassword).toHaveBeenCalledWith('operador-1', {
+      proveedorCuentaId: '30000043',
+      password: '87654321',
+    });
+    expect(crypto.encrypt).toHaveBeenCalledWith('87654321');
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: { id: 'cuenta-1' },
+      data: { passwordCifrado: 'cifrado:87654321' },
+    });
+    expect(audit.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entidadId: 'cuenta-1',
+        detalle: expect.objectContaining({
+          proveedor_cuenta_id: '30000043',
+          modificado_manualmente: true,
+        }),
+      }),
+    );
+    // Nunca se guarda la contraseña en claro en el detalle del audit log.
+    expect(audit.registrar).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        detalle: expect.objectContaining({ password: expect.anything() }),
+      }),
+    );
+    expect(resultado).toEqual({ id: 'cuenta-1' });
+  });
+});

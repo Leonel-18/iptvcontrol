@@ -2,6 +2,7 @@ import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common
 import {
   ActivarDispositivoParams,
   ActualizarCapacidadParams,
+  ActualizarPasswordParams,
   CredencialesProveedor,
   CrearCuentaParams,
   CuentaProveedor,
@@ -85,6 +86,14 @@ export class ProveedorService {
   ): Promise<void> {
     const { adapter, configuracion } = await this.resolver(operadorPrincipalId);
     await adapter.actualizarCapacidadDispositivos(configuracion.credenciales, params);
+  }
+
+  async actualizarPassword(
+    operadorPrincipalId: string,
+    params: ActualizarPasswordParams,
+  ): Promise<void> {
+    const { adapter, configuracion } = await this.resolver(operadorPrincipalId);
+    await adapter.actualizarPassword(configuracion.credenciales, params);
   }
 
   async activarDispositivo(

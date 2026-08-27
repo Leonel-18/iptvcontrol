@@ -96,6 +96,30 @@ services:
     ports:
       - '127.0.0.1:${FRONTEND_PORT:-8080}:80'
 
+  # pgAdmin — opcional. SOLO se levanta si se pide explícitamente:
+  #   docker compose --env-file .env.production -f docker-compose.prod.yml --profile pgadmin up -d
+  # Atado a 127.0.0.1: nunca queda alcanzable desde Internet. Para administrar
+  # la base desde la PC del operador hay que abrir un túnel SSH primero:
+  #   ssh -L 5050:127.0.0.1:5050 <usuario>@<ip-de-la-vps>
+  # y recién ahí entrar a http://localhost:5050 desde el navegador local.
+  pgadmin:
+    image: dpage/pgadmin4
+    profiles: ['pgadmin']
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL es obligatoria}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD es obligatoria}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - '127.0.0.1:${PGADMIN_PORT:-5050}:80'
+
 volumes:
   postgres_data:
   redis_data:
+  pgadmin_data:

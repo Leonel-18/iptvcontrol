@@ -4,6 +4,7 @@ import { EstadoLlamadaProveedor } from '@prisma/client';
 import {
   ActivarDispositivoParams,
   ActualizarCapacidadParams,
+  ActualizarPasswordParams,
   CredencialesProveedor,
   CrearCuentaParams,
   CuentaProveedor,
@@ -201,6 +202,23 @@ export class SensaAdapter implements ProveedorAdapter {
       body,
       // 820: "user data was not modified". Si la capacidad ya estaba en ese
       // valor, para IPTVControl el resultado deseado igual se cumplió.
+      codigosTolerados: [SENSA_CODIGOS.USER_DATA_WAS_NOT_MODIFIED],
+    });
+  }
+
+  async actualizarPassword(
+    credenciales: CredencialesProveedor,
+    params: ActualizarPasswordParams,
+  ): Promise<void> {
+    const body: SensaEditUserRequest = { password: params.password };
+
+    await this.llamar<SensaUser>(credenciales, {
+      operacion: 'edit_user_password',
+      metodo: 'PATCH',
+      ruta: `/v4/user/${encodeURIComponent(params.proveedorCuentaId)}`,
+      body,
+      // 820: "user data was not modified" — si ya tenía esa misma contraseña,
+      // para IPTVControl el resultado deseado igual se cumplió.
       codigosTolerados: [SENSA_CODIGOS.USER_DATA_WAS_NOT_MODIFIED],
     });
   }

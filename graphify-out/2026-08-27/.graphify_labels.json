@@ -126,8 +126,5 @@
   "124": "migration.sql",
   "125": "auth0",
   "126": "migration.sql",
-  "127": "autoprefixer",
-  "128": "@nestjs/platform-express",
-  "129": "migration.sql",
   "132": "vite"
 }

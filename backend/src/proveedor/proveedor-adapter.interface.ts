@@ -70,6 +70,12 @@ export interface ActualizarCapacidadParams {
   dispositivosMoviles: number;
 }
 
+export interface ActualizarPasswordParams {
+  proveedorCuentaId: string;
+  /** Contraseña numérica (8 a 20 dígitos), igual que en el alta. */
+  password: string;
+}
+
 export interface ActivarDispositivoParams {
   proveedorCuentaId: string;
   /** MAC de 12 dígitos hexadecimales. Si no se informa, el dispositivo se
@@ -133,6 +139,17 @@ export interface ProveedorAdapter {
   actualizarCapacidadDispositivos(
     credenciales: CredencialesProveedor,
     params: ActualizarCapacidadParams,
+  ): Promise<void>;
+
+  /**
+   * Cambia manualmente la contraseña de la Cuenta. La generada en el alta
+   * sigue siendo automática; esto es una corrección puntual para cuando la
+   * Empresa Revendedora necesita definir una a mano (ej. no se pudo comunicar
+   * la generada, o el Cliente Final ya tenía una acordada de antes).
+   */
+  actualizarPassword(
+    credenciales: CredencialesProveedor,
+    params: ActualizarPasswordParams,
   ): Promise<void>;
 
   /** Da de alta/activa un dispositivo dentro de una Cuenta. */

@@ -1,8 +1,19 @@
-import { Controller, Get, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CuentasService } from './cuentas.service';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
+import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
 import { InventarioProveedorService } from './inventario-proveedor.service';
@@ -83,6 +94,22 @@ export class CuentasController {
   })
   async credenciales(@Param('id', ParseUUIDPipe) id: string) {
     return this.cuentas.obtenerCredenciales(id);
+  }
+
+  @Patch(':id/password')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Cambia manualmente la contraseña de la Cuenta.',
+    description:
+      'La contraseña de una Cuenta nueva se genera automáticamente al darla de alta; este ' +
+      'endpoint permite reemplazarla a mano (numérica, 8 a 20 dígitos) cuando la Empresa ' +
+      'Revendedora lo necesite. Exclusivo del panel de la Empresa Revendedora dueña.',
+  })
+  async cambiarPassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CambiarPasswordCuentaDto,
+  ) {
+    return this.cuentas.cambiarPassword(id, dto.password);
   }
 
   @Post(':id/sync-services')

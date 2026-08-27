@@ -179,6 +179,52 @@ export class CuentasService {
   }
 
   /**
+   * Reemplaza manualmente la contraseña de la Cuenta en el Proveedor. La
+   * generada automáticamente en el alta sigue siendo la de por defecto; esto
+   * es la corrección puntual para cuando la Empresa Revendedora necesita
+   * definir una a mano (pedido de Bruno, 26/08/2026).
+   */
+  async cambiarPassword(id: string, passwordNueva: string): Promise<{ id: string }> {
+    if (this.contexto.esOperador) {
+      throw new ForbiddenException(
+        'El Operador Principal no administra las credenciales de las Cuentas de sus Empresas Revendedoras.',
+      );
+    }
+
+    const cuenta = await this.prisma.db.cuenta.findUnique({ where: { id } });
+    if (!cuenta) {
+      throw new NotFoundException('La cuenta no existe o no está disponible.');
+    }
+    if (!cuenta.proveedorCuentaId) {
+      throw new BadRequestException(
+        'Esta Cuenta todavía no se confirmó en el Proveedor: espere a que termine de crearse.',
+      );
+    }
+
+    const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
+    await this.proveedor.actualizarPassword(operadorPrincipalId, {
+      proveedorCuentaId: cuenta.proveedorCuentaId,
+      password: passwordNueva,
+    });
+
+    await this.prisma.db.cuenta.update({
+      where: { id },
+      data: { passwordCifrado: this.crypto.encrypt(passwordNueva) },
+    });
+
+    await this.audit.registrar({
+      accion: AccionAuditoria.cambio_password_cuenta,
+      entidad: EntidadAuditada.Cuenta,
+      entidadId: id,
+      empresaRevendedoraId: cuenta.empresaRevendedoraId,
+      // Nunca se guarda la contraseña en el detalle del log de auditoría.
+      detalle: { proveedor_cuenta_id: cuenta.proveedorCuentaId, modificado_manualmente: true },
+    });
+
+    return { id };
+  }
+
+  /**
    * Sincroniza la parametrización de contenido con el Proveedor.
    *
    * La API de SENSA no tiene webhooks, así que la única forma de enterarse de un
