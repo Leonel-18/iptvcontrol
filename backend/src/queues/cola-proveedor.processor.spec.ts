@@ -55,6 +55,7 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
         count: jest.fn().mockResolvedValue(0),
       },
       ventaCompartida: { deleteMany: ventaDeleteMany },
+      ventanaCuriosidad: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     };
 
     const prisma = {

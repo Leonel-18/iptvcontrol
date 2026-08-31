@@ -21,6 +21,7 @@ import {
   mapDispositivoParaRevendedora,
 } from './cuentas.mapper';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
+import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 /**
  * Consultas sobre Cuentas.
@@ -38,6 +39,7 @@ export class CuentasService {
     private readonly contexto: RequestContextService,
     private readonly proveedor: ProveedorService,
     private readonly audit: AuditService,
+    private readonly ventanasCuriosidad: VentanasCuriosidadService,
   ) {}
 
   async listar(
@@ -140,10 +142,15 @@ export class CuentasService {
         }
       : null;
 
+    const ventanas = cuenta.esExclusiva
+      ? { activa: null, historial: [] }
+      : await this.ventanasCuriosidad.obtenerEstadoEHistorial(cuenta.id);
     return {
       ...mapCuentaParaRevendedora(cuenta, capacidad, credenciales),
       dispositivos: cuenta.dispositivos.map(mapDispositivoParaRevendedora),
       clientes_finales: this.resumirClientes(cuenta.dispositivos),
+      ventana_curiosidad: ventanas.activa,
+      historial_ventanas_curiosidad: ventanas.historial,
     };
   }
 

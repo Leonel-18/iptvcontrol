@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EstadoDispositivo, TipoDispositivo } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 /**
@@ -46,6 +47,18 @@ export class CrearDispositivoDto {
   @IsString()
   @MaxLength(200)
   nota_descriptiva?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Duración en minutos si el alta adicional requiere una venta compartida nueva. ' +
+      'Si se omite, se usa el predeterminado de la Empresa Revendedora.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  duracion_ventana_curiosidad_minutos?: number;
 }
 
 /** Reasignación de un Dispositivo liberado a un Cliente Final. */

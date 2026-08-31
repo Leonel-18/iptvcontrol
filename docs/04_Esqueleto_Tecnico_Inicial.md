@@ -39,6 +39,8 @@ EmpresaRevendedora
 ├── modalidad_comercial (ENUM: "menudeo" | "obligacion_mensual")
 ├── escala_actual (ej. "X5", "X10", null si es menudeo)
 ├── login / credenciales_panel
+├── duracion_ventana_curiosidad_minutos (default 0; tope máximo que puede aplicarse en una venta
+│                                         compartida nueva — ver 03_Reglas_de_Negocio.md, sección 15)
 └── estado (activa/suspendida)
 
 ClienteFinal
@@ -77,6 +79,22 @@ VentaCompartida
 ├── empresa_revendedora_id (FK denormalizada para RLS)
 └── cupos_por_categoria (1 para una venta 1+1; 2 para una venta 2+2)
 
+VentanaCuriosidad (restricción local de elegibilidad — 03_Reglas_de_Negocio.md, sección 15)
+├── id
+├── cuenta_id (FK, sólo Cuentas compartidas)
+├── cliente_final_id (FK — dueño de la venta que abrió la ventana; nunca queda bloqueado él mismo)
+├── empresa_revendedora_id (FK denormalizada para RLS)
+├── venta_compartida_id (FK, nullable — se conserva como referencia histórica aunque la venta se
+│                          cancele después, ej. vencimiento de la ventana de vinculación de 10 min)
+├── inicio_en
+├── duracion_predeterminada_minutos (default vigente de la Empresa Revendedora al momento de la venta)
+├── duracion_aplicada_minutos (puede ser menor al predeterminado, incluso 0; nunca mayor)
+├── fin_previsto_en (inicio_en + duracion_aplicada_minutos)
+├── fin_real_en (null mientras sigue activa; se completa al vencer "al vuelo" o al levantarla manual)
+├── motivo_fin (ENUM: "vencimiento" | "levantamiento_manual" | "cancelacion_venta")
+├── iniciada_por_team_member_id (FK, nullable)
+└── finalizada_por_team_member_id (FK, nullable — quién la levantó manualmente)
+
 Dispositivo
 ├── id
 ├── cuenta_id (FK)
@@ -106,7 +124,8 @@ AuditLog (registro de auditoría — ver 03_Reglas_de_Negocio, sección 11)
 ├── team_member_id (FK — quién ejecutó la acción)
 ├── accion (ENUM: "alta_cliente" | "suspension_cliente" | "baja_cliente" | "alta_dispositivo"
 │           | "cambio_modalidad_comercial" | "cambio_precio" | "alta_empresa_revendedora"
-│           | "cambio_configuracion_proveedor" | ...)
+│           | "cambio_configuracion_proveedor" | "apertura_ventana_curiosidad"
+│           | "levantamiento_ventana_curiosidad" | "cambio_configuracion_ventana_curiosidad" | ...)
 ├── entidad_afectada (ENUM: "ClienteFinal" | "Dispositivo" | "Cuenta" | "EmpresaRevendedora" | "ModalidadComercial")
 ├── entidad_id (id del registro afectado)
 ├── detalle (JSON — datos relevantes del cambio, ej. valores anterior/nuevo)
@@ -152,6 +171,9 @@ integración es por consulta activa (polling) desde IPTVControl.
 - Una **Empresa Revendedora** tiene muchos **Clientes Finales** y muchas **Cuentas**.
 - Una **Cuenta** exclusiva admite hasta 3 fijos + 3 móviles para su único Cliente Final; una Cuenta
   compartida tiene 3 cupos por categoría y admite ventas 1+1 o 2+2 mientras quepan.
+- Una **Cuenta compartida** puede tener **VentanasCuriosidad** históricas (una por venta nueva que
+  recibió); a lo sumo una está activa (`fin_real_en` null) a la vez, y sólo bloquea Clientes
+  Finales nuevos, nunca al dueño de esa venta (03_Reglas_de_Negocio.md, sección 15).
 - Un **Dispositivo** pertenece a una única **Cuenta**, y a un único **Cliente Final** mientras esté
   activo (puede quedar sin Cliente Final asociado si está bloqueado por suspensión).
 - Un **Cliente Final** puede tener uno o más **Dispositivos**, incluso en **Cuentas distintas**. Si
@@ -217,8 +239,10 @@ contacto**. Como IPTVControl no gestiona DNIs reales de personas físicas, ambos
 4. **Si es `cuenta_exclusiva`:** crea una Cuenta nueva para ese único Cliente Final, con todos los
    servicios contratados y capacidad comercial de hasta 3 fijos + 3 móviles.
 5. **Si es `dispositivo_compartido`:** busca una Cuenta propia de firma idéntica con suficientes
-   cupos libres para el 1+1 o 2+2 solicitado. Si existe, suma esos cupos a los contadores de SENSA
-   antes de abrir la ventana; si no, crea una Cuenta nueva que arranca en 1/1 o 2/2.
+   cupos libres para el 1+1 o 2+2 solicitado **y sin una Ventana de curiosidad activa** (sección
+   15 de las reglas de negocio). Si existe, suma esos cupos a los contadores de SENSA antes de
+   abrir la ventana de vinculación y abre además la Ventana de curiosidad para ese Cliente Final;
+   si no encuentra ninguna, crea una Cuenta nueva que arranca en 1/1 o 2/2.
 6. Al crear Cuenta, genera `dni_alta_sensa` y `email_contacto` (ver 3.1). Si SENSA responde "DNI
    repetido", incrementa el DNI y reintenta.
 7. Toma una instantánea de Dispositivos, abre una ventana de 10 minutos y consulta a SENSA cada 30
@@ -272,8 +296,9 @@ defensa real es comparar activamente el inventario de SENSA contra lo vendido:
    Cuenta, el Dispositivo adicional se suma ahí mismo, sin crear una venta nueva.
 4. Si la Cuenta exclusiva ya llegó a 3 fijos y 3 móviles, o el cliente de una venta compartida ya
    completó sus cupos, el Dispositivo adicional constituye una venta nueva: usa otra Cuenta compatible
-   con la misma firma de servicios o crea una nueva. Los Dispositivos existentes permanecen donde
-   están: nunca se fuerza un cupo imposible en la Cuenta actual.
+   con la misma firma de servicios (misma condición del paso 5 del flujo 4.1: sin Ventana de
+   curiosidad activa) o crea una nueva. Los Dispositivos existentes permanecen donde están: nunca se
+   fuerza un cupo imposible en la Cuenta actual.
 
 ### 4.5. Cambio de modalidad comercial o escala
 1. Solo ejecutable por el Operador Principal (no autogestionable por la Empresa Revendedora),
@@ -420,6 +445,11 @@ export class TeamMembersService {
   permite elegir 1+1 o 2+2 y servicios, y fuerza el básico código 1; el formulario no solicita tipo ni MAC.
 - **Vista por Cuenta:** usuario, contraseña, PIN, parametrización de contenido, y listado de
   Clientes Finales + Dispositivos relacionados con esa Cuenta.
+- **Ventana de curiosidad (Cuentas compartidas):** en `/accounts/:id`, estado actual (bloqueada
+  hasta "Disponible el DD/MM HH:MM" o disponible ahora), botón de levantamiento manual con
+  confirmación, e historial de ventanas anteriores. Configuración del predeterminado por Empresa
+  Revendedora en `/settings` (sección separada de la conexión SENSA de la sección 9, que es
+  exclusiva del Operador Principal) — ver `03_Reglas_de_Negocio.md`, sección 15.
 - **Vista por Cliente:** usuario, contraseña y PIN de la Cuenta del cliente, parametrización de
   contenido, Dispositivos de ese cliente, y botón para saltar a la vista completa de la Cuenta.
 - **Vista del Operador Principal sobre Cuentas/Dispositivos de una Empresa Revendedora:** misma
@@ -511,7 +541,10 @@ Sección del panel de Operador Principal (ruta `/settings`, ver
 `IPTVControl_URL_Routing_Convention.md`) que permite administrar valores de configuración **sin
 depender de un despliegue de código**. Nace del pedido explícito de Bruno de tener control directo
 sobre los datos de conexión a SENSA. Corresponde al campo `configuracion_proveedor` de
-`OperadorPrincipal` (sección 1).
+`OperadorPrincipal` (sección 1). **No confundir** con la configuración de la duración
+predeterminada de la Ventana de curiosidad (sección 5 de este documento;
+`03_Reglas_de_Negocio.md`, sección 15), que vive en la misma ruta `/settings` pero es exclusiva de
+cada Empresa Revendedora, no del Operador Principal.
 
 ### 9.1. Campos del formulario
 - `server` / `port` — arman la URL base de la API: `https://<server>:<port>/v4/`.

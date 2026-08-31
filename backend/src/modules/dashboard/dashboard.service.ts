@@ -55,6 +55,10 @@ export class DashboardService {
           esExclusiva: true,
           dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
           ventasCompartidas: { select: { cuposPorCategoria: true } },
+          ventanasCuriosidad: {
+            where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
+            select: { id: true },
+          },
         },
       }),
       this.prisma.db.dispositivo.groupBy({ by: ['estado'], _count: { _all: true } }),
@@ -73,7 +77,9 @@ export class DashboardService {
       );
 
       if (capacidad.ocupados > 0) vendidas += 1;
-      if (!capacidad.completa) disponibles += 1;
+      if (!capacidad.completa && (cuenta.esExclusiva || cuenta.ventanasCuriosidad.length === 0)) {
+        disponibles += 1;
+      }
       if (tieneBloqueados) bloqueadas += 1;
     }
 

@@ -151,6 +151,9 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
 - **Exportación a CSV** de Clientes Finales y Dispositivos, disponible para la Empresa Revendedora,
   para facilitar la conciliación con su propio CRM/facturación externa (campo `id_gestion_externo`
   ya contemplado en el modelo de datos).
+- **Ventana de curiosidad (Fase 2):** bloqueo temporal, configurable por Empresa Revendedora, de una
+  Cuenta compartida frente a un Cliente Final nuevo, después de cada venta que recibe — ver
+  `03_Reglas_de_Negocio.md`, sección 15.
 
 **Nota sobre puntos superados de este listado:** el mecanismo de "Dispositivos de reserva técnicos"
 (marcado arriba) fue reemplazado por los contadores nativos de SENSA

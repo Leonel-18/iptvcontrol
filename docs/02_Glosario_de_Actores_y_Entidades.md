@@ -69,7 +69,9 @@ móviles. Estas ventas comparten Cuenta únicamente cuando tienen idéntica firm
 cupos caben dentro del máximo 3+3. La capacidad de cada modalidad la hace cumplir SENSA mismo, a través de sus
 contadores nativos `auto_provision_count_mobile`/`auto_provision_count_stationary`, que IPTVControl
 mantiene sincronizados con la cantidad de cupos comprometidos (ver `03_Reglas_de_Negocio.md`,
-sección 2.2).
+sección 2.2). Además, después de cada venta nueva en una Cuenta compartida, IPTVControl puede
+mantenerla temporalmente inelegible para otro Cliente Final nuevo ("Ventana de curiosidad" — ver
+`03_Reglas_de_Negocio.md`, sección 15); es una restricción local, no un límite que imponga SENSA.
 
 ### Dispositivo
 Unidad de gestión interna de la Empresa Revendedora. Representa un dispositivo físico (TV o móvil)

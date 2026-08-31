@@ -9,6 +9,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
 import { ConfiguracionProveedorService } from '../../proveedor/configuracion-proveedor.service';
 import { IdentificadoresService } from './identificadores.service';
+import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 /**
  * =============================================================================
@@ -100,6 +101,7 @@ describe('CuentasProvisioningService — crearCuenta', () => {
       configuracion,
       identificadores,
       audit,
+      {} as VentanasCuriosidadService,
     );
 
     return { servicio, crearCuentaProveedor };
@@ -190,7 +192,7 @@ describe('CuentasProvisioningService — contadores de venta', () => {
         clienteFinalId: data.clienteFinalId,
         cuposPorCategoria: data.cuposPorCategoria,
       });
-      return undefined;
+      return { id: 'venta-nueva' };
     });
     const tx = {
       $queryRaw: jest.fn().mockResolvedValue([]),
@@ -229,6 +231,10 @@ describe('CuentasProvisioningService — contadores de venta', () => {
       {} as ConfiguracionProveedorService,
       {} as IdentificadoresService,
       {} as AuditService,
+      {
+        abrirPorNuevaVentaEnTx: jest.fn().mockResolvedValue(undefined),
+        cerrarPorCancelacionEnTx: jest.fn().mockResolvedValue(undefined),
+      } as unknown as VentanasCuriosidadService,
     );
 
     return {
@@ -404,6 +410,7 @@ describe('CuentasProvisioningService — búsqueda por cupos', () => {
       {} as ConfiguracionProveedorService,
       {} as IdentificadoresService,
       {} as AuditService,
+      {} as VentanasCuriosidadService,
     );
   };
 

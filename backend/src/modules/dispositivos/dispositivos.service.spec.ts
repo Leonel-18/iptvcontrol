@@ -11,6 +11,10 @@ import { AuditService } from '../../common/audit/audit.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
 import { CuentasProvisioningService } from '../cuentas/cuentas-provisioning.service';
+import {
+  CuentaEnVentanaCuriosidadError,
+  VentanasCuriosidadService,
+} from '../cuentas/ventanas-curiosidad.service';
 import { ColaProveedorService } from '../../queues/cola-proveedor.service';
 
 /**
@@ -100,6 +104,7 @@ describe('DispositivosService — corregirVinculacion', () => {
       proveedor,
       {} as CuentasProvisioningService,
       cola,
+      {} as VentanasCuriosidadService,
     );
 
     return { servicio, prisma, proveedor, audit, cola, tx, eliminarDispositivo };
@@ -259,6 +264,7 @@ describe('DispositivosService — liberar (preservación del vínculo en Cuentas
       proveedor,
       provisioning,
       cola,
+      {} as VentanasCuriosidadService,
     );
     return { servicio, dispositivoUpdate };
   };
@@ -359,6 +365,7 @@ describe('DispositivosService — altaAdicional reutiliza la Cuenta exclusiva ex
       proveedor,
       {} as CuentasProvisioningService,
       {} as ColaProveedorService,
+      {} as VentanasCuriosidadService,
     );
     return { servicio, prisma, proveedor };
   };
@@ -383,5 +390,78 @@ describe('DispositivosService — altaAdicional reutiliza la Cuenta exclusiva ex
     );
     // No hace falta consultar licencias: ya se encontró la Cuenta existente.
     expect(proveedor.consultarLicencias).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * =============================================================================
+ * reasignar() y la Ventana de curiosidad
+ * =============================================================================
+ * Reasignar un Dispositivo `disponible` a un Cliente Final SIN venta previa en
+ * esa Cuenta compartida es, en los hechos, otra forma de alta (regla de
+ * negocio 6: credenciales compartidas sin rotación). Debe respetar el mismo
+ * bloqueo que el wizard normal cuando hay una Ventana de curiosidad activa de
+ * OTRO cliente.
+ * =============================================================================
+ */
+describe('DispositivosService — reasignar y la Ventana de curiosidad', () => {
+  const dispositivoDisponible = {
+    id: 'dispositivo-1',
+    cuentaId: 'cuenta-1',
+    empresaRevendedoraId: 'empresa-1',
+    estado: EstadoDispositivo.disponible,
+    cuenta: { id: 'cuenta-1', esExclusiva: false, servicios: '1' },
+  };
+
+  const crearServicio = (ventaExistente: unknown) => {
+    const prisma = {
+      db: {
+        dispositivo: { findUnique: jest.fn().mockResolvedValue(dispositivoDisponible) },
+        clienteFinal: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'cliente-nuevo' }) },
+        ventaCompartida: { findUnique: jest.fn().mockResolvedValue(ventaExistente) },
+      },
+    } as unknown as PrismaService;
+    const audit = { registrar: jest.fn() } as unknown as AuditService;
+    const asegurarClientePermitido = jest.fn().mockResolvedValue(undefined);
+    const ventanasCuriosidad = {
+      asegurarClientePermitido,
+    } as unknown as VentanasCuriosidadService;
+
+    const servicio = new DispositivosService(
+      prisma,
+      audit,
+      {} as RequestContextService,
+      {} as ProveedorService,
+      {} as CuentasProvisioningService,
+      {} as ColaProveedorService,
+      ventanasCuriosidad,
+    );
+    jest.spyOn(servicio, 'alta').mockResolvedValue({
+      dispositivo: { id: 'dispositivo-1' } as never,
+      cuenta: { id: 'cuenta-1' } as never,
+      cuentaCreada: false,
+      pendienteDeAutoprovision: true,
+      solicitudVinculacionId: 'solicitud-1',
+    });
+    return { servicio, asegurarClientePermitido };
+  };
+
+  it('bloquea reasignar a un cliente nuevo si hay una Ventana activa de otro cliente', async () => {
+    const { servicio, asegurarClientePermitido } = crearServicio(null);
+    asegurarClientePermitido.mockRejectedValueOnce(
+      new CuentaEnVentanaCuriosidadError('cuenta-1', new Date()),
+    );
+
+    await expect(
+      servicio.reasignar('dispositivo-1', 'cliente-nuevo', 'operador-1'),
+    ).rejects.toBeInstanceOf(CuentaEnVentanaCuriosidadError);
+  });
+
+  it('no valida la Ventana si el cliente destino ya tiene una venta en esa Cuenta', async () => {
+    const { servicio, asegurarClientePermitido } = crearServicio({ cuposPorCategoria: 1 });
+
+    await servicio.reasignar('dispositivo-1', 'cliente-nuevo', 'operador-1');
+
+    expect(asegurarClientePermitido).not.toHaveBeenCalled();
   });
 });

@@ -23,6 +23,7 @@ import {
   SinCapacidadEnCuentaError,
   SincronizacionContadoresPendienteError,
 } from '../cuentas/cuentas-provisioning.service';
+import { VentanasCuriosidadService } from '../cuentas/ventanas-curiosidad.service';
 import { calcularCapacidad, contarDispositivosCliente } from '../cuentas/capacidad.util';
 import { serviciosContratados } from '../../proveedor/servicios.util';
 
@@ -40,6 +41,7 @@ export interface AltaDispositivoParams {
   servicios: string;
   /** Cupos reservados por categoría para una venta compartida nueva. */
   cuposPorCategoria?: 1 | 2;
+  duracionVentanaCuriosidadMinutos?: number;
 }
 
 export interface ResultadoAltaDispositivo {
@@ -61,6 +63,7 @@ export class DispositivosService {
     private readonly proveedor: ProveedorService,
     private readonly provisioning: CuentasProvisioningService,
     private readonly cola: ColaProveedorService,
+    private readonly ventanasCuriosidad: VentanasCuriosidadService,
   ) {}
 
   async alta(params: AltaDispositivoParams): Promise<ResultadoAltaDispositivo> {
@@ -81,6 +84,8 @@ export class DispositivosService {
           cuposPorCategoria,
           operadorPrincipalId,
           actualizarProveedor,
+          duracionVentanaCuriosidadMinutos: params.duracionVentanaCuriosidadMinutos,
+          teamMemberId: this.contexto.teamMemberId,
         });
       } catch (error) {
         if (!(error instanceof SincronizacionContadoresPendienteError)) throw error;
@@ -518,7 +523,11 @@ export class DispositivosService {
 
   async altaAdicional(
     clienteFinalId: string,
-    opciones: { notaDescriptiva?: string; operadorPrincipalId: string },
+    opciones: {
+      notaDescriptiva?: string;
+      operadorPrincipalId: string;
+      duracionVentanaCuriosidadMinutos?: number;
+    },
   ): Promise<ResultadoAltaDispositivo & { migro: boolean }> {
     const clienteFinal = await this.prisma.db.clienteFinal.findUniqueOrThrow({
       where: { id: clienteFinalId },
@@ -611,6 +620,7 @@ export class DispositivosService {
       cuentaExclusiva: !cuentaActual && esExclusivaPorTipoAlta,
       operadorPrincipalId: opciones.operadorPrincipalId,
       servicios,
+      duracionVentanaCuriosidadMinutos: opciones.duracionVentanaCuriosidadMinutos,
     });
     return {
       ...resultado,
@@ -741,6 +751,29 @@ export class DispositivosService {
     const clienteFinal = await this.prisma.db.clienteFinal.findUniqueOrThrow({
       where: { id: clienteFinalId },
     });
+
+    if (!dispositivo.cuenta.esExclusiva) {
+      const ventaExistente = await this.prisma.db.ventaCompartida.findUnique({
+        where: {
+          cuentaId_clienteFinalId: { cuentaId: dispositivo.cuentaId, clienteFinalId },
+        },
+      });
+      // Reasignar un Dispositivo liberado a un cliente SIN venta previa en esta
+      // Cuenta es, en los hechos, otra forma de alta (regla de negocio 6: el
+      // cliente nuevo recibe las mismas credenciales que el saliente). Por eso
+      // respeta el mismo bloqueo de la Ventana de curiosidad que el wizard.
+      // Nota: a diferencia del wizard, este camino NO crea `VentaCompartida` ni
+      // toca los contadores de SENSA (comportamiento previo a esta Fase, sin
+      // cambios acá) — pendiente de decisión de negocio si corresponde
+      // unificarlo, ver docs/05_Decisiones_Pendientes.md.
+      if (!ventaExistente) {
+        await this.ventanasCuriosidad.asegurarClientePermitido(
+          dispositivo.cuentaId,
+          clienteFinalId,
+        );
+      }
+    }
+
     const resultado = await this.alta({
       clienteFinal,
       notaDescriptiva: opciones?.notaDescriptiva,

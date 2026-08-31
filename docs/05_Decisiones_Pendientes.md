@@ -71,6 +71,17 @@
   - **Sigue pendiente:** decidir si conviene, además, intentar acortar la ventana de exposición
     (ej. barrido más frecuente para Cuentas compartidas recién vendidas) y si vale la pena
     investigar con SENSA si existe algún parámetro adicional que sí limite `cloud_client`.
+- **`POST /devices/:id/reassign` a un Cliente Final sin venta previa en una Cuenta compartida no
+  crea `VentaCompartida` ni actualiza los contadores de SENSA** (detectado 31/08/2026, al
+  implementar la Ventana de curiosidad — Fase 2). Este endpoint es, en los hechos, la vía real de
+  la regla de negocio 6 (credenciales compartidas sin rotación: un Dispositivo liberado se
+  reasigna a un cliente nuevo sin pasar por el wizard de alta), pero no comparte el camino de
+  reserva de cupos (`reservarCapacidadPorNuevaVenta`) que sí usa `/customers`. Como parche mínimo
+  de esta Fase, `reasignar()` sí respeta el bloqueo de la Ventana de curiosidad cuando el cliente
+  destino es nuevo para esa Cuenta (`VentanasCuriosidadService.asegurarClientePermitido`), pero
+  **no crea la fila de `VentaCompartida` correspondiente** — queda pendiente decidir con Federico
+  si conviene unificar ambos caminos (con qué `cupos_por_categoria` asumir para un Dispositivo ya
+  existente) o si es una limitación aceptada del flujo de reasignación manual.
 
 ## 5. Parametrización — umbrales y validaciones
 

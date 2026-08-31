@@ -2,6 +2,19 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Length, Matches, Max, MaxLength, Min } from 'class-validator';
 
+export class ActualizarVentanaCuriosidadDto {
+  @ApiProperty({
+    description:
+      'Duración predeterminada máxima, en minutos, para nuevas ventas compartidas. Admite 0.',
+    example: 1440,
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  duracion_predeterminada_minutos!: number;
+}
+
 /**
  * Conexión con el Proveedor (docs/04_Esqueleto_Tecnico_Inicial.md, sección 9.1).
  *

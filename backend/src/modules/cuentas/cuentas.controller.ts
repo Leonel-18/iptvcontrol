@@ -17,6 +17,7 @@ import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
 import { InventarioProveedorService } from './inventario-proveedor.service';
+import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 /**
  * Cuentas — `/accounts` en el frontend.
@@ -30,6 +31,7 @@ export class CuentasController {
   constructor(
     private readonly cuentas: CuentasService,
     private readonly inventario: InventarioProveedorService,
+    private readonly ventanasCuriosidad: VentanasCuriosidadService,
   ) {}
 
   @Get()
@@ -110,6 +112,15 @@ export class CuentasController {
     @Body() dto: CambiarPasswordCuentaDto,
   ) {
     return this.cuentas.cambiarPassword(id, dto.password);
+  }
+
+  @Post(':id/curiosity-window/release')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Levanta manualmente la Ventana de curiosidad activa de una Cuenta compartida.',
+  })
+  levantarVentanaCuriosidad(@Param('id', ParseUUIDPipe) id: string) {
+    return this.ventanasCuriosidad.levantarManualmente(id);
   }
 
   @Post(':id/sync-services')

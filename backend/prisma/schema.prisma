@@ -111,6 +111,12 @@ enum EstadoTeamMember {
   inactivo
 }
 
+enum MotivoFinVentanaCuriosidad {
+  vencimiento
+  levantamiento_manual
+  cancelacion_venta
+}
+
 /// Acciones trazadas en el Audit Log (reglas de negocio, sección 11).
 enum AccionAuditoria {
   alta_cliente
@@ -140,6 +146,9 @@ enum AccionAuditoria {
   deteccion_dispositivo_no_autorizado
   resolucion_incidencia_dispositivo
   correccion_vinculacion_dispositivo
+  apertura_ventana_curiosidad
+  levantamiento_ventana_curiosidad
+  cambio_configuracion_ventana_curiosidad
 }
 
 enum EntidadAuditada {
@@ -153,6 +162,7 @@ enum EntidadAuditada {
   SolicitudVinculacionDispositivo
   ReservaTecnicaDispositivo
   IncidenciaDispositivoProveedor
+  VentanaCuriosidad
 }
 
 enum EstadoLlamadaProveedor {
@@ -292,6 +302,10 @@ model EmpresaRevendedora {
   /// (contacto1@isp.com, contacto2@isp.com, ...).
   secuenciaEmailCuenta   Int @default(0) @map("secuencia_email_cuenta")
 
+  /// Tiempo máximo que una Cuenta compartida queda reservada para clientes ya
+  /// existentes después de una venta nueva. La Empresa puede reducirlo en cada alta.
+  duracionVentanaCuriosidadMinutos Int @default(0) @map("duracion_ventana_curiosidad_minutos")
+
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
@@ -303,6 +317,7 @@ model EmpresaRevendedora {
   incidenciasDispositivo IncidenciaDispositivoProveedor[]
   teamMembers            TeamMember[]
   auditLogs              AuditLog[]
+  ventanasCuriosidad     VentanaCuriosidad[]
 
   @@index([operadorPrincipalId])
   @@map("empresa_revendedora")
@@ -354,8 +369,9 @@ model ClienteFinal {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  dispositivos      Dispositivo[]
-  ventasCompartidas VentaCompartida[]
+  dispositivos       Dispositivo[]
+  ventasCompartidas  VentaCompartida[]
+  ventanasCuriosidad VentanaCuriosidad[]
 
   @@unique([empresaRevendedoraId, numeroCliente])
   @@index([empresaRevendedoraId, estado])
@@ -414,6 +430,7 @@ model Cuenta {
   ventasCompartidas      VentaCompartida[]
   solicitudesVinculacion SolicitudVinculacionDispositivo[]
   incidenciasDispositivo IncidenciaDispositivoProveedor[]
+  ventanasCuriosidad     VentanaCuriosidad[]
 
   @@index([empresaRevendedoraId, estado])
   @@map("cuenta")
@@ -440,11 +457,52 @@ model VentaCompartida {
 
   creadoEn DateTime @default(now()) @map("creado_en")
 
+  ventanaCuriosidad VentanaCuriosidad?
+
   @@unique([cuentaId, clienteFinalId])
   @@index([empresaRevendedoraId])
   @@index([cuentaId])
   @@index([clienteFinalId])
   @@map("venta_compartida")
+}
+
+/// Restricción local de elegibilidad para nuevas ventas sobre una Cuenta
+/// compartida. No modifica capacidad ni contadores del Proveedor.
+model VentanaCuriosidad {
+  id String @id @default(uuid()) @db.Uuid
+
+  cuentaId String @map("cuenta_id") @db.Uuid
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  clienteFinalId String       @map("cliente_final_id") @db.Uuid
+  clienteFinal   ClienteFinal @relation(fields: [clienteFinalId], references: [id], onDelete: Cascade)
+
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  ventaCompartidaId String?          @unique @map("venta_compartida_id") @db.Uuid
+  ventaCompartida   VentaCompartida? @relation(fields: [ventaCompartidaId], references: [id], onDelete: SetNull)
+
+  inicioEn                      DateTime                    @default(now()) @map("inicio_en")
+  duracionPredeterminadaMinutos Int                         @map("duracion_predeterminada_minutos")
+  duracionAplicadaMinutos       Int                         @map("duracion_aplicada_minutos")
+  finPrevistoEn                 DateTime                    @map("fin_previsto_en")
+  finRealEn                     DateTime?                   @map("fin_real_en")
+  motivoFin                     MotivoFinVentanaCuriosidad? @map("motivo_fin")
+
+  iniciadaPorTeamMemberId String?     @map("iniciada_por_team_member_id") @db.Uuid
+  iniciadaPorTeamMember   TeamMember? @relation("VentanaCuriosidadIniciadaPor", fields: [iniciadaPorTeamMemberId], references: [id], onDelete: SetNull)
+
+  finalizadaPorTeamMemberId String?     @map("finalizada_por_team_member_id") @db.Uuid
+  finalizadaPorTeamMember   TeamMember? @relation("VentanaCuriosidadFinalizadaPor", fields: [finalizadaPorTeamMemberId], references: [id], onDelete: SetNull)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@index([empresaRevendedoraId, inicioEn])
+  @@index([cuentaId, finRealEn, finPrevistoEn])
+  @@index([clienteFinalId])
+  @@map("ventana_curiosidad")
 }
 
 /// Dispositivo físico (TV o móvil) vinculado a un Cliente Final dentro de una
@@ -586,7 +644,9 @@ model TeamMember {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  auditLogs AuditLog[]
+  auditLogs                     AuditLog[]
+  ventanasCuriosidadIniciadas   VentanaCuriosidad[] @relation("VentanaCuriosidadIniciadaPor")
+  ventanasCuriosidadFinalizadas VentanaCuriosidad[] @relation("VentanaCuriosidadFinalizadaPor")
 
   @@index([empresaRevendedoraId])
   @@index([operadorPrincipalId])

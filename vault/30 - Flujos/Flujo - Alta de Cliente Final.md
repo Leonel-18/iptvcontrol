@@ -26,8 +26,8 @@ flowchart TD
     METODO{"Método de alta"}
     METODO -->|"cuenta_exclusiva"| NUEVA["Crear Cuenta nueva<br/>todos los servicios contratados"]
     METODO -->|"dispositivo_compartido"| FIRMA["Elegir 1+1 o 2+2 y servicios<br/>básico 1 siempre incluido"]
-    FIRMA --> BUSCA{"¿Hay Cuenta propia con firma<br/>idéntica y cupos suficientes?"}
-    BUSCA -->|"Sí"| LIBERA["Reservar cupos y subir<br/>contadores SENSA"]
+    FIRMA --> BUSCA{"¿Hay Cuenta propia con firma<br/>idéntica, cupos suficientes<br/>y sin Ventana de curiosidad activa?"}
+    BUSCA -->|"Sí"| LIBERA["Reservar cupos, subir<br/>contadores SENSA y abrir<br/>Ventana de curiosidad"]
     BUSCA -->|"No"| NUEVAC["Crear Cuenta nueva<br/>en 1/1 o 2/2"]
     NUEVA --> DNI["Generar identificador tipo DNI"]
     NUEVAC --> DNI
@@ -53,7 +53,7 @@ flowchart TD
 | Paso | Qué se define | Regla asociada |
 |---|---|---|
 | 1 · Cliente | Nombre, contacto e ID de gestión externa | [[Validación de ID de gestión externa]] |
-| 2 · Método y servicios | Cuenta exclusiva o compartida; cupos 1+1/2+2 y servicios | [[Capacidad de una Cuenta]] |
+| 2 · Método y servicios | Cuenta exclusiva o compartida; cupos 1+1/2+2, servicios y duración de la [[Ventana de curiosidad]] | [[Capacidad de una Cuenta]] |
 | 3 · Dispositivo | Instrucciones para el primer login; no se pide tipo ni MAC | — |
 | 4 · Confirmar | Resumen de qué va a pasar antes de tocar el Proveedor | — |
 
@@ -85,3 +85,4 @@ Y el sistema revierte la reserva local para no dejar un Cliente Final fantasma s
 
 - [[Flujo - Migración de Cuenta]]
 - [[Ciclo de vida del Cliente Final]]
+- [[Ventana de curiosidad]]

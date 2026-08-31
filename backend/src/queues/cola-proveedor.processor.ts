@@ -9,6 +9,7 @@ import {
   EstadoSolicitudVinculacion,
   EstadoVinculacionDispositivo,
   TipoDispositivo,
+  MotivoFinVentanaCuriosidad,
 } from '@prisma/client';
 import { Job } from 'bullmq';
 import { AuditService } from '../common/audit/audit.service';
@@ -238,6 +239,17 @@ export class ColaProveedorProcessor extends WorkerHost {
               },
             });
             if (otrosDispositivos === 0) {
+              await tx.ventanaCuriosidad.updateMany({
+                where: {
+                  cuentaId: solicitud.cuentaId,
+                  clienteFinalId: solicitud.dispositivo.clienteFinalId,
+                  finRealEn: null,
+                },
+                data: {
+                  finRealEn: ahora,
+                  motivoFin: MotivoFinVentanaCuriosidad.cancelacion_venta,
+                },
+              });
               await tx.ventaCompartida.deleteMany({
                 where: {
                   cuentaId: solicitud.cuentaId,

@@ -20,6 +20,7 @@ import {
 } from '../../common/errors/proveedor.errors';
 import { IdentificadoresService } from './identificadores.service';
 import { calcularCapacidad, LIMITE_POR_CATEGORIA_COMPARTIDA } from './capacidad.util';
+import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 /** Señal interna: esta Cuenta no puede alojar la venta/Dispositivo pedido. */
 export class SinCapacidadEnCuentaError extends Error {
@@ -94,6 +95,7 @@ export class CuentasProvisioningService {
     private readonly configuracion: ConfiguracionProveedorService,
     private readonly identificadores: IdentificadoresService,
     private readonly audit: AuditService,
+    private readonly ventanasCuriosidad: VentanasCuriosidadService,
   ) {}
 
   /**
@@ -289,6 +291,8 @@ export class CuentasProvisioningService {
     cuposPorCategoria: 1 | 2;
     operadorPrincipalId: string;
     actualizarProveedor: boolean;
+    duracionVentanaCuriosidadMinutos?: number;
+    teamMemberId?: string;
   }): Promise<boolean> {
     const { cuentaId, clienteFinalId, empresaRevendedoraId, cuposPorCategoria } = params;
     const reserva = await this.prisma.transaction(async (tx) => {
@@ -314,13 +318,21 @@ export class CuentasProvisioningService {
         throw new SinCapacidadEnCuentaError(cuentaId);
       }
 
-      await tx.ventaCompartida.create({
+      const venta = await tx.ventaCompartida.create({
         data: {
           cuentaId,
           clienteFinalId,
           empresaRevendedoraId,
           cuposPorCategoria,
         },
+      });
+      await this.ventanasCuriosidad.abrirPorNuevaVentaEnTx(tx, {
+        cuentaId,
+        clienteFinalId,
+        empresaRevendedoraId,
+        ventaCompartidaId: venta.id,
+        duracionSolicitadaMinutos: params.duracionVentanaCuriosidadMinutos,
+        teamMemberId: params.teamMemberId,
       });
       return { cuenta, nuevoValor, creada: true };
     });
@@ -362,6 +374,7 @@ export class CuentasProvisioningService {
         },
       });
       if (dispositivosVigentes > 0) return false;
+      await this.ventanasCuriosidad.cerrarPorCancelacionEnTx(tx, cuentaId, clienteFinalId);
       const resultado = await tx.ventaCompartida.deleteMany({
         where: { cuentaId, clienteFinalId },
       });
@@ -464,6 +477,9 @@ export class CuentasProvisioningService {
         esExclusiva: false,
         servicios,
         id: excluirCuentaIds.length ? { notIn: excluirCuentaIds } : undefined,
+        ventanasCuriosidad: {
+          none: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
+        },
       },
       include: {
         dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },

@@ -111,6 +111,7 @@ export class DispositivosController {
     const resultado = await this.dispositivos.altaAdicional(dto.customer_id, {
       notaDescriptiva: dto.nota_descriptiva,
       operadorPrincipalId,
+      duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
     });
 
     return {

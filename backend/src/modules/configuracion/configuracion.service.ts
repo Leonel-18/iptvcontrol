@@ -8,6 +8,7 @@ import { ProveedorService } from '../../proveedor/proveedor.service';
 import { CONECTOR_SENSA } from '../../proveedor/sensa/sensa.constants';
 import {
   ActualizarConexionProveedorDto,
+  ActualizarVentanaCuriosidadDto,
   ConfiguracionProveedorRespuestaDto,
   ProbarConexionDto,
 } from './dto/configuracion.dto';
@@ -201,6 +202,43 @@ export class ConfiguracionService {
     return this.formatearPrueba(resultado);
   }
 
+  async obtenerVentanaCuriosidad() {
+    const empresaRevendedoraId = this.exigirRevendedor();
+    const empresa = await this.prisma.db.empresaRevendedora.findUniqueOrThrow({
+      where: { id: empresaRevendedoraId },
+      select: { duracionVentanaCuriosidadMinutos: true },
+    });
+    return {
+      duracion_predeterminada_minutos: empresa.duracionVentanaCuriosidadMinutos,
+    };
+  }
+
+  async actualizarVentanaCuriosidad(dto: ActualizarVentanaCuriosidadDto) {
+    const empresaRevendedoraId = this.exigirRevendedor();
+    await this.prisma.transaction(async (tx) => {
+      const anterior = await tx.empresaRevendedora.findUniqueOrThrow({
+        where: { id: empresaRevendedoraId },
+        select: { duracionVentanaCuriosidadMinutos: true },
+      });
+      await tx.empresaRevendedora.update({
+        where: { id: empresaRevendedoraId },
+        data: {
+          duracionVentanaCuriosidadMinutos: dto.duracion_predeterminada_minutos,
+        },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.cambio_configuracion_ventana_curiosidad,
+        entidad: EntidadAuditada.EmpresaRevendedora,
+        entidadId: empresaRevendedoraId,
+        detalle: {
+          duracion_anterior_minutos: anterior.duracionVentanaCuriosidadMinutos,
+          duracion_nueva_minutos: dto.duracion_predeterminada_minutos,
+        },
+      });
+    });
+    return this.obtenerVentanaCuriosidad();
+  }
+
   private formatearPrueba(resultado: {
     ok: boolean;
     mensaje: string;
@@ -226,5 +264,15 @@ export class ConfiguracionService {
       );
     }
     return operadorPrincipalId;
+  }
+
+  private exigirRevendedor(): string {
+    const empresaRevendedoraId = this.contexto.empresaRevendedoraId;
+    if (this.contexto.esOperador || !empresaRevendedoraId) {
+      throw new ForbiddenException(
+        'La Ventana de curiosidad se parametriza desde cada Empresa Revendedora.',
+      );
+    }
+    return empresaRevendedoraId;
   }
 }
