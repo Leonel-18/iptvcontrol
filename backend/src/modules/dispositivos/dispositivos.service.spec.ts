@@ -346,6 +346,7 @@ describe('DispositivosService — altaAdicional reutiliza la Cuenta exclusiva ex
             esExclusiva: true,
             servicios: '1|2|3|4|5|6|7',
             dispositivos: [], // sin Dispositivos activos: hay lugar de sobra
+            ventasCompartidas: [],
           }),
         },
       },

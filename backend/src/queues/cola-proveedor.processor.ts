@@ -73,7 +73,7 @@ export class ColaProveedorProcessor extends WorkerHost {
     }
   }
 
-  /** Reintenta sincronizar los contadores de ventas activas de una Cuenta compartida. */
+  /** Reintenta sincronizar los contadores de cupos comprometidos de una Cuenta compartida. */
   private async sincronizarContadoresVenta(
     datos: DatosSincronizarContadoresVenta,
   ): Promise<unknown> {
@@ -185,12 +185,13 @@ export class ColaProveedorProcessor extends WorkerHost {
     const ahora = new Date();
     if (ahora >= solicitud.expiraEn) {
       // Si esta fila puntual ya detectó su equipo antes de que venza la
-      // ventana (ej. el fijo de una venta unitaria, o alguno de los hasta 3
+      // ventana (ej. un fijo de una venta compartida, o alguno de los hasta 3
       // fijos/3 móviles de una Cuenta exclusiva), la venta quedó cumplida
       // igual: lo que expira es sólo la búsqueda de un candidato adicional.
       const equipoYaVinculado =
         solicitud.dispositivo.estadoVinculacion === EstadoVinculacionDispositivo.vinculado;
       await this.prisma.transactionComoOperador(datos.operadorPrincipalId, async (tx) => {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${solicitud.cuentaId}))`;
         if (equipoYaVinculado) {
           await tx.solicitudVinculacionDispositivo.update({
             where: { id: solicitud.id },
@@ -225,6 +226,26 @@ export class ColaProveedorProcessor extends WorkerHost {
           // sólo ensucia el listado de Dispositivos y la lista de "liberados
           // para reasignar" sin aportar nada real. Se borra directo (la
           // Solicitud cae con ella por `onDelete: Cascade`).
+          if (solicitud.creaVentaCompartida && solicitud.dispositivo.clienteFinalId) {
+            const otrosDispositivos = await tx.dispositivo.count({
+              where: {
+                cuentaId: solicitud.cuentaId,
+                clienteFinalId: solicitud.dispositivo.clienteFinalId,
+                id: { not: solicitud.dispositivoId },
+                estado: {
+                  in: [EstadoDispositivo.activo, EstadoDispositivo.bloqueado_por_suspension],
+                },
+              },
+            });
+            if (otrosDispositivos === 0) {
+              await tx.ventaCompartida.deleteMany({
+                where: {
+                  cuentaId: solicitud.cuentaId,
+                  clienteFinalId: solicitud.dispositivo.clienteFinalId,
+                },
+              });
+            }
+          }
           await tx.dispositivo.delete({ where: { id: solicitud.dispositivoId } });
         }
       });
@@ -234,12 +255,16 @@ export class ColaProveedorProcessor extends WorkerHost {
         // base real (ya sin este Dispositivo).
         await this.provisioning
           .sincronizarContadoresVenta(solicitud.cuentaId, datos.operadorPrincipalId)
-          .catch((error) =>
+          .catch(async (error) => {
             this.logger.error(
               `No se pudo revertir el contador de la Cuenta ${solicitud.cuentaId} tras expirar ` +
                 `la vinculación: ${(error as Error).message}`,
-            ),
-          );
+            );
+            await this.cola.encolarSincronizacionContadoresVenta({
+              cuentaId: solicitud.cuentaId,
+              operadorPrincipalId: datos.operadorPrincipalId,
+            });
+          });
       }
       return { activa: false, expirada: true };
     }
@@ -529,8 +554,7 @@ export class ColaProveedorProcessor extends WorkerHost {
    * todavia tengan lugar segun el modo de la Cuenta:
    *
    *  - Exclusiva: hasta 3 fijos + 3 moviles para el unico Cliente Final.
-   *  - Compartida: hasta 1 fijo + 1 movil para el Cliente Final de esta venta
-   *    puntual (los demas Clientes Finales de la Cuenta no cuentan aca).
+   *  - Compartida: hasta el 1+1 o 2+2 reservado para esta venta puntual.
    *
    * Lo que no entra por categoria queda como incidencia pendiente de revision
    * manual (nunca se elimina solo) - cubre tanto un Dispositivo de mas de este
@@ -569,7 +593,20 @@ export class ColaProveedorProcessor extends WorkerHost {
         select: { tipo: true },
       });
 
-      const topePorCategoria = solicitud.cuenta.esExclusiva ? 3 : 1;
+      const ventaCompartida = solicitud.cuenta.esExclusiva
+        ? null
+        : await tx.ventaCompartida.findUnique({
+            where: {
+              cuentaId_clienteFinalId: {
+                cuentaId: solicitud.cuentaId,
+                clienteFinalId: clienteFinalId!,
+              },
+            },
+            select: { cuposPorCategoria: true },
+          });
+      const topePorCategoria = solicitud.cuenta.esExclusiva
+        ? 3
+        : (ventaCompartida?.cuposPorCategoria ?? 1);
       let ocupadosFijo = yaVinculados.filter((d) => d.tipo === TipoDispositivo.fijo).length;
       let ocupadosMovil = yaVinculados.filter((d) => d.tipo === TipoDispositivo.movil).length;
 
@@ -670,7 +707,7 @@ export class ColaProveedorProcessor extends WorkerHost {
             proveedor_device_id: descartado.proveedorDeviceId,
             motivo: solicitud.cuenta.esExclusiva
               ? 'Excede el limite de 3 fijos / 3 moviles de la Cuenta.'
-              : 'Excede el limite de 1 fijo / 1 movil de esta venta.',
+              : `Excede el limite de ${topePorCategoria} fijo(s) / ${topePorCategoria} movil(es) de esta venta.`,
           },
         });
       }
@@ -696,7 +733,7 @@ export class ColaProveedorProcessor extends WorkerHost {
    * SENSA reporta el tipo como "phone", "tablet", "stationary", "STB" o
    * "cloud_client" (reproductor web, ej. una PC). `cloud_client` se
    * contabiliza como **móvil** junto con phone/tablet (confirmado por Bruno
-   * el 24/08/2026, caso Valentín Alamo: una venta unitaria necesita poder
+   * el 24/08/2026, caso Valentín Alamo: una venta compartida necesita poder
    * tener 1 TV/stationary "fijo" + 1 PC/cloud_client "móvil" sin chocar
    * cupos). `stationary`/`STB` son fijos.
    */

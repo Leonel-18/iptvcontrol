@@ -10,6 +10,7 @@ import {
   EstadoSolicitudVinculacion,
   EstadoVinculacionDispositivo,
   Prisma,
+  TipoDispositivo,
   TipoAltaClienteFinal,
 } from '@prisma/client';
 import { AuditService } from '../../common/audit/audit.service';
@@ -17,7 +18,11 @@ import { RequestContextService } from '../../common/context/request-context.serv
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
 import { ColaProveedorService } from '../../queues/cola-proveedor.service';
-import { CuentasProvisioningService } from '../cuentas/cuentas-provisioning.service';
+import {
+  CuentasProvisioningService,
+  SinCapacidadEnCuentaError,
+  SincronizacionContadoresPendienteError,
+} from '../cuentas/cuentas-provisioning.service';
 import { calcularCapacidad, contarDispositivosCliente } from '../cuentas/capacidad.util';
 import { serviciosContratados } from '../../proveedor/servicios.util';
 
@@ -33,6 +38,8 @@ export interface AltaDispositivoParams {
   operadorPrincipalId: string;
   /** Firma canónica, por ejemplo `1|3|5`. */
   servicios: string;
+  /** Cupos reservados por categoría para una venta compartida nueva. */
+  cuposPorCategoria?: 1 | 2;
 }
 
 export interface ResultadoAltaDispositivo {
@@ -62,8 +69,28 @@ export class DispositivosService {
       where: { id: clienteFinal.empresaRevendedoraId },
     });
     const umbral = await this.umbralAlerta(operadorPrincipalId);
+    const cuposPorCategoria = params.cuposPorCategoria ?? 1;
     let cuentaCreada = false;
     let cuentaId = params.cuentaIdForzada ?? null;
+    const reservarVenta = async (id: string, actualizarProveedor: boolean): Promise<boolean> => {
+      try {
+        return await this.provisioning.reservarCapacidadPorNuevaVenta({
+          cuentaId: id,
+          clienteFinalId: clienteFinal.id,
+          empresaRevendedoraId: empresaRevendedora.id,
+          cuposPorCategoria,
+          operadorPrincipalId,
+          actualizarProveedor,
+        });
+      } catch (error) {
+        if (!(error instanceof SincronizacionContadoresPendienteError)) throw error;
+        await this.cola.encolarSincronizacionContadoresVenta({
+          cuentaId: id,
+          operadorPrincipalId,
+        });
+        return error.ventaCreada;
+      }
+    };
 
     if (!cuentaId && !params.cuentaExclusiva) {
       cuentaId = await this.provisioning.buscarCuentaConLugar(
@@ -71,6 +98,7 @@ export class DispositivosService {
         umbral,
         [],
         params.servicios,
+        cuposPorCategoria,
       );
     }
 
@@ -81,24 +109,28 @@ export class DispositivosService {
         operadorPrincipalId,
         esExclusiva: Boolean(params.cuentaExclusiva),
         servicios: params.servicios,
+        dispositivosFijos: params.cuentaExclusiva ? undefined : cuposPorCategoria,
+        dispositivosMoviles: params.cuentaExclusiva ? undefined : cuposPorCategoria,
       });
       cuentaId = cuentaNueva.id;
       cuentaCreada = true;
     }
 
     let cuenta: Cuenta;
-    // Se sube el contador ANTES de abrir la ventana: SENSA rechaza el primer
-    // inicio de sesión del Cliente Final nuevo si el contador todavía no
-    // refleja su venta.
-    let incrementoAplicado = false;
+    // La reserva comercial se registra ANTES de abrir la ventana: define tanto
+    // el filtro local de capacidad como los contadores que recibirá SENSA.
+    let ventaReservada = false;
     if (params.dispositivoIdForzado) {
       // Reactivación o reasignación de un Dispositivo ya vinculado a la Cuenta:
       // el cupo comercial lo ocupa ese mismo Dispositivo, no se vuelve a contar.
       cuenta = await this.prisma.db.cuenta.findUniqueOrThrow({ where: { id: cuentaId } });
     } else {
-      const cuentaConDispositivos = await this.prisma.db.cuenta.findUniqueOrThrow({
+      let cuentaConDispositivos = await this.prisma.db.cuenta.findUniqueOrThrow({
         where: { id: cuentaId },
-        include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
+        include: {
+          dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+          ventasCompartidas: true,
+        },
       });
       const capacidad = calcularCapacidad(cuentaConDispositivos, umbral);
 
@@ -109,28 +141,57 @@ export class DispositivosService {
           );
         }
       } else {
-        const dispositivosDelCliente = contarDispositivosCliente(
-          cuentaConDispositivos.dispositivos,
-          clienteFinal.id,
+        const ventaExistente = cuentaConDispositivos.ventasCompartidas.find(
+          (venta) => venta.clienteFinalId === clienteFinal.id,
         );
-        if (dispositivosDelCliente > 0) {
-          // Completa su venta actual: el 2do Dispositivo del par (1 fijo + 1 móvil).
-          if (dispositivosDelCliente >= 2) {
+        if (ventaExistente) {
+          const fijos = contarDispositivosCliente(
+            cuentaConDispositivos.dispositivos,
+            clienteFinal.id,
+            TipoDispositivo.fijo,
+          );
+          const moviles = contarDispositivosCliente(
+            cuentaConDispositivos.dispositivos,
+            clienteFinal.id,
+            TipoDispositivo.movil,
+          );
+          if (
+            fijos >= ventaExistente.cuposPorCategoria &&
+            moviles >= ventaExistente.cuposPorCategoria
+          ) {
             throw new BadRequestException(
-              'Este Cliente Final ya tiene sus 2 Dispositivos (1 fijo + 1 móvil) en esta Cuenta.',
+              `Este Cliente Final ya completó su venta ${ventaExistente.cuposPorCategoria}+${ventaExistente.cuposPorCategoria} en esta Cuenta.`,
             );
           }
         } else {
-          // Es una venta nueva: la Cuenta necesita lugar para otro Cliente Final.
-          if (capacidad.completa) {
-            throw new BadRequestException('La Cuenta llegó al límite de 3 ventas.');
-          }
-          if (!cuentaCreada) {
-            await this.provisioning.incrementarCapacidadPorNuevaVenta(
-              cuentaId,
+          try {
+            ventaReservada = await reservarVenta(cuentaId, !cuentaCreada);
+          } catch (error) {
+            if (!(error instanceof SinCapacidadEnCuentaError) || params.cuentaIdForzada) {
+              throw error;
+            }
+            // Otra alta tomó los últimos cupos después de la búsqueda. En vez de
+            // fallarle al vendedor, se crea la Cuenta nueva que habría elegido
+            // el flujo si hubiese observado ese estado actualizado.
+            const cuentaNueva = await this.provisioning.crearCuenta({
+              empresaRevendedora,
+              clienteFinal,
               operadorPrincipalId,
-            );
-            incrementoAplicado = true;
+              esExclusiva: false,
+              servicios: params.servicios,
+              dispositivosFijos: cuposPorCategoria,
+              dispositivosMoviles: cuposPorCategoria,
+            });
+            cuentaId = cuentaNueva.id;
+            cuentaCreada = true;
+            cuentaConDispositivos = await this.prisma.db.cuenta.findUniqueOrThrow({
+              where: { id: cuentaId },
+              include: {
+                dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+                ventasCompartidas: true,
+              },
+            });
+            ventaReservada = await reservarVenta(cuentaId, false);
           }
         }
       }
@@ -140,16 +201,26 @@ export class DispositivosService {
       throw new BadRequestException('La Cuenta todavía no fue confirmada por el Proveedor.');
     }
 
-    const baseline = await this.proveedor.listarDispositivos(
-      operadorPrincipalId,
-      cuenta.proveedorCuentaId,
-    );
-
     try {
+      const baseline = await this.proveedor.listarDispositivos(
+        operadorPrincipalId,
+        cuenta.proveedorCuentaId,
+      );
       const ahora = new Date();
       const expiraEn = new Date(ahora.getTime() + DURACION_VINCULACION_MS);
       const proximoSondeoEn = new Date(ahora.getTime() + INTERVALO_SONDEO_MS);
       const resultado = await this.prisma.transaction(async (tx) => {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuenta.id}))`;
+        if (!cuenta.esExclusiva) {
+          await tx.ventaCompartida.findUniqueOrThrow({
+            where: {
+              cuentaId_clienteFinalId: {
+                cuentaId: cuenta.id,
+                clienteFinalId: clienteFinal.id,
+              },
+            },
+          });
+        }
         const dispositivo = params.dispositivoIdForzado
           ? await tx.dispositivo.update({
               where: { id: params.dispositivoIdForzado },
@@ -186,6 +257,7 @@ export class DispositivosService {
             abiertaEn: ahora,
             expiraEn,
             proximoSondeoEn,
+            creaVentaCompartida: ventaReservada,
           },
         });
         await this.audit.registrarEnTx(tx, {
@@ -215,7 +287,22 @@ export class DispositivosService {
         solicitudVinculacionId: resultado.solicitud.id,
       };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const esColisionConcurrente =
+        error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+      if (ventaReservada) {
+        await this.provisioning
+          .liberarCapacidadDeVenta(cuenta.id, clienteFinal.id, operadorPrincipalId)
+          .catch(async (cause) => {
+            this.logger.error(
+              `No se pudo revertir la venta reservada en la Cuenta ${cuenta.id}: ${(cause as Error).message}`,
+            );
+            await this.cola.encolarSincronizacionContadoresVenta({
+              cuentaId: cuenta.id,
+              operadorPrincipalId,
+            });
+          });
+      }
+      if (esColisionConcurrente) {
         // El índice único por Cuenta limita a una vinculación abierta a la vez:
         // es una colisión de altas concurrentes, no un fallo de SENSA.
         this.logger.warn(
@@ -224,18 +311,6 @@ export class DispositivosService {
         throw new BadRequestException(
           'La Cuenta ya tiene una vinculación de Dispositivo en curso. Espere a que finalice antes de otra venta.',
         );
-      }
-      if (incrementoAplicado) {
-        // El alta local falló después de subirle el contador a SENSA: se
-        // recalcula contra la base real (sin el Dispositivo fallido) para que
-        // el contador vuelva a bajar solo.
-        await this.provisioning
-          .sincronizarContadoresVenta(cuenta.id, operadorPrincipalId)
-          .catch((cause) =>
-            this.logger.error(
-              `No se pudo revertir el contador de la Cuenta ${cuenta.id}: ${(cause as Error).message}`,
-            ),
-          );
       }
       throw error;
     }
@@ -476,11 +551,29 @@ export class DispositivosService {
     if (cuentaActual) {
       const cuentaConDispositivos = await this.prisma.db.cuenta.findUniqueOrThrow({
         where: { id: cuentaActual.id },
-        include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
+        include: {
+          dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+          ventasCompartidas: true,
+        },
       });
+      const venta = cuentaConDispositivos.ventasCompartidas.find(
+        (item) => item.clienteFinalId === clienteFinal.id,
+      );
       const puedeQuedarseEnLaMismaCuenta = cuentaConDispositivos.esExclusiva
         ? !calcularCapacidad(cuentaConDispositivos).completa
-        : contarDispositivosCliente(cuentaConDispositivos.dispositivos, clienteFinal.id) < 2;
+        : Boolean(
+            venta &&
+            (contarDispositivosCliente(
+              cuentaConDispositivos.dispositivos,
+              clienteFinal.id,
+              TipoDispositivo.fijo,
+            ) < venta.cuposPorCategoria ||
+              contarDispositivosCliente(
+                cuentaConDispositivos.dispositivos,
+                clienteFinal.id,
+                TipoDispositivo.movil,
+              ) < venta.cuposPorCategoria),
+          );
 
       if (puedeQuedarseEnLaMismaCuenta) {
         const resultado = await this.alta({
@@ -672,6 +765,18 @@ export class DispositivosService {
       select: { umbralAlertaCapacidad: true },
     });
     return operador?.umbralAlertaCapacidad ?? 2;
+  }
+
+  async sincronizarCapacidadCuenta(cuentaId: string, operadorPrincipalId: string): Promise<void> {
+    try {
+      await this.provisioning.sincronizarContadoresVenta(cuentaId, operadorPrincipalId);
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo sincronizar la capacidad de la Cuenta ${cuentaId}: ${(error as Error).message}. ` +
+          'Se encola un reintento.',
+      );
+      await this.cola.encolarSincronizacionContadoresVenta({ cuentaId, operadorPrincipalId });
+    }
   }
 
   async operadorPrincipalId(empresaRevendedoraId?: string): Promise<string> {

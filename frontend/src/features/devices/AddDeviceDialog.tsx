@@ -8,8 +8,8 @@ import { Dialog, DialogContent } from '@/components/ui/overlays';
 /**
  * Alta de un Dispositivo adicional para un Cliente Final que ya existe.
  *
- * Si el cliente ya tiene su par completo (1 fijo + 1 móvil en una Cuenta
- * compartida, o los 3 fijos + 3 móviles de su Cuenta exclusiva), el alta
+ * Si el cliente ya completó los cupos de su venta compartida (1+1 o 2+2), o
+ * los 3 fijos + 3 móviles de su Cuenta exclusiva, el alta
  * puede quedar en otra Cuenta compatible sin alterar necesariamente la actual.
  */
 export const AddDeviceDialog = ({
@@ -85,10 +85,10 @@ export const AddDeviceDialog = ({
           </Field>
 
           <Alert tone="info">
-            En una Cuenta compartida, cada venta admite hasta 1 Dispositivo fijo + 1 móvil; en una
-            Cuenta exclusiva, hasta 3 fijos + 3 móviles. Si este cliente ya completó su cupo, el
-            alta puede quedar en otra Cuenta compatible. Esto no implica migrar los Dispositivos
-            existentes ni cambiar necesariamente sus credenciales.
+            En una Cuenta compartida, cada venta conserva los cupos 1+1 o 2+2 elegidos al crearla;
+            en una Cuenta exclusiva, admite hasta 3 de cada categoría. Si este cliente ya completó
+            su cupo, el alta puede quedar en otra Cuenta compatible. Esto no implica migrar los
+            Dispositivos existentes ni cambiar necesariamente sus credenciales.
           </Alert>
 
           <div className="flex justify-end gap-2">

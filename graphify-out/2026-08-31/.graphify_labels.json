@@ -129,14 +129,5 @@
   "127": "autoprefixer",
   "128": "@nestjs/platform-express",
   "129": "migration.sql",
-  "130": "prettier",
-  "131": "prisma",
-  "132": "vite",
-  "133": "supertest",
-  "134": "tsconfig-paths",
-  "135": "@types/compression",
-  "136": "@types/jest",
-  "137": "@types/passport-jwt",
-  "138": "@types/supertest",
-  "139": "eslint-plugin-react-hooks"
+  "132": "vite"
 }

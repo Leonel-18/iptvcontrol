@@ -7,6 +7,7 @@ import {
   deviceStatusLabels,
   deviceTypeLabels,
   entityLabels,
+  sharedCapacityLabels,
   traducir,
 } from './entityLabels';
 
@@ -63,6 +64,13 @@ describe('entityLabels', () => {
       'cuenta_exclusiva',
       'dispositivo_compartido',
     ]);
+  });
+
+  it('expone las dos capacidades válidas de una venta compartida', () => {
+    expect(sharedCapacityLabels).toEqual({
+      1: '1 fijo + 1 móvil',
+      2: '2 fijos + 2 móviles',
+    });
   });
 
   describe('traducir', () => {

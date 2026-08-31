@@ -197,6 +197,10 @@ export class ClientesService {
             where: { cuentaId: cuentaPrincipal.id },
             select: { tipo: true, estado: true, clienteFinalId: true },
           }),
+          ventasCompartidas: await this.prisma.db.ventaCompartida.findMany({
+            where: { cuentaId: cuentaPrincipal.id },
+            select: { cuposPorCategoria: true },
+          }),
         })
       : null;
 
@@ -218,7 +222,7 @@ export class ClientesService {
             capacidad: capacidad
               ? capacidad.esExclusiva
                 ? `${capacidad.ocupados} de ${capacidad.limite}`
-                : `${capacidad.ocupados} de ${capacidad.limite} ventas`
+                : `${capacidad.ocupados} de ${capacidad.limite} cupos por categoría`
               : null,
             fijos: capacidad ? `${capacidad.fijo.ocupados} de ${capacidad.fijo.limite}` : null,
             moviles: capacidad ? `${capacidad.movil.ocupados} de ${capacidad.movil.limite}` : null,
@@ -332,6 +336,23 @@ export class ClientesService {
       };
     }
 
+    if (
+      dto.tipo_alta === TipoAltaClienteFinal.dispositivo_compartido &&
+      dto.cupos_por_categoria === undefined
+    ) {
+      throw new BadRequestException(
+        'Seleccione si la venta compartida reserva 1+1 o 2+2 Dispositivos.',
+      );
+    }
+    if (
+      dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva &&
+      dto.cupos_por_categoria !== undefined
+    ) {
+      throw new BadRequestException(
+        'Los cupos por categoría sólo corresponden a una venta compartida.',
+      );
+    }
+
     const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
     const servicios =
       dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva
@@ -370,6 +391,7 @@ export class ClientesService {
         cuentaExclusiva: dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva,
         operadorPrincipalId,
         servicios,
+        cuposPorCategoria: dto.cupos_por_categoria,
       });
 
       await this.audit.registrar({
@@ -381,6 +403,7 @@ export class ClientesService {
           numero_cliente: cliente.numeroCliente,
           tipo_alta: dto.tipo_alta,
           servicios,
+          cupos_por_categoria: dto.cupos_por_categoria ?? null,
           cuenta_id: resultado.cuenta.id,
           cuenta_creada: resultado.cuentaCreada,
           duplicado_confirmado: Boolean(dto.confirmar_duplicado),
@@ -595,7 +618,15 @@ export class ClientesService {
           transicion_desde_suspension: veniaDeSuspension,
         },
       });
+      await tx.ventaCompartida.deleteMany({ where: { clienteFinalId: id } });
     });
+
+    const cuentasCompartidas = [
+      ...new Set(cliente.ventasCompartidas.map((venta) => venta.cuentaId)),
+    ];
+    for (const cuentaId of cuentasCompartidas) {
+      await this.dispositivos.sincronizarCapacidadCuenta(cuentaId, operadorPrincipalId);
+    }
 
     return this.obtener(id);
   }
@@ -613,7 +644,7 @@ export class ClientesService {
 
     const cliente = await this.prisma.db.clienteFinal.findUnique({
       where: { id },
-      include: { dispositivos: true },
+      include: { dispositivos: true, ventasCompartidas: true },
     });
     if (!cliente) throw new NotFoundException('El cliente no existe o no está disponible.');
     return cliente;

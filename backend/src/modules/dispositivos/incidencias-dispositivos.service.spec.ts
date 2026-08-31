@@ -3,13 +3,14 @@ import { IncidenciasDispositivosService } from './incidencias-dispositivos.servi
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
+import { ColaProveedorService } from '../../queues/cola-proveedor.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { CuentasProvisioningService } from '../cuentas/cuentas-provisioning.service';
 
 /**
  * =============================================================================
  * Caso real: Valentín Alamo (PC ya vinculada como "fijo") + TV detectada como
- * incidencia porque excedió el cupo de 1 fijo de su venta unitaria.
+ * incidencia porque excedió el cupo fijo de su venta compartida.
  * =============================================================================
  * Antes del rediseño de capacidad.util, "vincular" dependía de encontrar una
  * `SolicitudVinculacionDispositivo` en estado "ambiguo" — un estado que el
@@ -33,20 +34,23 @@ describe('IncidenciasDispositivosService — resolver', () => {
   const crearServicio = (opciones?: {
     clienteFinal?: Record<string, unknown> | null;
     dispositivosDelClienteEnCuenta?: number;
+    ocupadosCategoria?: number;
     dispositivoYaVinculado?: Record<string, unknown> | null;
   }) => {
     const dispositivoCreate = jest.fn().mockResolvedValue({ id: 'dispositivo-tv-nuevo' });
     const incidenciaUpdate = jest.fn().mockResolvedValue(undefined);
-    const dispositivoCount = jest
-      .fn()
-      .mockResolvedValue(opciones?.dispositivosDelClienteEnCuenta ?? 1);
+    const dispositivoCount = jest.fn().mockResolvedValue(opciones?.ocupadosCategoria ?? 0);
     const dispositivoFindUnique = jest
       .fn()
       .mockResolvedValue(opciones?.dispositivoYaVinculado ?? null);
     const incidenciaUpdateDirecta = jest.fn().mockResolvedValue(undefined);
 
     const tx = {
-      dispositivo: { create: dispositivoCreate },
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      dispositivo: { create: dispositivoCreate, count: dispositivoCount },
+      ventaCompartida: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ cuposPorCategoria: 1 }),
+      },
       incidenciaDispositivoProveedor: { update: incidenciaUpdate },
     };
 
@@ -68,6 +72,13 @@ describe('IncidenciasDispositivosService — resolver', () => {
           ),
         },
         dispositivo: { count: dispositivoCount, findUnique: dispositivoFindUnique },
+        ventaCompartida: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue(
+              (opciones?.dispositivosDelClienteEnCuenta ?? 1) > 0 ? { cuposPorCategoria: 1 } : null,
+            ),
+        },
       },
       transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) => fn(tx)),
     } as unknown as PrismaService;
@@ -76,10 +87,15 @@ describe('IncidenciasDispositivosService — resolver', () => {
     const eliminarDispositivo = jest.fn().mockResolvedValue(undefined);
     const proveedor = { eliminarDispositivo } as unknown as ProveedorService;
     const audit = { registrarEnTx: jest.fn() } as unknown as AuditService;
-    const incrementarCapacidadPorNuevaVenta = jest.fn().mockResolvedValue(undefined);
+    const reservarCapacidadPorNuevaVenta = jest.fn().mockResolvedValue(true);
+    const liberarCapacidadDeVenta = jest.fn().mockResolvedValue(undefined);
     const provisioning = {
-      incrementarCapacidadPorNuevaVenta,
+      reservarCapacidadPorNuevaVenta,
+      liberarCapacidadDeVenta,
     } as unknown as CuentasProvisioningService;
+    const cola = {
+      encolarSincronizacionContadoresVenta: jest.fn().mockResolvedValue(undefined),
+    } as unknown as ColaProveedorService;
 
     const servicio = new IncidenciasDispositivosService(
       prisma,
@@ -87,6 +103,7 @@ describe('IncidenciasDispositivosService — resolver', () => {
       proveedor,
       audit,
       provisioning,
+      cola,
     );
 
     return {
@@ -95,7 +112,7 @@ describe('IncidenciasDispositivosService — resolver', () => {
       incidenciaUpdate,
       incidenciaUpdateDirecta,
       eliminarDispositivo,
-      incrementarCapacidadPorNuevaVenta,
+      reservarCapacidadPorNuevaVenta,
       dispositivoCount,
     };
   };
@@ -127,23 +144,41 @@ describe('IncidenciasDispositivosService — resolver', () => {
   });
 
   it('NO sube el contador de SENSA si el cliente ya tenía otro Dispositivo en la Cuenta', async () => {
-    const { servicio, incrementarCapacidadPorNuevaVenta } = crearServicio({
+    const { servicio, reservarCapacidadPorNuevaVenta } = crearServicio({
       dispositivosDelClienteEnCuenta: 1,
     });
 
     await servicio.resolver('incidencia-tv', 'vincular', 'cliente-valentin');
 
-    expect(incrementarCapacidadPorNuevaVenta).not.toHaveBeenCalled();
+    expect(reservarCapacidadPorNuevaVenta).not.toHaveBeenCalled();
+  });
+
+  it('no permite vincular un fijo que exceda el cupo de la venta', async () => {
+    const { servicio } = crearServicio({
+      dispositivosDelClienteEnCuenta: 1,
+      ocupadosCategoria: 1,
+    });
+
+    await expect(
+      servicio.resolver('incidencia-tv', 'vincular', 'cliente-valentin'),
+    ).rejects.toThrow('ya completó sus cupos para esta categoría');
   });
 
   it('sube el contador de SENSA si el cliente no tenía ningún Dispositivo antes (venta nueva)', async () => {
-    const { servicio, incrementarCapacidadPorNuevaVenta } = crearServicio({
+    const { servicio, reservarCapacidadPorNuevaVenta } = crearServicio({
       dispositivosDelClienteEnCuenta: 0,
     });
 
     await servicio.resolver('incidencia-tv', 'vincular', 'cliente-otro');
 
-    expect(incrementarCapacidadPorNuevaVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+    expect(reservarCapacidadPorNuevaVenta).toHaveBeenCalledWith({
+      cuentaId: 'cuenta-1',
+      clienteFinalId: 'cliente-otro',
+      empresaRevendedoraId: 'empresa-1',
+      cuposPorCategoria: 1,
+      operadorPrincipalId: 'operador-1',
+      actualizarProveedor: true,
+    });
   });
 
   it('exige indicar el Cliente Final al vincular', async () => {

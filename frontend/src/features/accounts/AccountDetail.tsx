@@ -142,7 +142,7 @@ export const AccountDetail = () => {
         descripcion={
           data.es_exclusiva
             ? "Cuenta exclusiva: fue creada para un único cliente final, con hasta 3 fijos + 3 móviles."
-            : "Cuenta compartida: hasta 3 ventas de distintos clientes, cada una con hasta 1 fijo + 1 móvil."
+            : "Cuenta compartida: 3 cupos por categoría, repartidos entre ventas 1+1 o 2+2."
         }
         acciones={
           <>
@@ -253,7 +253,7 @@ export const AccountDetail = () => {
                 <Alert tone="warning" titulo="Cerca del tope de capacidad">
                   {data.es_exclusiva
                     ? "Esta Cuenta está cerca de su tope de 3 fijos + 3 móviles."
-                    : "Una venta unitaria adicional puede asignarse a otra Cuenta compatible."}
+                    : "Una venta compartida adicional puede asignarse a otra Cuenta compatible."}
                 </Alert>
               ) : null}
             </CardContent>

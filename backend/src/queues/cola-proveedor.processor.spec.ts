@@ -31,14 +31,17 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
     empresaRevendedoraId: 'empresa-1',
     estado: EstadoSolicitudVinculacion.observando,
     expiraEn: new Date(Date.now() - 60_000), // ya venció
+    creaVentaCompartida: true,
     dispositivo: { clienteFinalId: 'cliente-usuario-131', estadoVinculacion: 'observando' },
   };
 
   const crearProcesador = (esExclusiva: boolean) => {
     const dispositivoUpdate = jest.fn().mockResolvedValue(undefined);
     const dispositivoDelete = jest.fn().mockResolvedValue(undefined);
+    const ventaDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const solicitudUpdate = jest.fn().mockResolvedValue(undefined);
     const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       solicitudVinculacionDispositivo: {
         findUnique: jest.fn().mockResolvedValue({
           ...solicitudBase,
@@ -46,7 +49,12 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
         }),
         update: solicitudUpdate,
       },
-      dispositivo: { update: dispositivoUpdate, delete: dispositivoDelete },
+      dispositivo: {
+        update: dispositivoUpdate,
+        delete: dispositivoDelete,
+        count: jest.fn().mockResolvedValue(0),
+      },
+      ventaCompartida: { deleteMany: ventaDeleteMany },
     };
 
     const prisma = {
@@ -61,10 +69,12 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
 
     const proveedor = {} as unknown as ProveedorService;
     const audit = {} as unknown as AuditService;
-    const cola = {} as unknown as ColaProveedorService;
+    const cola = {
+      encolarSincronizacionContadoresVenta: jest.fn().mockResolvedValue(undefined),
+    } as unknown as ColaProveedorService;
 
     const procesador = new ColaProveedorProcessor(prisma, proveedor, audit, cola, provisioning);
-    return { procesador, dispositivoUpdate, dispositivoDelete, provisioning };
+    return { procesador, dispositivoUpdate, dispositivoDelete, ventaDeleteMany, provisioning, tx };
   };
 
   it('preserva el Cliente Final al vencer la ventana de una Cuenta exclusiva (no la borra)', async () => {
@@ -101,5 +111,33 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
     expect(dispositivoDelete).toHaveBeenCalledWith({ where: { id: 'dispositivo-1' } });
     expect(dispositivoUpdate).not.toHaveBeenCalled();
     expect(provisioning.sincronizarContadoresVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+  });
+
+  it('no libera la venta si sólo vence el intento de agregar un Dispositivo a una venta existente', async () => {
+    const { procesador, ventaDeleteMany, tx } = crearProcesador(false);
+    tx.solicitudVinculacionDispositivo.findUnique.mockResolvedValue({
+      ...solicitudBase,
+      creaVentaCompartida: false,
+      cuenta: { esExclusiva: false, proveedorCuentaId: '30000042' },
+    });
+
+    await procesador.process({
+      name: TRABAJOS_PROVEEDOR.SONDEAR_VINCULACION,
+      data: { solicitudId: 'solicitud-1', operadorPrincipalId: 'operador-1', intento: 1 },
+    } as never);
+
+    expect(ventaDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it('no libera la venta vencida si otro alta ya vinculó un Dispositivo del mismo cliente', async () => {
+    const { procesador, ventaDeleteMany, tx } = crearProcesador(false);
+    tx.dispositivo.count.mockResolvedValueOnce(1);
+
+    await procesador.process({
+      name: TRABAJOS_PROVEEDOR.SONDEAR_VINCULACION,
+      data: { solicitudId: 'solicitud-1', operadorPrincipalId: 'operador-1', intento: 1 },
+    } as never);
+
+    expect(ventaDeleteMany).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   AccionAuditoria,
+  Dispositivo,
   EntidadAuditada,
   EstadoClienteFinal,
   EstadoDispositivo,
@@ -12,7 +13,11 @@ import { AuditService } from '../../common/audit/audit.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
-import { CuentasProvisioningService } from '../cuentas/cuentas-provisioning.service';
+import { ColaProveedorService } from '../../queues/cola-proveedor.service';
+import {
+  CuentasProvisioningService,
+  SincronizacionContadoresPendienteError,
+} from '../cuentas/cuentas-provisioning.service';
 
 @Injectable()
 export class IncidenciasDispositivosService {
@@ -24,6 +29,7 @@ export class IncidenciasDispositivosService {
     private readonly proveedor: ProveedorService,
     private readonly audit: AuditService,
     private readonly provisioning: CuentasProvisioningService,
+    private readonly cola: ColaProveedorService,
   ) {}
 
   async listarPendientes() {
@@ -59,10 +65,9 @@ export class IncidenciasDispositivosService {
    *  - `eliminar`: el equipo no pertenece a nadie, se da de baja en el Proveedor.
    *  - `vincular`: el equipo es en realidad de un Cliente Final de esta misma
    *    Cuenta (`clienteFinalId`, obligatorio). Se crea el Dispositivo local
-   *    directamente como `vinculado`, sin pasar por el tope automático por
-   *    categoría — es una decisión manual explícita de la Empresa Revendedora,
-   *    igual que `corregirVinculacion` (caso Pepito/Marcelo). No toca los
-   *    contadores de SENSA: el cliente ya contaba como venta activa.
+   *    directamente como `vinculado`, respetando el 1+1/2+2 reservado. Es una
+   *    decisión manual explícita de la Empresa Revendedora, pero nunca habilita
+   *    superar los cupos comerciales de la venta.
    */
   async resolver(
     id: string,
@@ -156,55 +161,119 @@ export class IncidenciasDispositivosService {
       );
     }
 
-    // Si este Cliente Final todavía no tenía ningún Dispositivo en esta Cuenta,
-    // vincular acá es en realidad una venta nueva: hay que subirle el contador
-    // a SENSA antes de dejarlo como vinculado (si no, quedaría desincronizado).
-    const yaTieneDispositivosEnEstaCuenta = await this.prisma.db.dispositivo.count({
-      where: {
-        cuentaId: incidencia.cuentaId,
-        clienteFinalId,
-        estado: { in: [EstadoDispositivo.activo, EstadoDispositivo.bloqueado_por_suspension] },
-      },
-    });
-    if (yaTieneDispositivosEnEstaCuenta === 0 && !incidencia.cuenta.esExclusiva) {
-      await this.provisioning.incrementarCapacidadPorNuevaVenta(
-        incidencia.cuentaId,
-        operadorPrincipalId,
+    const tipo = this.tipoLocal(incidencia.tipoProveedor ?? undefined);
+    if (!tipo) {
+      throw new BadRequestException(
+        'El Proveedor no informó una categoría reconocida para este Dispositivo.',
       );
     }
+    let ventaReservada = false;
+    if (!incidencia.cuenta.esExclusiva) {
+      const venta = await this.prisma.db.ventaCompartida.findUnique({
+        where: {
+          cuentaId_clienteFinalId: { cuentaId: incidencia.cuentaId, clienteFinalId },
+        },
+      });
+      if (!venta) {
+        try {
+          ventaReservada = await this.provisioning.reservarCapacidadPorNuevaVenta({
+            cuentaId: incidencia.cuentaId,
+            clienteFinalId,
+            empresaRevendedoraId: incidencia.empresaRevendedoraId,
+            cuposPorCategoria: 1,
+            operadorPrincipalId,
+            actualizarProveedor: true,
+          });
+        } catch (error) {
+          if (!(error instanceof SincronizacionContadoresPendienteError)) throw error;
+          ventaReservada = error.ventaCreada;
+          await this.cola.encolarSincronizacionContadoresVenta({
+            cuentaId: incidencia.cuentaId,
+            operadorPrincipalId,
+          });
+        }
+      }
+    }
 
-    const dispositivo = await this.prisma.transaction(async (tx) => {
-      const creado = await tx.dispositivo.create({
-        data: {
-          cuentaId: incidencia.cuentaId,
+    let dispositivo: Dispositivo;
+    try {
+      dispositivo = await this.prisma.transaction(async (tx) => {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${incidencia.cuentaId}))`;
+        const venta = incidencia.cuenta.esExclusiva
+          ? null
+          : await tx.ventaCompartida.findUniqueOrThrow({
+              where: {
+                cuentaId_clienteFinalId: { cuentaId: incidencia.cuentaId, clienteFinalId },
+              },
+            });
+        const ocupadosCategoria = await tx.dispositivo.count({
+          where: {
+            cuentaId: incidencia.cuentaId,
+            ...(incidencia.cuenta.esExclusiva ? {} : { clienteFinalId }),
+            tipo,
+            estado: { in: [EstadoDispositivo.activo, EstadoDispositivo.bloqueado_por_suspension] },
+          },
+        });
+        const limite = incidencia.cuenta.esExclusiva ? 3 : venta!.cuposPorCategoria;
+        if (ocupadosCategoria >= limite) {
+          throw new BadRequestException(
+            incidencia.cuenta.esExclusiva
+              ? 'La Cuenta exclusiva ya completó esta categoría.'
+              : `La venta ${limite}+${limite} ya completó sus cupos para esta categoría.`,
+          );
+        }
+
+        const creado = await tx.dispositivo.create({
+          data: {
+            cuentaId: incidencia.cuentaId,
+            empresaRevendedoraId: incidencia.empresaRevendedoraId,
+            clienteFinalId,
+            proveedorDeviceId: incidencia.proveedorDeviceId,
+            mac: incidencia.mac,
+            tipo,
+            tipoProveedor: incidencia.tipoProveedor,
+            estado: EstadoDispositivo.activo,
+            estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+          },
+        });
+        await tx.incidenciaDispositivoProveedor.update({
+          where: { id },
+          data: { estado: EstadoIncidenciaDispositivo.reconocido, resueltaEn: new Date() },
+        });
+        await this.audit.registrarEnTx(tx, {
+          accion: AccionAuditoria.resolucion_incidencia_dispositivo,
+          entidad: EntidadAuditada.IncidenciaDispositivoProveedor,
+          entidadId: id,
           empresaRevendedoraId: incidencia.empresaRevendedoraId,
-          clienteFinalId,
-          proveedorDeviceId: incidencia.proveedorDeviceId,
-          mac: incidencia.mac,
-          tipo: this.tipoLocal(incidencia.tipoProveedor ?? undefined),
-          tipoProveedor: incidencia.tipoProveedor,
-          estado: EstadoDispositivo.activo,
-          estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
-        },
+          detalle: {
+            cuenta_id: incidencia.cuentaId,
+            proveedor_device_id: incidencia.proveedorDeviceId,
+            resolucion: 'vinculado',
+            cliente_final_id: clienteFinalId,
+          },
+        });
+        return creado;
       });
-      await tx.incidenciaDispositivoProveedor.update({
-        where: { id },
-        data: { estado: EstadoIncidenciaDispositivo.reconocido, resueltaEn: new Date() },
-      });
-      await this.audit.registrarEnTx(tx, {
-        accion: AccionAuditoria.resolucion_incidencia_dispositivo,
-        entidad: EntidadAuditada.IncidenciaDispositivoProveedor,
-        entidadId: id,
-        empresaRevendedoraId: incidencia.empresaRevendedoraId,
-        detalle: {
-          cuenta_id: incidencia.cuentaId,
-          proveedor_device_id: incidencia.proveedorDeviceId,
-          resolucion: 'vinculado',
-          cliente_final_id: clienteFinalId,
-        },
-      });
-      return creado;
-    });
+    } catch (error) {
+      if (ventaReservada) {
+        try {
+          await this.provisioning.liberarCapacidadDeVenta(
+            incidencia.cuentaId,
+            clienteFinalId,
+            operadorPrincipalId,
+          );
+        } catch (cause) {
+          this.logger.error(
+            `No se pudo revertir la venta reservada en la Cuenta ${incidencia.cuentaId}: ${(cause as Error).message}`,
+          );
+          await this.cola.encolarSincronizacionContadoresVenta({
+            cuentaId: incidencia.cuentaId,
+            operadorPrincipalId,
+          });
+        }
+      }
+      throw error;
+    }
     return {
       id,
       estado: EstadoIncidenciaDispositivo.reconocido,

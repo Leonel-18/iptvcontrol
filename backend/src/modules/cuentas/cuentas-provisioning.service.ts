@@ -6,6 +6,7 @@ import {
   EmpresaRevendedora,
   EntidadAuditada,
   EstadoCuenta,
+  EstadoDispositivo,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
@@ -18,13 +19,24 @@ import {
   ReintentosDniAgotadosError,
 } from '../../common/errors/proveedor.errors';
 import { IdentificadoresService } from './identificadores.service';
-import { calcularCapacidad, contarVentasActivas, LIMITE_VENTAS_COMPARTIDA } from './capacidad.util';
+import { calcularCapacidad, LIMITE_POR_CATEGORIA_COMPARTIDA } from './capacidad.util';
 
 /** Señal interna: esta Cuenta no puede alojar la venta/Dispositivo pedido. */
 export class SinCapacidadEnCuentaError extends Error {
   constructor(readonly cuentaId: string) {
     super(`La Cuenta ${cuentaId} llegó a su límite comercial.`);
     this.name = 'SinCapacidadEnCuentaError';
+  }
+}
+
+/** SENSA confirmó el contador, pero todavía falta verificar su valor vigente. */
+export class SincronizacionContadoresPendienteError extends Error {
+  constructor(
+    readonly cuentaId: string,
+    readonly ventaCreada: boolean,
+  ) {
+    super(`La sincronización de contadores de la Cuenta ${cuentaId} requiere un reintento.`);
+    this.name = 'SincronizacionContadoresPendienteError';
   }
 }
 
@@ -38,8 +50,8 @@ export interface CrearCuentaOpciones {
   servicios?: string;
   /**
    * Proyección técnica inicial de capacidad. Por defecto: 3/3 para una Cuenta
-   * exclusiva (hasta 3 fijos + 3 móviles para su único cliente) y 1/1 para una
-   * Cuenta compartida recién creada (arranca con 1 venta).
+   * exclusiva y 1/1 para una Cuenta compartida. Una venta compartida 2+2
+   * sobreescribe ambos valores con 2.
    */
   dispositivosFijos?: number;
   dispositivosMoviles?: number;
@@ -90,14 +102,14 @@ export class CuentasProvisioningService {
    * Una Cuenta exclusiva arranca con sus tres categorías al tope (3 fijos + 3
    * móviles) para su único Cliente Final. Una Cuenta compartida arranca en 1/1
    * (su primera venta); los contadores suben de a uno por cada venta nueva que
-   * se suma, vía `incrementarCapacidadPorNuevaVenta`.
+   * se suma, vía `reservarCapacidadPorNuevaVenta`.
    */
   async crearCuenta(opciones: CrearCuentaOpciones): Promise<Cuenta> {
     const { empresaRevendedora, operadorPrincipalId, esExclusiva } = opciones;
     const config = await this.configuracion.obtener(operadorPrincipalId);
 
-    const limiteDispositivos = LIMITE_VENTAS_COMPARTIDA;
-    const dispositivosPorDefecto = esExclusiva ? LIMITE_VENTAS_COMPARTIDA : 1;
+    const limiteDispositivos = LIMITE_POR_CATEGORIA_COMPARTIDA;
+    const dispositivosPorDefecto = esExclusiva ? LIMITE_POR_CATEGORIA_COMPARTIDA : 1;
     const dispositivosFijos = opciones.dispositivosFijos ?? dispositivosPorDefecto;
     const dispositivosMoviles = opciones.dispositivosMoviles ?? dispositivosPorDefecto;
 
@@ -267,29 +279,96 @@ export class CuentasProvisioningService {
   }
 
   /**
-   * Sube los contadores de una Cuenta compartida ya existente a la cantidad de
-   * ventas activas + 1 (la venta nueva que se está por vincular). Se llama
-   * ANTES de abrir la ventana de vinculación de un Cliente Final nuevo, para
-   * que SENSA admita su primer inicio de sesión.
-   *
-   * No hace nada sobre Cuentas exclusivas: esas ya nacen con sus contadores en
-   * el tope (3/3) y no varían con las bajas/altas de su único cliente.
+   * Reserva 1+1 o 2+2 para una venta compartida y, si la Cuenta ya existía,
+   * sube los contadores de SENSA antes de abrir la ventana de vinculación.
    */
-  async incrementarCapacidadPorNuevaVenta(
-    cuentaId: string,
-    operadorPrincipalId: string,
-  ): Promise<void> {
-    const cuenta = await this.prisma.db.cuenta.findUniqueOrThrow({
-      where: { id: cuentaId },
-      include: { dispositivos: { select: { estado: true, clienteFinalId: true } } },
-    });
-    if (cuenta.esExclusiva || !cuenta.proveedorCuentaId) return;
+  async reservarCapacidadPorNuevaVenta(params: {
+    cuentaId: string;
+    clienteFinalId: string;
+    empresaRevendedoraId: string;
+    cuposPorCategoria: 1 | 2;
+    operadorPrincipalId: string;
+    actualizarProveedor: boolean;
+  }): Promise<boolean> {
+    const { cuentaId, clienteFinalId, empresaRevendedoraId, cuposPorCategoria } = params;
+    const reserva = await this.prisma.transaction(async (tx) => {
+      // Serializa ventas concurrentes sobre la misma Cuenta: dos requests no
+      // pueden observar el mismo último cupo y comprometerlo a la vez.
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      const cuenta = await tx.cuenta.findUniqueOrThrow({
+        where: { id: cuentaId },
+        include: { ventasCompartidas: true },
+      });
+      if (cuenta.esExclusiva) return null;
 
-    const ventasActuales = contarVentasActivas(
-      cuenta.dispositivos.map((dispositivo) => ({ ...dispositivo, tipo: null })),
-    );
-    const nuevoValor = Math.min(LIMITE_VENTAS_COMPARTIDA, ventasActuales + 1);
-    await this.aplicarContadoresVenta(cuenta, nuevoValor, operadorPrincipalId);
+      const existente = cuenta.ventasCompartidas.find(
+        (venta) => venta.clienteFinalId === clienteFinalId,
+      );
+      if (existente) {
+        return { cuenta, nuevoValor: this.sumarCupos(cuenta.ventasCompartidas), creada: false };
+      }
+
+      const ocupados = this.sumarCupos(cuenta.ventasCompartidas);
+      const nuevoValor = ocupados + cuposPorCategoria;
+      if (nuevoValor > LIMITE_POR_CATEGORIA_COMPARTIDA) {
+        throw new SinCapacidadEnCuentaError(cuentaId);
+      }
+
+      await tx.ventaCompartida.create({
+        data: {
+          cuentaId,
+          clienteFinalId,
+          empresaRevendedoraId,
+          cuposPorCategoria,
+        },
+      });
+      return { cuenta, nuevoValor, creada: true };
+    });
+
+    if (!reserva) return false;
+    if (!params.actualizarProveedor || !reserva.cuenta.proveedorCuentaId) return reserva.creada;
+    try {
+      await this.aplicarContadoresVenta(
+        reserva.cuenta,
+        reserva.nuevoValor,
+        params.operadorPrincipalId,
+      );
+    } catch (error) {
+      if (error instanceof SincronizacionContadoresPendienteError) {
+        throw new SincronizacionContadoresPendienteError(cuentaId, reserva.creada);
+      }
+      if (reserva.creada) {
+        await this.liberarCapacidadDeVenta(cuentaId, clienteFinalId, params.operadorPrincipalId);
+      }
+      throw error;
+    }
+    return reserva.creada;
+  }
+
+  async liberarCapacidadDeVenta(
+    cuentaId: string,
+    clienteFinalId: string,
+    operadorPrincipalId: string,
+  ): Promise<boolean> {
+    const eliminada = await this.prisma.transactionComoOperador(operadorPrincipalId, async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      const dispositivosVigentes = await tx.dispositivo.count({
+        where: {
+          cuentaId,
+          clienteFinalId,
+          estado: {
+            in: [EstadoDispositivo.activo, EstadoDispositivo.bloqueado_por_suspension],
+          },
+        },
+      });
+      if (dispositivosVigentes > 0) return false;
+      const resultado = await tx.ventaCompartida.deleteMany({
+        where: { cuentaId, clienteFinalId },
+      });
+      return resultado.count > 0;
+    });
+    if (eliminada) await this.sincronizarContadoresVenta(cuentaId, operadorPrincipalId);
+    return eliminada;
   }
 
   /**
@@ -299,47 +378,72 @@ export class CuentasProvisioningService {
    * Final en la Cuenta, para bajar el cupo que SENSA le habilita a esa Cuenta.
    */
   async sincronizarContadoresVenta(cuentaId: string, operadorPrincipalId: string): Promise<void> {
-    const cuenta = await this.prisma.db.cuenta.findUniqueOrThrow({
-      where: { id: cuentaId },
-      include: { dispositivos: { select: { estado: true, clienteFinalId: true } } },
-    });
+    const cuenta = await this.prisma.transactionComoOperador(operadorPrincipalId, (tx) =>
+      tx.cuenta.findUniqueOrThrow({
+        where: { id: cuentaId },
+        include: { ventasCompartidas: { select: { cuposPorCategoria: true } } },
+      }),
+    );
     if (cuenta.esExclusiva || !cuenta.proveedorCuentaId) return;
 
-    const ventas = contarVentasActivas(
-      cuenta.dispositivos.map((dispositivo) => ({ ...dispositivo, tipo: null })),
-    );
+    const ventas = this.sumarCupos(cuenta.ventasCompartidas);
     // Nunca menos de 1: SENSA exige al menos un dispositivo móvil habilitado
     // mientras la Cuenta siga activa, aunque momentáneamente no tenga ventas.
     const nuevoValor = Math.max(1, ventas);
-    if (nuevoValor === cuenta.dispositivosFijosHabilitados) return;
+    if (
+      nuevoValor === cuenta.dispositivosFijosHabilitados &&
+      nuevoValor === cuenta.dispositivosMovilesHabilitados
+    ) {
+      return;
+    }
     await this.aplicarContadoresVenta(cuenta, nuevoValor, operadorPrincipalId);
   }
 
   private async aplicarContadoresVenta(
     cuenta: Pick<Cuenta, 'id' | 'proveedorCuentaId'>,
-    valor: number,
+    _valorSolicitado: number,
     operadorPrincipalId: string,
   ): Promise<void> {
     if (!cuenta.proveedorCuentaId) return;
-    await this.proveedor.actualizarCapacidadDispositivos(operadorPrincipalId, {
-      proveedorCuentaId: cuenta.proveedorCuentaId,
-      // Los tres contadores de SENSA avanzan siempre juntos (1/1/1 → 2/2/2 →
-      // 3/3/3): `limiteDispositivos` es el genérico (`auto_provision_count`,
-      // STB), sin uso de negocio propio, pero igual debe reflejar la cantidad
-      // de ventas activas para no quedar desincronizado de fijos/móviles.
-      limiteDispositivos: valor,
-      dispositivosFijos: valor,
-      dispositivosMoviles: valor,
-    });
-    await this.prisma.db.cuenta.update({
-      where: { id: cuenta.id },
-      data: { dispositivosFijosHabilitados: valor, dispositivosMovilesHabilitados: valor },
-    });
+    let proveedorActualizado = false;
+    try {
+      await this.prisma.transactionComoOperador(operadorPrincipalId, async (tx) => {
+        // La llamada externa queda serializada con reservas, altas, incidencias
+        // y vencimientos de esta Cuenta. Así ninguna respuesta tardía de SENSA
+        // puede sobrescribir un total más nuevo.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuenta.id}))`;
+        const vigente = await tx.cuenta.findUniqueOrThrow({
+          where: { id: cuenta.id },
+          select: { ventasCompartidas: { select: { cuposPorCategoria: true } } },
+        });
+        const valorVigente = Math.max(1, this.sumarCupos(vigente.ventasCompartidas));
+        await this.proveedor.actualizarCapacidadDispositivos(operadorPrincipalId, {
+          proveedorCuentaId: cuenta.proveedorCuentaId!,
+          // Los tres contadores de SENSA avanzan siempre juntos.
+          limiteDispositivos: valorVigente,
+          dispositivosFijos: valorVigente,
+          dispositivosMoviles: valorVigente,
+        });
+        proveedorActualizado = true;
+        await tx.cuenta.update({
+          where: { id: cuenta.id },
+          data: {
+            dispositivosFijosHabilitados: valorVigente,
+            dispositivosMovilesHabilitados: valorVigente,
+          },
+        });
+      });
+    } catch (error) {
+      if (proveedorActualizado) {
+        throw new SincronizacionContadoresPendienteError(cuenta.id, false);
+      }
+      throw error;
+    }
   }
 
   /**
    * Busca una Cuenta compartida con la misma firma de servicios y lugar para
-   * una venta nueva (menos de 3 ventas activas).
+   * una venta nueva con los cupos pedidos.
    *
    * Quedan afuera: las Cuentas cerradas y las exclusivas (creadas para un único
    * Cliente Final, no se comparten). Se ordena por antigüedad para ir llenando
@@ -351,6 +455,7 @@ export class CuentasProvisioningService {
     umbralAlerta = 2,
     excluirCuentaIds: string[] = [],
     servicios?: string,
+    cuposRequeridos: 1 | 2 = 1,
   ): Promise<string | null> {
     const candidatas = await this.prisma.db.cuenta.findMany({
       where: {
@@ -360,13 +465,16 @@ export class CuentasProvisioningService {
         servicios,
         id: excluirCuentaIds.length ? { notIn: excluirCuentaIds } : undefined,
       },
-      include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
+      include: {
+        dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+        ventasCompartidas: { select: { cuposPorCategoria: true } },
+      },
       orderBy: { creadoEn: 'asc' },
     });
 
     for (const candidata of candidatas) {
       const capacidad = calcularCapacidad(candidata, umbralAlerta);
-      if (capacidad.libres > 0) return candidata.id;
+      if (capacidad.libres >= cuposRequeridos) return candidata.id;
     }
 
     return null;
@@ -385,5 +493,9 @@ export class CuentasProvisioningService {
           'Queda como Cuenta sin confirmar para que la reconciliación la resuelva.',
       );
     }
+  }
+
+  private sumarCupos(ventas: { cuposPorCategoria: number }[]): number {
+    return ventas.reduce((total, venta) => total + venta.cuposPorCategoria, 0);
   }
 }

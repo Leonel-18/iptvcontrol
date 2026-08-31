@@ -128,9 +128,8 @@ export const providerDeviceClassHelp: Record<string, string> = {
 };
 
 /**
- * Tipos de Dispositivo. El tope depende del modo de la Cuenta: hasta 1 fijo +
- * 1 móvil por venta en una Cuenta compartida, o hasta 3 fijos + 3 móviles en
- * una Cuenta exclusiva.
+ * Tipos de Dispositivo. El tope depende del modo de la Cuenta: 1+1 o 2+2 por
+ * venta compartida, o hasta 3 fijos + 3 móviles en una Cuenta exclusiva.
  */
 export const deviceTypeLabels: Record<string, string> = {
   fijo: "Fijo",
@@ -145,15 +144,20 @@ export const deviceTypeHelp: Record<string, string> = {
 /** Métodos de alta de Cliente Final. */
 export const customerIntakeLabels: Record<string, string> = {
   cuenta_exclusiva: "Cuenta completa exclusiva",
-  dispositivo_compartido: "Venta unitaria (cuenta compartida)",
+  dispositivo_compartido: "Venta en cuenta compartida",
 };
 
 export const customerIntakeHelp: Record<string, string> = {
   cuenta_exclusiva:
     "Se crea una Cuenta nueva para este cliente, con todos los servicios contratados y hasta 3 fijos + 3 móviles.",
   dispositivo_compartido:
-    "Autoriza hasta 1 Dispositivo fijo + 1 móvil, en una Cuenta compartida sólo con ventas de exactamente la misma selección de servicios.",
+    "Reserva 1+1 o 2+2 Dispositivos, en una Cuenta compartida sólo con ventas de exactamente la misma selección de servicios.",
 };
+
+export const sharedCapacityLabels = {
+  1: "1 fijo + 1 móvil",
+  2: "2 fijos + 2 móviles",
+} as const;
 
 /** Modalidades comerciales. */
 export const commercialPlanTypeLabels: Record<string, string> = {

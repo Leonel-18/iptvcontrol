@@ -6,6 +6,7 @@ import {
   IsEmail,
   IsEnum,
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -106,6 +107,16 @@ export class CrearClienteDto {
   @ArrayUnique()
   @IsString({ each: true })
   servicios?: string[];
+
+  @ApiPropertyOptional({
+    enum: [1, 2],
+    description:
+      'Cupos por categoría reservados para una venta compartida: 1 autoriza 1 fijo + 1 móvil; ' +
+      '2 autoriza 2 fijos + 2 móviles. Es obligatorio para `dispositivo_compartido`.',
+  })
+  @IsOptional()
+  @IsIn([1, 2])
+  cupos_por_categoria?: 1 | 2;
 
   @ApiProperty({ type: DispositivoAltaDto })
   @ValidateNested()

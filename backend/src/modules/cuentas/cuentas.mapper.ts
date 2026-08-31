@@ -23,8 +23,7 @@ import { SENSA_SERVICIOS } from '../../proveedor/sensa/sensa.constants';
  *
  * `tope` es dinámico según el modo de la Cuenta: en una exclusiva es siempre 3
  * (hasta 3 fijos + 3 móviles para su único Cliente Final); en una compartida
- * refleja la cantidad de ventas activas (1 fijo + 1 móvil habilitado por cada
- * venta, hasta 3 ventas).
+ * refleja los cupos comprometidos por ventas 1+1 o 2+2, hasta 3 por categoría.
  */
 export class OcupacionCategoriaDto {
   @ApiProperty({ description: 'Dispositivos de esta categoría que están ocupando lugar.' })

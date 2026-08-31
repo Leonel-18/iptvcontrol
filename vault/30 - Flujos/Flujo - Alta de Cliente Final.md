@@ -25,10 +25,10 @@ flowchart TD
 
     METODO{"Método de alta"}
     METODO -->|"cuenta_exclusiva"| NUEVA["Crear Cuenta nueva<br/>todos los servicios contratados"]
-    METODO -->|"dispositivo_compartido"| FIRMA["Elegir servicios<br/>básico 1 siempre incluido"]
-    FIRMA --> BUSCA{"¿Hay Cuenta propia con<br/>firma idéntica y menos de 3 ventas?"}
-    BUSCA -->|"Sí"| LIBERA["Eliminar exactamente<br/>una reserva técnica"]
-    BUSCA -->|"No"| NUEVAC["Crear Cuenta nueva<br/>y dos reservas técnicas"]
+    METODO -->|"dispositivo_compartido"| FIRMA["Elegir 1+1 o 2+2 y servicios<br/>básico 1 siempre incluido"]
+    FIRMA --> BUSCA{"¿Hay Cuenta propia con firma<br/>idéntica y cupos suficientes?"}
+    BUSCA -->|"Sí"| LIBERA["Reservar cupos y subir<br/>contadores SENSA"]
+    BUSCA -->|"No"| NUEVAC["Crear Cuenta nueva<br/>en 1/1 o 2/2"]
     NUEVA --> DNI["Generar identificador tipo DNI"]
     NUEVAC --> DNI
     DNI --> APICREA["API: crear Cuenta"]
@@ -37,10 +37,10 @@ flowchart TD
     REPETIDO -->|"No"| SONDEA
     LIBERA --> SONDEA["Sondear Dispositivos<br/>cada 30 s durante 10 min"]
     SONDEA --> CAND{"¿Cuántos candidatos nuevos?"}
-    CAND -->|"Uno"| GUARDA["Vincular ID, MAC y tipo<br/>Dispositivo ↔ Cliente ↔ Cuenta"]
-    CAND -->|"Varios en venta unitaria"| AMBIGUA["Alta ambigua:<br/>no vincular automáticamente"]
+    CAND -->|"Dentro del 1+1 o 2+2"| GUARDA["Vincular ID, MAC y tipo<br/>Dispositivo ↔ Cliente ↔ Cuenta"]
+    CAND -->|"Excede cupos"| AMBIGUA["Incidencia pendiente<br/>de revisión manual"]
     CAND -->|"Hasta 3 en Cuenta completa"| GUARDA
-    CAND -->|"Ninguno al vencer"| REPONE["Reponer reserva<br/>si la Cuenta es compartida"]
+    CAND -->|"Ninguno al vencer"| REPONE["Liberar venta y<br/>resincronizar contadores"]
 
     classDef auto fill:#E9F9F0,stroke:#17B26A
     classDef decision fill:#FDF5E4,stroke:#E8A93A
@@ -53,7 +53,7 @@ flowchart TD
 | Paso | Qué se define | Regla asociada |
 |---|---|---|
 | 1 · Cliente | Nombre, contacto e ID de gestión externa | [[Validación de ID de gestión externa]] |
-| 2 · Método y servicios | Cuenta exclusiva o venta unitaria; servicios para la venta unitaria | [[Capacidad de una Cuenta]] |
+| 2 · Método y servicios | Cuenta exclusiva o compartida; cupos 1+1/2+2 y servicios | [[Capacidad de una Cuenta]] |
 | 3 · Dispositivo | Instrucciones para el primer login; no se pide tipo ni MAC | — |
 | 4 · Confirmar | Resumen de qué va a pasar antes de tocar el Proveedor | — |
 

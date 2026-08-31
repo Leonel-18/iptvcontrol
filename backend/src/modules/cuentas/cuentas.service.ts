@@ -75,7 +75,10 @@ export class CuentasService {
       this.prisma.db.cuenta.count({ where }),
       this.prisma.db.cuenta.findMany({
         where,
-        include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
+        include: {
+          dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+          ventasCompartidas: { select: { cuposPorCategoria: true } },
+        },
         orderBy: { creadoEn: 'desc' },
         skip: esCsv ? undefined : query.skip,
         take: esCsv ? undefined : query.take,
@@ -104,6 +107,7 @@ export class CuentasService {
     const cuenta = await this.prisma.db.cuenta.findUnique({
       where: { id },
       include: {
+        ventasCompartidas: { select: { cuposPorCategoria: true } },
         dispositivos: {
           include: {
             clienteFinal: {
@@ -263,7 +267,10 @@ export class CuentasService {
   async cerrar(id: string): Promise<{ id: string; estado: EstadoCuenta }> {
     const cuenta = await this.prisma.db.cuenta.findUnique({
       where: { id },
-      include: { dispositivos: { select: { estado: true } } },
+      include: {
+        dispositivos: { select: { estado: true } },
+        ventasCompartidas: { select: { id: true } },
+      },
     });
     if (!cuenta) {
       throw new NotFoundException('La cuenta no existe o no está disponible.');
@@ -274,7 +281,7 @@ export class CuentasService {
     const tieneDispositivosOcupando = cuenta.dispositivos.some((dispositivo) =>
       ESTADOS_QUE_OCUPAN.includes(dispositivo.estado),
     );
-    if (tieneDispositivosOcupando) {
+    if (tieneDispositivosOcupando || cuenta.ventasCompartidas.length > 0) {
       throw new BadRequestException(
         'No se puede cerrar una Cuenta con Dispositivos activos o bloqueados por suspensión. ' +
           'Dé de baja a esos Clientes Finales primero.',
@@ -319,7 +326,10 @@ export class CuentasService {
         estado: EstadoCuenta.activa,
         empresaRevendedoraId,
       },
-      include: { dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } } },
+      include: {
+        dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+        ventasCompartidas: { select: { cuposPorCategoria: true } },
+      },
     });
 
     return cuentas
@@ -330,14 +340,14 @@ export class CuentasService {
         proveedor_cuenta_id: cuenta.proveedorCuentaId,
         dispositivos: capacidad.esExclusiva
           ? `${capacidad.ocupados} de ${capacidad.limite}`
-          : `${capacidad.ocupados} de ${capacidad.limite} ventas`,
+          : `${capacidad.ocupados} de ${capacidad.limite} cupos por categoría`,
         fijos: `${capacidad.fijo.ocupados} de ${capacidad.fijo.limite}`,
         moviles: `${capacidad.movil.ocupados} de ${capacidad.movil.limite}`,
         completa: capacidad.completa,
         mensaje: capacidad.completa
           ? capacidad.esExclusiva
             ? 'La Cuenta llegó al límite de 3 fijos y 3 móviles.'
-            : 'La Cuenta llegó al límite de 3 ventas.'
+            : 'La Cuenta comprometió sus 3 cupos por categoría.'
           : 'La cuenta está cerca del tope de capacidad.',
       }));
   }

@@ -10,10 +10,12 @@
  * el resto del frontend.
  */
 
+export type SharedCapacity = 1 | 2;
+
 /**
  * Ocupación de una categoría (fijo o móvil). `tope` es dinámico: en una Cuenta
- * exclusiva siempre es 3; en una compartida refleja la cantidad de ventas
- * activas (1 fijo + 1 móvil habilitado por cada venta, hasta 3 ventas).
+ * exclusiva siempre es 3; en una compartida refleja los cupos comprometidos
+ * por ventas 1+1 o 2+2, hasta 3 por categoría.
  */
 export interface CapacityCategory {
   ocupados: number;
@@ -25,8 +27,8 @@ export interface CapacityCategory {
 
 /**
  * Ocupación global de la Cuenta. En una exclusiva, `ocupados`/`limite` son
- * Dispositivos (sobre 6 = 3 fijos + 3 móviles). En una compartida son ventas
- * (Clientes Finales distintos, sobre 3).
+ * Dispositivos (sobre 6 = 3 fijos + 3 móviles). En una compartida son cupos
+ * comprometidos por categoría (sobre 3).
  */
 export interface AccountCapacity {
   ocupados: number;
@@ -141,7 +143,7 @@ export interface AccountCredentials {
 export interface CapacityAlert {
   cuenta_id: string;
   proveedor_cuenta_id: string | null;
-  /** Exclusiva: "X de 6" (Dispositivos). Compartida: "X de 3 ventas". */
+  /** Exclusiva: "X de 6" (Dispositivos). Compartida: "X de 3 cupos". */
   dispositivos: string;
   fijos: string;
   moviles: string;
