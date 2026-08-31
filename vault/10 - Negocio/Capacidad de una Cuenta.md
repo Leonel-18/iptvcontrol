@@ -58,7 +58,8 @@ flowchart TD
 ```
 
 Antes de crear una venta compartida, el wizard permite elegir 1+1 o 2+2 y los servicios; siempre
-incluye el básico código 1. Sólo se reutilizan Cuentas con firma idéntica y cupos suficientes.
+incluye el básico código 1. Sólo se reutilizan Cuentas con firma idéntica, cupos suficientes y sin
+una [[Ventana de curiosidad]] activa de otro Cliente Final.
 
 ## Descubrimiento después del primer login
 
@@ -121,3 +122,4 @@ capacidad en sí — ver [[Integración con SENSA]].
 - [[Flujo - Alta de Cliente Final]]
 - [[Flujo - Migración de Cuenta]]
 - [[Integración con SENSA]]
+- [[Ventana de curiosidad]]

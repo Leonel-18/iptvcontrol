@@ -18,7 +18,14 @@ import { TeamMemberList } from './features/team-members/TeamMemberList';
 import { AuditLogList } from './features/audit-log/AuditLogList';
 import { ReportsView } from './features/reports/ReportsView';
 import { SettingsView } from './features/settings/SettingsView';
+import { CuriosityWindowSettings } from './features/settings/CuriosityWindowSettings';
 import { LandingPage } from './features/landing/LandingPage';
+import { useSesion } from './lib/session';
+
+const SettingsPage = () => {
+  const { esOperador } = useSesion();
+  return esOperador ? <SettingsView /> : <CuriosityWindowSettings />;
+};
 
 /**
  * =============================================================================
@@ -105,14 +112,7 @@ export const AppRoutes = () => (
           </SoloOperador>
         }
       />
-      <Route
-        path="/settings"
-        element={
-          <SoloOperador>
-            <SettingsView />
-          </SoloOperador>
-        }
-      />
+      <Route path="/settings" element={<SettingsPage />} />
 
       <Route path="/audit-log" element={<AuditLogList />} />
       <Route path="/team-members" element={<TeamMemberList />} />

@@ -57,7 +57,15 @@ No lo esconde. El panel avisa explícitamente:
 - En la vista de una Cuenta compartida: *"todos los clientes finales que tengan un dispositivo acá
   usan estas mismas credenciales"*.
 
+## Relación con la Ventana de curiosidad (Fase 2)
+
+La [[Ventana de curiosidad]] no resuelve este riesgo (sigue vigente sin rotación de contraseña):
+sólo acorta cuánto tiempo puede pasar antes de que esa Cuenta se le ofrezca a otro Cliente Final
+nuevo después de una venta, incluida la reasignación manual de un Dispositivo liberado descripta
+arriba (D3 → D4).
+
 ## Ver también
 
 - [[Decisiones pendientes]] — para lo que sí está abierto
 - [[Capacidad de una Cuenta]]
+- [[Ventana de curiosidad]]

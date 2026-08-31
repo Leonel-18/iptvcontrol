@@ -34,6 +34,9 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   deteccion_dispositivo_no_autorizado: 'Detección de Dispositivo no autorizado',
   resolucion_incidencia_dispositivo: 'Resolución de incidencia de Dispositivo',
   correccion_vinculacion_dispositivo: 'Corrección de vinculación de Dispositivo',
+  apertura_ventana_curiosidad: 'Apertura de Ventana de curiosidad',
+  levantamiento_ventana_curiosidad: 'Levantamiento de Ventana de curiosidad',
+  cambio_configuracion_ventana_curiosidad: 'Cambio de duración de Ventana de curiosidad',
 };
 
 /**

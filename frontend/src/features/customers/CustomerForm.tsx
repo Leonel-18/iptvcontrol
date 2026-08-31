@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Check, UserPlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
@@ -10,6 +10,7 @@ import type {
   ExternalIdMatch,
   ServiceCatalogItem,
   SharedCapacity,
+  CuriosityWindowSettings,
 } from '@/lib/types';
 import {
   customerIntakeHelp,
@@ -17,6 +18,8 @@ import {
   sharedCapacityLabels,
 } from '@/i18n/entityLabels';
 import { PageHeader } from '@/components/common';
+import { CuriosityDurationInput } from '@/components/CuriosityDurationInput';
+import { formatDurationMinutes } from '@/lib/curiosity-window';
 import {
   Alert,
   Button,
@@ -99,6 +102,7 @@ interface EstadoFormulario {
   cuposPorCategoria: SharedCapacity;
   servicios: string[];
   notaDescriptiva: string;
+  duracionVentanaCuriosidadMinutos: number;
 }
 
 const INICIAL: EstadoFormulario = {
@@ -113,6 +117,7 @@ const INICIAL: EstadoFormulario = {
   cuposPorCategoria: 1,
   servicios: ['1'],
   notaDescriptiva: '',
+  duracionVentanaCuriosidadMinutos: 0,
 };
 
 const PASOS = ['Cliente', 'Método de alta', 'Servicios', 'Confirmar'] as const;
@@ -125,6 +130,7 @@ export const CustomerForm = () => {
   const [valores, setValores] = useState<EstadoFormulario>(INICIAL);
   const [errores, setErrores] = useState<Partial<Record<keyof EstadoFormulario, string>>>({});
   const [coincidencias, setCoincidencias] = useState<ExternalIdMatch[]>([]);
+  const durationInitialized = useRef(false);
   /** Decisión tomada frente al ID duplicado: agrupar en un cliente o seguir. */
   const [decisionDuplicado, setDecisionDuplicado] = useState<
     { tipo: 'agrupar'; clienteId: string; nombre: string } | { tipo: 'crear' } | null
@@ -134,6 +140,12 @@ export const CustomerForm = () => {
     queryKey: ['providers-catalog'],
     queryFn: () => api<ServiceCatalogItem[]>('/providers/services-catalog'),
     staleTime: Infinity,
+  });
+
+  const configuracionVentana = useQuery({
+    queryKey: ['settings-curiosity-window'],
+    queryFn: () => api<CuriosityWindowSettings>('/settings/curiosity-window'),
+    staleTime: 5 * 60 * 1000,
   });
 
   const serviciosContratados = (catalogo.data ?? []).filter((servicio) => servicio.contratado);
@@ -152,6 +164,17 @@ export const CustomerForm = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogoDisponible]);
+
+  useEffect(() => {
+    if (configuracionVentana.data && !durationInitialized.current) {
+      durationInitialized.current = true;
+      setValores((actual) => ({
+        ...actual,
+        duracionVentanaCuriosidadMinutos:
+          configuracionVentana.data.duracion_predeterminada_minutos,
+      }));
+    }
+  }, [configuracionVentana.data]);
 
   const actualizar = <K extends keyof EstadoFormulario>(clave: K, valor: EstadoFormulario[K]) => {
     setValores((actual) => ({ ...actual, [clave]: valor }));
@@ -196,6 +219,8 @@ export const CustomerForm = () => {
               ? {
                   servicios: valores.servicios,
                   cupos_por_categoria: valores.cuposPorCategoria,
+                  duracion_ventana_curiosidad_minutos:
+                    valores.duracionVentanaCuriosidadMinutos,
                 }
               : {}),
             dispositivo: {
@@ -263,6 +288,14 @@ export const CustomerForm = () => {
     }
 
     if (paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible) {
+      return false;
+    }
+
+    if (
+      paso === 1 &&
+      valores.metodoAlta === 'dispositivo_compartido' &&
+      !configuracionVentana.isSuccess
+    ) {
       return false;
     }
 
@@ -539,32 +572,60 @@ export const CustomerForm = () => {
               ))}
 
               {valores.metodoAlta === 'dispositivo_compartido' ? (
-                <fieldset className="rounded-lg border p-4">
-                  <legend className="px-1 text-sm font-medium">Dispositivos de esta venta</legend>
-                  <p className="mb-3 text-sm texto-suave">
-                    Esta reserva se descuenta de los 3 cupos fijos y 3 móviles de la Cuenta.
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {([1, 2] as SharedCapacity[]).map((cantidad) => (
-                      <button
-                        key={cantidad}
-                        type="button"
-                        onClick={() => actualizar('cuposPorCategoria', cantidad)}
-                        className={cn(
-                          'rounded-lg border px-4 py-3 text-left transition-colors',
-                          valores.cuposPorCategoria === cantidad
-                            ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
-                            : 'hover:bg-navy-50 dark:hover:bg-navy-800',
-                        )}
+                <div className="space-y-3">
+                  <fieldset className="rounded-lg border p-4">
+                    <legend className="px-1 text-sm font-medium">Dispositivos de esta venta</legend>
+                    <p className="mb-3 text-sm texto-suave">
+                      Esta reserva se descuenta de los 3 cupos fijos y 3 móviles de la Cuenta.
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {([1, 2] as SharedCapacity[]).map((cantidad) => (
+                        <button
+                          key={cantidad}
+                          type="button"
+                          onClick={() => actualizar('cuposPorCategoria', cantidad)}
+                          className={cn(
+                            'rounded-lg border px-4 py-3 text-left transition-colors',
+                            valores.cuposPorCategoria === cantidad
+                              ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
+                              : 'hover:bg-navy-50 dark:hover:bg-navy-800',
+                          )}
+                        >
+                          <span className="block font-medium">{sharedCapacityLabels[cantidad]}</span>
+                          <span className="mt-0.5 block text-xs texto-suave">
+                            Consume {cantidad} de los 3 cupos por categoría.
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  {configuracionVentana.isPending ? (
+                    <Skeleton className="h-28" />
+                  ) : configuracionVentana.isError ? (
+                    <Alert tone="danger" titulo="No se pudo cargar la duración predeterminada">
+                      <p className="mb-3">Reintente antes de continuar con el alta compartida.</p>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void configuracionVentana.refetch()}
                       >
-                        <span className="block font-medium">{sharedCapacityLabels[cantidad]}</span>
-                        <span className="mt-0.5 block text-xs texto-suave">
-                          Consume {cantidad} de los 3 cupos por categoría.
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </fieldset>
+                        Reintentar
+                      </Button>
+                    </Alert>
+                  ) : (
+                    <div className="rounded-lg border p-4">
+                      <CuriosityDurationInput
+                        value={valores.duracionVentanaCuriosidadMinutos}
+                        maxMinutes={configuracionVentana.data.duracion_predeterminada_minutos}
+                        onChange={(duration) =>
+                          actualizar('duracionVentanaCuriosidadMinutos', duration)
+                        }
+                        help={`Puede elegir desde cero hasta ${formatDurationMinutes(configuracionVentana.data.duracion_predeterminada_minutos)}.`}
+                      />
+                    </div>
+                  )}
+                </div>
               ) : null}
 
               <Alert tone="info">
@@ -733,6 +794,12 @@ export const CustomerForm = () => {
                     {sharedCapacityLabels[valores.cuposPorCategoria]}
                   </Resumen>
                 ) : null}
+                {decisionDuplicado?.tipo !== 'agrupar' &&
+                valores.metodoAlta === 'dispositivo_compartido' ? (
+                  <Resumen etiqueta="Ventana de curiosidad">
+                    {formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos)}
+                  </Resumen>
+                ) : null}
                 <Resumen etiqueta="Servicios">
                   {decisionDuplicado?.tipo === 'agrupar' ? (
                     'Heredados de la Cuenta existente'
@@ -770,7 +837,10 @@ export const CustomerForm = () => {
                   <p>
                     La venta reserva {sharedCapacityLabels[valores.cuposPorCategoria]} para este
                     cliente, en una Cuenta compartida sólo con otras ventas de exactamente la misma
-                    selección de servicios y con cupos suficientes.
+                    selección de servicios y con cupos suficientes.{' '}
+                    {valores.duracionVentanaCuriosidadMinutos > 0
+                      ? `La ventana de curiosidad durará ${formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}.`
+                      : 'No se aplicará una ventana de curiosidad.'}
                   </p>
                 )}
               </Alert>
@@ -797,7 +867,10 @@ export const CustomerForm = () => {
                 variant="primary"
                 onClick={siguiente}
                 disabled={
-                  paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible
+                  (paso === 1 &&
+                    valores.metodoAlta === 'dispositivo_compartido' &&
+                    !configuracionVentana.isSuccess) ||
+                  (paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible)
                 }
               >
                 Continuar

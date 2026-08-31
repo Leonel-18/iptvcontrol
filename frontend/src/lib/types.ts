@@ -103,6 +103,26 @@ export interface AccountDetail extends Account {
     nombre: string;
     dispositivos: number;
   }[];
+  /** Sólo llega al panel revendedor para Cuentas compartidas. */
+  ventana_curiosidad?: CuriosityWindow | null;
+  historial_ventanas_curiosidad?: CuriosityWindow[];
+}
+
+export type CuriosityWindowActor =
+  | string
+  | { id?: string; nombre?: string | null; email?: string | null }
+  | null;
+
+export interface CuriosityWindow {
+  activa: boolean;
+  inicio_en: string;
+  fin_previsto_en: string;
+  fin_real_en: string | null;
+  duracion_predeterminada_minutos: number;
+  duracion_aplicada_minutos: number;
+  motivo_fin: string | null;
+  iniciada_por: CuriosityWindowActor;
+  finalizada_por: CuriosityWindowActor;
 }
 
 /**
@@ -413,6 +433,10 @@ export interface ProviderSettings {
   umbral_alerta_capacidad: number;
   max_reintentos_dni: number;
   url_base: string | null;
+}
+
+export interface CuriosityWindowSettings {
+  duracion_predeterminada_minutos: number;
 }
 
 export interface ConnectionTest {

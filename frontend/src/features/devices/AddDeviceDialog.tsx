@@ -1,9 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
-import { Alert, Button, Field, Textarea } from '@/components/ui/primitives';
+import { CuriosityDurationInput } from '@/components/CuriosityDurationInput';
+import { formatDurationMinutes } from '@/lib/curiosity-window';
+import { Alert, Button, Field, Skeleton, Textarea } from '@/components/ui/primitives';
 import { Dialog, DialogContent } from '@/components/ui/overlays';
+import type { CuriosityWindowSettings } from '@/lib/types';
 
 /**
  * Alta de un Dispositivo adicional para un Cliente Final que ya existe.
@@ -25,6 +28,21 @@ export const AddDeviceDialog = ({
 }) => {
   const queryClient = useQueryClient();
   const [nota, setNota] = useState('');
+  const [duration, setDuration] = useState(0);
+  const durationInitialized = useRef(false);
+
+  const settings = useQuery({
+    queryKey: ['settings-curiosity-window'],
+    queryFn: () => api<CuriosityWindowSettings>('/settings/curiosity-window'),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (settings.data && !durationInitialized.current) {
+      durationInitialized.current = true;
+      setDuration(settings.data.duracion_predeterminada_minutos);
+    }
+  }, [settings.data]);
 
   const crear = useMutation({
     mutationFn: () =>
@@ -37,6 +55,7 @@ export const AddDeviceDialog = ({
         body: {
           customer_id: clienteId,
           nota_descriptiva: nota.trim() || undefined,
+          duracion_ventana_curiosidad_minutos: duration,
         },
       }),
     onSuccess: (resultado) => {
@@ -84,6 +103,24 @@ export const AddDeviceDialog = ({
             />
           </Field>
 
+          {settings.isPending ? (
+            <Skeleton className="h-28" />
+          ) : settings.isError ? (
+            <Alert tone="danger" titulo="No se pudo cargar la duración predeterminada">
+              <p className="mb-3">Reintente antes de agregar el dispositivo.</p>
+              <Button variant="secondary" size="sm" onClick={() => void settings.refetch()}>
+                Reintentar
+              </Button>
+            </Alert>
+          ) : (
+            <CuriosityDurationInput
+              value={duration}
+              maxMinutes={settings.data.duracion_predeterminada_minutos}
+              onChange={setDuration}
+              help={`Puede elegir desde cero hasta ${formatDurationMinutes(settings.data.duracion_predeterminada_minutos)}. Se aplicará si el alta requiere una venta nueva.`}
+            />
+          )}
+
           <Alert tone="info">
             En una Cuenta compartida, cada venta conserva los cupos 1+1 o 2+2 elegidos al crearla;
             en una Cuenta exclusiva, admite hasta 3 de cada categoría. Si este cliente ya completó
@@ -95,7 +132,11 @@ export const AddDeviceDialog = ({
             <Button variant="secondary" onClick={() => onCambio(false)} disabled={crear.isPending}>
               Cancelar
             </Button>
-            <Button variant="primary" onClick={() => crear.mutate()} disabled={crear.isPending}>
+            <Button
+              variant="primary"
+              onClick={() => crear.mutate()}
+              disabled={crear.isPending || !settings.isSuccess}
+            >
               {crear.isPending ? 'Agregando…' : 'Agregar dispositivo'}
             </Button>
           </div>

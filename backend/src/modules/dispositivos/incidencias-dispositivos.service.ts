@@ -183,6 +183,7 @@ export class IncidenciasDispositivosService {
             cuposPorCategoria: 1,
             operadorPrincipalId,
             actualizarProveedor: true,
+            teamMemberId: this.contexto.teamMemberId,
           });
         } catch (error) {
           if (!(error instanceof SincronizacionContadoresPendienteError)) throw error;

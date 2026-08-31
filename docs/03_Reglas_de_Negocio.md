@@ -72,6 +72,11 @@ Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
   detectado por el barrido de inventario (no requiere el estado "ambiguo" del modelo anterior).
 - Si vence la ventana sin ningún candidato para una venta nueva, el Dispositivo vuelve a
   `disponible` y el contador se resincroniza contra las ventas activas reales (baja solo).
+- **Ventana de curiosidad (a partir de Fase 2):** además de los cupos disponibles, una Cuenta
+  compartida puede quedar temporalmente inelegible para un Cliente Final **nuevo** después de cada
+  venta que se le suma. No modifica los contadores de SENSA ni la capacidad comercial — es una
+  restricción local de a quién se le puede vender esa Cuenta en las próximas horas/días. Detalle
+  completo en la sección 15.
 - **Límite real de los contadores de SENSA (confirmado por prueba de Bruno, 21/08/2026):** los
   contadores `auto_provision_count*` evitan un alta explícita por API y probablemente los tipos
   "phone"/"stationary", pero **no bloquean** un inicio de sesión por el reproductor web de SENSA
@@ -275,8 +280,10 @@ rotación del sistema: el riesgo aceptado de esta sección sigue vigente igual.
 
 La Empresa Revendedora puede consultar su información de dos formas dentro de su panel:
 - **Vista por Cuenta**: usuario, contraseña y PIN de esa Cuenta en SENSA, su parametrización de
-  contenido (paquetes/canales habilitados), y el listado de todos los Clientes Finales y
-  Dispositivos relacionados con esa Cuenta.
+  contenido (paquetes/canales habilitados), el listado de todos los Clientes Finales y
+  Dispositivos relacionados con esa Cuenta y, si es compartida, el estado de su Ventana de
+  curiosidad (sección 15): activa/disponible, próxima disponibilidad, botón de levantamiento
+  manual e historial de ventanas anteriores.
 - **Vista por Cliente**: usuario, contraseña y PIN de la Cuenta a la que pertenece ese Cliente
   Final, la parametrización de contenido, los Dispositivos que se relacionan específicamente con
   ese cliente, y un botón para saltar a la vista completa de la Cuenta.
@@ -313,6 +320,8 @@ ejecutó (`TeamMember`), **cuándo**, y **sobre qué entidad**:
 - Cambio de configuración de conexión al Proveedor (servidor, credenciales, `dni_inicial_sensa` —
   ver `04_Esqueleto_Tecnico_Inicial.md`, sección 9).
 - Alta/baja de Empresa Revendedora.
+- Apertura, levantamiento manual y cambio de duración predeterminada de la Ventana de curiosidad
+  (sección 15).
 
 **Quién puede consultarlo:**
 - El Operador Principal ve el log completo de todas las Empresas Revendedoras, pero respetando la
@@ -354,3 +363,52 @@ teléfono y la dirección funcionan además como fallback cuando faltan en el Cl
 - Sitio web (opcional)
 
 **Incluido en el alcance del MVP.**
+
+## 15. Ventana de curiosidad (Fase 2)
+
+**Qué resuelve:** después de que un Cliente Final nuevo entra a una Cuenta compartida, esa Cuenta
+queda temporalmente inelegible para OTRO Cliente Final nuevo, para reducir la ventana en la que un
+"cliente curioso" (que compró sólo para mirar las credenciales o el contenido) puede pasarle el
+usuario/contraseña a alguien más antes de que la Empresa Revendedora note algo raro. **No es un
+mecanismo de seguridad de SENSA ni reemplaza al riesgo aceptado de la sección 6** (contraseña
+compartida sin rotación): es una restricción puramente local de IPTVControl sobre a quién se le
+puede vender esa Cuenta en las próximas horas/días.
+
+**Alcance:**
+- Aplica **únicamente a Cuentas compartidas** (`dispositivo_compartido`). Las Cuentas exclusivas
+  nunca quedan bloqueadas — pertenecen a un único cliente desde el alta.
+- **Nunca bloquea al dueño de la venta que abrió la ventana**: ese mismo Cliente Final puede seguir
+  vinculando los Dispositivos de su 1+1 o 2+2 sin restricción, aunque la ventana siga activa.
+- Bloquea exclusivamente que la Cuenta se le ofrezca a un Cliente Final **nuevo** (uno que todavía
+  no tiene una venta ahí) — tanto por el buscador automático de Cuenta compatible (sección 2.1)
+  como por la reasignación manual de un Dispositivo liberado (sección 6).
+- No modifica los contadores `auto_provision_count*` de SENSA ni la capacidad comercial de la
+  Cuenta (sección 2.2): un cupo bloqueado por la ventana sigue contando como libre a efectos de
+  `auto_provision_count*`, simplemente IPTVControl no se lo ofrece a nadie nuevo mientras dure.
+
+**Duración:**
+- Cada Empresa Revendedora define, desde su Menú de Parametrización (`/settings`), una **duración
+  predeterminada** en días/horas/minutos (puede ser `0`, lo que equivale a no usar la funcionalidad).
+- En cada alta compartida nueva, el vendedor puede **reducir** esa duración para esa venta puntual
+  (incluso a `0`), pero **nunca superar** el predeterminado vigente de su Empresa Revendedora. El
+  backend valida el tope, no sólo el selector del wizard.
+- La duración que se guarda es la que estaba vigente al momento de esa venta puntual: si la Empresa
+  Revendedora cambia el predeterminado después, **no afecta retroactivamente** a ventanas ya
+  abiertas.
+
+**Ciclo de vida:**
+- Se abre automáticamente al confirmar una venta nueva sobre una Cuenta compartida (ya sea por el
+  wizard de alta, por resolver una incidencia de Dispositivo no autorizado vinculándola a un
+  cliente nuevo, o por reasignar un Dispositivo liberado a un cliente que todavía no tiene venta en
+  esa Cuenta).
+- Vence "al vuelo": no depende de un job en segundo plano. Cada vez que se consulta o se intenta
+  usar la Cuenta, el sistema recalcula si la ventana sigue vigente comparando la fecha actual
+  contra el fin previsto.
+- **Levantamiento manual**: desde la vista de Cuenta (`/accounts/:id`), la Empresa Revendedora
+  puede levantar la ventana activa antes de que venza, si confía en que no hay riesgo. Queda
+  registrado en el Audit Log con quién y cuándo.
+- El panel muestra el texto **"Disponible el DD/MM HH:MM"** mientras la ventana sigue activa.
+
+**Historial:** cada Cuenta compartida conserva el historial completo de sus ventanas anteriores
+(inicio, fin previsto, fin real, si se acortó manualmente y quién la abrió/levantó), visible desde
+la vista de Cuenta.

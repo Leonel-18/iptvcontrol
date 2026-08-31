@@ -4,6 +4,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
+import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 import { AuditService } from '../../common/audit/audit.service';
 
 /**
@@ -36,7 +37,14 @@ describe('CuentasService — cerrar', () => {
     const audit = { registrar: jest.fn() } as unknown as AuditService;
     const contexto = { operadorPrincipalId: 'operador-1' } as unknown as RequestContextService;
 
-    const servicio = new CuentasService(prisma, {} as CryptoService, contexto, proveedor, audit);
+    const servicio = new CuentasService(
+      prisma,
+      {} as CryptoService,
+      contexto,
+      proveedor,
+      audit,
+      {} as VentanasCuriosidadService,
+    );
     return { servicio, cuentaDelete, cuentaUpdate, cerrarCuentaProveedor, audit };
   };
 
@@ -163,7 +171,14 @@ describe('CuentasService — cambiarPassword', () => {
       encrypt: jest.fn((valor: string) => `cifrado:${valor}`),
     } as unknown as CryptoService;
 
-    const servicio = new CuentasService(prisma, crypto, contexto, proveedor, audit);
+    const servicio = new CuentasService(
+      prisma,
+      crypto,
+      contexto,
+      proveedor,
+      audit,
+      {} as VentanasCuriosidadService,
+    );
     return { servicio, cuentaUpdate, actualizarPassword, audit, crypto };
   };
 

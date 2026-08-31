@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, KeyRound, Lock, RefreshCw, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
@@ -19,6 +19,7 @@ import {
 } from "@/components/common";
 import { AccountDevicesTab } from "./AccountDevicesTab";
 import { AccountProviderInventoryTab } from "./AccountProviderInventoryTab";
+import { CuriosityWindowPanel } from "./CuriosityWindowPanel";
 import { CapacityMeter } from "@/components/CapacityMeter";
 import {
   Alert,
@@ -62,6 +63,7 @@ export const AccountDetail = () => {
   const navigate = useNavigate();
   const [credencialesVisibles, setCredencialesVisibles] = useState(false);
   const [confirmarCierre, setConfirmarCierre] = useState(false);
+  const [confirmarLiberacion, setConfirmarLiberacion] = useState(false);
   const [cambiarPasswordAbierto, setCambiarPasswordAbierto] = useState(false);
   const [passwordNueva, setPasswordNueva] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
@@ -71,6 +73,28 @@ export const AccountDetail = () => {
     queryFn: () => api<AccountDetailData>(`/accounts/${id}`),
     enabled: Boolean(id),
   });
+  const curiosityWindowActive = data?.ventana_curiosidad?.activa;
+  const curiosityWindowExpectedEnd = data?.ventana_curiosidad?.fin_previsto_en;
+
+  useEffect(() => {
+    if (!curiosityWindowActive || !curiosityWindowExpectedEnd) return;
+
+    const expectedEnd = new Date(curiosityWindowExpectedEnd).getTime();
+    if (!Number.isFinite(expectedEnd)) return;
+
+    let timer = 0;
+    const refreshAtEnd = () => {
+      const remaining = expectedEnd - Date.now();
+      if (remaining <= 0) {
+        void queryClient.invalidateQueries({ queryKey: ["account", id] });
+        return;
+      }
+      timer = window.setTimeout(refreshAtEnd, Math.min(remaining + 100, 2_147_483_647));
+    };
+    refreshAtEnd();
+
+    return () => window.clearTimeout(timer);
+  }, [curiosityWindowActive, curiosityWindowExpectedEnd, id, queryClient]);
 
   // Las credenciales se piden aparte, y sólo cuando la persona las pide: no se
   // descifran "por si acaso" al abrir la pantalla.
@@ -98,6 +122,18 @@ export const AccountDetail = () => {
       setConfirmarCierre(false);
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
       navigate("/accounts");
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const liberarVentanaCuriosidad = useMutation({
+    mutationFn: () =>
+      api(`/accounts/${id}/curiosity-window/release`, { metodo: "POST" }),
+    onSuccess: () => {
+      toast.success("Ventana de curiosidad levantada.");
+      setConfirmarLiberacion(false);
+      void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -192,6 +228,20 @@ export const AccountDetail = () => {
         </Alert>
       </ConfirmDialog>
 
+      <ConfirmDialog
+        abierto={confirmarLiberacion}
+        onCambio={setConfirmarLiberacion}
+        titulo="Levantar ventana de curiosidad"
+        descripcion="La Cuenta compartida volverá a estar disponible de inmediato para otra venta compatible."
+        etiquetaConfirmar="Levantar ventana"
+        cargando={liberarVentanaCuriosidad.isPending}
+        onConfirmar={() => liberarVentanaCuriosidad.mutate()}
+      >
+        <Alert tone="warning">
+          Confirme sólo si ya no necesita mantener esta Cuenta reservada durante el plazo indicado.
+        </Alert>
+      </ConfirmDialog>
+
       <Dialog open={cambiarPasswordAbierto} onOpenChange={setCambiarPasswordAbierto}>
         <DialogContent
           titulo="Cambiar contraseña de la Cuenta"
@@ -242,6 +292,15 @@ export const AccountDetail = () => {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {!esOperador && !data.es_exclusiva ? (
+            <CuriosityWindowPanel
+              currentWindow={data.ventana_curiosidad}
+              history={data.historial_ventanas_curiosidad ?? []}
+              onRelease={() => setConfirmarLiberacion(true)}
+              releasing={liberarVentanaCuriosidad.isPending}
+            />
+          ) : null}
+
           <Card>
             <CardHeader>
               <CardTitle>Ocupación</CardTitle>

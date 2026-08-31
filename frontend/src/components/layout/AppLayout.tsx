@@ -65,7 +65,7 @@ const ITEMS: ItemMenu[] = [
   { to: '/providers', label: navLabels.providers, icono: <Radio />, soloOperador: true },
   { to: '/audit-log', label: navLabels.auditLog, icono: <ClipboardList /> },
   { to: '/team-members', label: navLabels.teamMembers, icono: <UsersRound /> },
-  { to: '/settings', label: navLabels.settings, icono: <Cog />, soloOperador: true },
+  { to: '/settings', label: navLabels.settings, icono: <Cog /> },
 ];
 
 const Logo = ({ compacto = false }: { compacto?: boolean }) => (

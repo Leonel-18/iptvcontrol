@@ -190,6 +190,7 @@ describe('ClientesService — ciclo de vida de una venta compartida', () => {
     };
     const ventaDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const tx = {
+      ventanaCuriosidad: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       clienteFinal: { update: jest.fn().mockResolvedValue(undefined) },
       ventaCompartida: { deleteMany: ventaDeleteMany },
     };

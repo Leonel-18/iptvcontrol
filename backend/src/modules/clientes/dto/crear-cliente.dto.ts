@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsArray,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
@@ -14,6 +15,8 @@ import {
   Length,
   Matches,
   MaxLength,
+  Max,
+  Min,
   ValidateNested,
 } from 'class-validator';
 
@@ -117,6 +120,18 @@ export class CrearClienteDto {
   @IsOptional()
   @IsIn([1, 2])
   cupos_por_categoria?: 1 | 2;
+
+  @ApiPropertyOptional({
+    description:
+      'Duración de la Ventana de curiosidad para esta venta, en minutos. Puede reducir el ' +
+      'predeterminado de la Empresa Revendedora hasta 0, pero nunca superarlo.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  duracion_ventana_curiosidad_minutos?: number;
 
   @ApiProperty({ type: DispositivoAltaDto })
   @ValidateNested()

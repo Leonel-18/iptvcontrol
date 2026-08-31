@@ -15,6 +15,7 @@ import {
   EstadoSolicitudVinculacion,
   Prisma,
   TipoAltaClienteFinal,
+  MotivoFinVentanaCuriosidad,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -325,6 +326,7 @@ export class ClientesService {
       const resultado = await this.dispositivos.altaAdicional(dto.agrupar_en_cliente_id, {
         notaDescriptiva: dto.dispositivo.nota_descriptiva,
         operadorPrincipalId,
+        duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
       });
 
       return {
@@ -346,10 +348,11 @@ export class ClientesService {
     }
     if (
       dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva &&
-      dto.cupos_por_categoria !== undefined
+      (dto.cupos_por_categoria !== undefined ||
+        dto.duracion_ventana_curiosidad_minutos !== undefined)
     ) {
       throw new BadRequestException(
-        'Los cupos por categoría sólo corresponden a una venta compartida.',
+        'Los cupos y la Ventana de curiosidad sólo corresponden a una venta compartida.',
       );
     }
 
@@ -392,6 +395,7 @@ export class ClientesService {
         operadorPrincipalId,
         servicios,
         cuposPorCategoria: dto.cupos_por_categoria,
+        duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
       });
 
       await this.audit.registrar({
@@ -600,11 +604,20 @@ export class ClientesService {
     }
 
     await this.prisma.transaction(async (tx) => {
+      const ahora = new Date();
+      await tx.ventanaCuriosidad.updateMany({
+        where: { clienteFinalId: id, finRealEn: null },
+        data: {
+          finRealEn: ahora,
+          motivoFin: MotivoFinVentanaCuriosidad.cancelacion_venta,
+          finalizadaPorTeamMemberId: this.contexto.teamMemberId ?? null,
+        },
+      });
       await tx.clienteFinal.update({
         where: { id },
         data: {
           estado: EstadoClienteFinal.dado_de_baja,
-          dadoDeBajaEn: new Date(),
+          dadoDeBajaEn: ahora,
         },
       });
       await this.audit.registrarEnTx(tx, {
