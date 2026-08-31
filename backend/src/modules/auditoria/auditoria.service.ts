@@ -18,6 +18,8 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   alta_cuenta: 'Alta de Cuenta',
   cierre_cuenta: 'Cierre de Cuenta',
   cambio_password_cuenta: 'Cambio manual de contraseña de Cuenta',
+  cambio_tipo_cuenta: 'Cambio de tipo de Cuenta',
+  cambio_servicios_cuenta: 'Cambio de servicios de Cuenta',
   cambio_modalidad_comercial: 'Cambio de modalidad comercial',
   cambio_precio: 'Cambio de precios',
   alta_empresa_revendedora: 'Alta de Empresa Revendedora',

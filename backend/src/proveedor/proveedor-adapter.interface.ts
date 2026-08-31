@@ -76,6 +76,12 @@ export interface ActualizarPasswordParams {
   password: string;
 }
 
+export interface ActualizarServiciosParams {
+  proveedorCuentaId: string;
+  /** Firma canónica de servicios, ej. "1|3|5". */
+  servicios: string;
+}
+
 export interface ActivarDispositivoParams {
   proveedorCuentaId: string;
   /** MAC de 12 dígitos hexadecimales. Si no se informa, el dispositivo se
@@ -150,6 +156,12 @@ export interface ProveedorAdapter {
   actualizarPassword(
     credenciales: CredencialesProveedor,
     params: ActualizarPasswordParams,
+  ): Promise<void>;
+
+  /** Actualiza la parametrización de contenido (servicios) de una Cuenta. */
+  actualizarServicios(
+    credenciales: CredencialesProveedor,
+    params: ActualizarServiciosParams,
   ): Promise<void>;
 
   /** Da de alta/activa un dispositivo dentro de una Cuenta. */

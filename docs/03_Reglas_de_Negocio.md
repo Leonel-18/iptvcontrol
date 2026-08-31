@@ -112,6 +112,18 @@ La Empresa Revendedora puede sumarle a un Cliente Final que ya tiene Dispositivo
 - La baja de uno de varios Dispositivos de un mismo Cliente Final (sin dar de baja al cliente
   entero) no afecta a los demás Dispositivos de ese cliente ni a su estado general.
 
+### 2.3.1. Edición de propiedades de una Cuenta existente
+La Empresa Revendedora dueña puede editar, desde `/accounts/:id`, el **tipo** (exclusiva ↔
+compartida) y/o los **servicios** de una Cuenta ya creada:
+- Cambiar el tipo sólo es posible si la Cuenta tiene **a lo sumo un Cliente Final activo**.
+- De exclusiva a compartida, además, ese cliente no puede tener más de 2 Dispositivos fijos ni 2
+  móviles (el máximo de una venta es 2+2); se crea la venta 1+1 o 2+2 que corresponda.
+- De compartida a exclusiva se elimina la venta y se cierra cualquier Ventana de curiosidad activa
+  (sección 15).
+- Los servicios sólo se editan manualmente en una Cuenta compartida (validados contra lo
+  contratado); una Cuenta exclusiva siempre incluye todos los servicios contratados.
+- Todo cambio queda auditado (`cambio_tipo_cuenta`, `cambio_servicios_cuenta`).
+
 ### 2.4. Identificador (DNI), credenciales y datos enviados a SENSA
 - El identificador que SENSA exige para dar de alta una Cuenta corresponde a un **número de DNI**.
   Como el sistema no gestiona DNIs reales de personas físicas, IPTVControl genera estos números de

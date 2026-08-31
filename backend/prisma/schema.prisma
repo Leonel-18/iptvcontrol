@@ -130,6 +130,8 @@ enum AccionAuditoria {
   alta_cuenta
   cierre_cuenta
   cambio_password_cuenta
+  cambio_tipo_cuenta
+  cambio_servicios_cuenta
   cambio_modalidad_comercial
   cambio_precio
   alta_empresa_revendedora

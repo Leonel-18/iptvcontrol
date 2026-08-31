@@ -76,6 +76,7 @@ export type SensaEditUserRequest = Partial<
     | 'mobile_phone'
     | 'password'
     | 'pin'
+    | 'services'
     | 'vod'
     | 'auto_provision_count'
     | 'auto_provision_count_mobile'

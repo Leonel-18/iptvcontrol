@@ -2,15 +2,25 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AccionAuditoria, EntidadAuditada, EstadoCuenta, Prisma } from '@prisma/client';
+import {
+  AccionAuditoria,
+  EntidadAuditada,
+  EstadoCuenta,
+  MotivoFinVentanaCuriosidad,
+  Prisma,
+  TipoDispositivo,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
+import { normalizarServicios, validarServiciosContratados } from '../../proveedor/servicios.util';
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
+import { ColaProveedorService } from '../../queues/cola-proveedor.service';
 import { calcularCapacidad, ESTADOS_QUE_OCUPAN } from './capacidad.util';
 import {
   CuentaOperadorDto,
@@ -20,7 +30,9 @@ import {
   mapDispositivoParaOperador,
   mapDispositivoParaRevendedora,
 } from './cuentas.mapper';
+import { ActualizarCuentaDto } from './dto/actualizar-cuenta.dto';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
+import { CuentasProvisioningService } from './cuentas-provisioning.service';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 /**
@@ -33,6 +45,8 @@ import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
  */
 @Injectable()
 export class CuentasService {
+  private readonly logger = new Logger(CuentasService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
@@ -40,6 +54,8 @@ export class CuentasService {
     private readonly proveedor: ProveedorService,
     private readonly audit: AuditService,
     private readonly ventanasCuriosidad: VentanasCuriosidadService,
+    private readonly provisioning: CuentasProvisioningService,
+    private readonly cola: ColaProveedorService,
   ) {}
 
   async listar(
@@ -260,6 +276,162 @@ export class CuentasService {
     });
 
     return { servicios: servicios.servicios, plan: servicios.plan, sincronizada: true };
+  }
+
+  /**
+   * Edita propiedades de una Cuenta ya creada: tipo (exclusiva ↔ compartida)
+   * y/o su parametrización de servicios.
+   *
+   * Cambiar de tipo sólo es posible si la Cuenta tiene a lo sumo un Cliente
+   * Final activo: de exclusiva a compartida, además, ese cliente no puede
+   * tener más de 2 Dispositivos fijos ni 2 móviles (el máximo de una venta es
+   * 2+2). Los servicios sólo se editan manualmente en una Cuenta compartida;
+   * la exclusiva siempre incluye todos los contratados.
+   */
+  async actualizarPropiedades(id: string, dto: ActualizarCuentaDto) {
+    if (this.contexto.esOperador) {
+      throw new ForbiddenException(
+        'El Operador Principal no administra las propiedades de las Cuentas de sus Empresas Revendedoras.',
+      );
+    }
+    if (dto.es_exclusiva === undefined && dto.servicios === undefined) {
+      throw new BadRequestException('Informe al menos un cambio: tipo de Cuenta o servicios.');
+    }
+
+    const cuenta = await this.prisma.db.cuenta.findUnique({
+      where: { id },
+      include: {
+        dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+      },
+    });
+    if (!cuenta) throw new NotFoundException('La cuenta no existe o no está disponible.');
+    if (!cuenta.proveedorCuentaId) {
+      throw new BadRequestException(
+        'Esta Cuenta todavía no se confirmó en el Proveedor: espere a que termine de crearse.',
+      );
+    }
+
+    const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
+    const esExclusivaFinal = dto.es_exclusiva ?? cuenta.esExclusiva;
+    const cambiaTipo = esExclusivaFinal !== cuenta.esExclusiva;
+
+    if (esExclusivaFinal && dto.servicios !== undefined) {
+      throw new BadRequestException(
+        'Una Cuenta exclusiva no permite elegir servicios manualmente: incluye todos los contratados.',
+      );
+    }
+
+    const clientesActivos = new Set(
+      cuenta.dispositivos
+        .filter((d) => ESTADOS_QUE_OCUPAN.includes(d.estado) && d.clienteFinalId)
+        .map((d) => d.clienteFinalId as string),
+    );
+
+    let cuposParaVentaNueva: 1 | 2 | undefined;
+    if (cambiaTipo) {
+      if (clientesActivos.size > 1) {
+        throw new BadRequestException(
+          'La Cuenta tiene más de un Cliente Final activo: no se puede cambiar su tipo.',
+        );
+      }
+      if (!esExclusivaFinal) {
+        const ocupadosFijo = cuenta.dispositivos.filter(
+          (d) => ESTADOS_QUE_OCUPAN.includes(d.estado) && d.tipo === TipoDispositivo.fijo,
+        ).length;
+        const ocupadosMovil = cuenta.dispositivos.filter(
+          (d) => ESTADOS_QUE_OCUPAN.includes(d.estado) && d.tipo === TipoDispositivo.movil,
+        ).length;
+        if (ocupadosFijo > 2 || ocupadosMovil > 2) {
+          throw new BadRequestException(
+            'La Cuenta tiene más de 2 Dispositivos fijos o móviles: no entra en una venta ' +
+              'compartida (máximo 2+2).',
+          );
+        }
+        cuposParaVentaNueva = ocupadosFijo > 1 || ocupadosMovil > 1 ? 2 : 1;
+      }
+    }
+
+    let serviciosNuevos: string | undefined;
+    if (!esExclusivaFinal && dto.servicios !== undefined) {
+      const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
+      serviciosNuevos = normalizarServicios(dto.servicios);
+      validarServiciosContratados(serviciosNuevos, licencias);
+    }
+    const cambiaServicios = serviciosNuevos !== undefined && serviciosNuevos !== cuenta.servicios;
+
+    // Se empuja primero al Proveedor: si SENSA rechaza los servicios nuevos,
+    // no queda ningún cambio a medias en la base local.
+    if (cambiaServicios) {
+      await this.proveedor.actualizarServicios(operadorPrincipalId, {
+        proveedorCuentaId: cuenta.proveedorCuentaId,
+        servicios: serviciosNuevos!,
+      });
+    }
+
+    const ahora = new Date();
+    await this.prisma.transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+
+      if (cambiaTipo && esExclusivaFinal) {
+        await tx.ventaCompartida.deleteMany({ where: { cuentaId: id } });
+        await tx.ventanaCuriosidad.updateMany({
+          where: { cuentaId: id, finRealEn: null },
+          data: { finRealEn: ahora, motivoFin: MotivoFinVentanaCuriosidad.cancelacion_venta },
+        });
+      } else if (cambiaTipo && clientesActivos.size === 1 && cuposParaVentaNueva) {
+        const [clienteFinalId] = clientesActivos;
+        await tx.ventaCompartida.create({
+          data: {
+            cuentaId: id,
+            clienteFinalId,
+            empresaRevendedoraId: cuenta.empresaRevendedoraId,
+            cuposPorCategoria: cuposParaVentaNueva,
+          },
+        });
+      }
+
+      await tx.cuenta.update({
+        where: { id },
+        data: { esExclusiva: esExclusivaFinal, servicios: serviciosNuevos ?? cuenta.servicios },
+      });
+
+      if (cambiaTipo) {
+        await this.audit.registrarEnTx(tx, {
+          accion: AccionAuditoria.cambio_tipo_cuenta,
+          entidad: EntidadAuditada.Cuenta,
+          entidadId: id,
+          empresaRevendedoraId: cuenta.empresaRevendedoraId,
+          detalle: { de_exclusiva: cuenta.esExclusiva, a_exclusiva: esExclusivaFinal },
+        });
+      }
+      if (cambiaServicios) {
+        await this.audit.registrarEnTx(tx, {
+          accion: AccionAuditoria.cambio_servicios_cuenta,
+          entidad: EntidadAuditada.Cuenta,
+          entidadId: id,
+          empresaRevendedoraId: cuenta.empresaRevendedoraId,
+          detalle: { servicios_anteriores: cuenta.servicios, servicios_nuevos: serviciosNuevos },
+        });
+      }
+    });
+
+    if (cambiaTipo) {
+      try {
+        if (esExclusivaFinal) {
+          await this.provisioning.aplicarLimiteExclusiva(id, operadorPrincipalId);
+        } else {
+          await this.provisioning.sincronizarContadoresVenta(id, operadorPrincipalId);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `No se pudieron sincronizar los contadores tras cambiar el tipo de la Cuenta ${id}: ` +
+            `${(error as Error).message}. Se encola un reintento.`,
+        );
+        await this.cola.encolarSincronizacionContadoresVenta({ cuentaId: id, operadorPrincipalId });
+      }
+    }
+
+    return this.obtener(id);
   }
 
   /**

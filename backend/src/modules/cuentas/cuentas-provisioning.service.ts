@@ -19,7 +19,11 @@ import {
   ReintentosDniAgotadosError,
 } from '../../common/errors/proveedor.errors';
 import { IdentificadoresService } from './identificadores.service';
-import { calcularCapacidad, LIMITE_POR_CATEGORIA_COMPARTIDA } from './capacidad.util';
+import {
+  calcularCapacidad,
+  LIMITE_POR_CATEGORIA_COMPARTIDA,
+  LIMITE_POR_CATEGORIA_EXCLUSIVA,
+} from './capacidad.util';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 /** Señal interna: esta Cuenta no puede alojar la venta/Dispositivo pedido. */
@@ -410,6 +414,44 @@ export class CuentasProvisioningService {
       return;
     }
     await this.aplicarContadoresVenta(cuenta, nuevoValor, operadorPrincipalId);
+  }
+
+  /**
+   * Empuja el tope fijo de una Cuenta exclusiva (3 fijos + 3 móviles) al
+   * Proveedor. Se llama tras convertir una Cuenta compartida en exclusiva
+   * (Actualizar propiedades de Cuenta), ya que esa Cuenta nunca vuelve a
+   * variar sus contadores por ventas.
+   */
+  async aplicarLimiteExclusiva(cuentaId: string, operadorPrincipalId: string): Promise<void> {
+    const cuenta = await this.prisma.transactionComoOperador(operadorPrincipalId, (tx) =>
+      tx.cuenta.findUniqueOrThrow({ where: { id: cuentaId } }),
+    );
+    if (!cuenta.esExclusiva || !cuenta.proveedorCuentaId) return;
+    if (
+      cuenta.dispositivosFijosHabilitados === LIMITE_POR_CATEGORIA_EXCLUSIVA &&
+      cuenta.dispositivosMovilesHabilitados === LIMITE_POR_CATEGORIA_EXCLUSIVA
+    ) {
+      return;
+    }
+    try {
+      await this.proveedor.actualizarCapacidadDispositivos(operadorPrincipalId, {
+        proveedorCuentaId: cuenta.proveedorCuentaId,
+        limiteDispositivos: LIMITE_POR_CATEGORIA_EXCLUSIVA,
+        dispositivosFijos: LIMITE_POR_CATEGORIA_EXCLUSIVA,
+        dispositivosMoviles: LIMITE_POR_CATEGORIA_EXCLUSIVA,
+      });
+      await this.prisma.transactionComoOperador(operadorPrincipalId, (tx) =>
+        tx.cuenta.update({
+          where: { id: cuentaId },
+          data: {
+            dispositivosFijosHabilitados: LIMITE_POR_CATEGORIA_EXCLUSIVA,
+            dispositivosMovilesHabilitados: LIMITE_POR_CATEGORIA_EXCLUSIVA,
+          },
+        }),
+      );
+    } catch {
+      throw new SincronizacionContadoresPendienteError(cuentaId, false);
+    }
   }
 
   private async aplicarContadoresVenta(
