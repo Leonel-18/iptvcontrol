@@ -49,6 +49,8 @@ export class CuentaOperadorDto {
   @ApiProperty({ enum: EstadoCuenta }) estado!: EstadoCuenta;
   @ApiProperty() es_exclusiva!: boolean;
   @ApiProperty() empresa_revendedora_id!: string;
+  @ApiPropertyOptional({ description: 'Nombre del Proveedor de contenido (hoy siempre SENSA).' })
+  proveedor?: string | null;
   @ApiProperty({ type: OcupacionCategoriaDto }) fijos!: OcupacionCategoriaDto;
   @ApiProperty({ type: OcupacionCategoriaDto }) moviles!: OcupacionCategoriaDto;
   @ApiProperty() capacidad!: {
@@ -101,12 +103,14 @@ export const nombresDeServicios = (servicios: string): string[] =>
 export const mapCuentaParaOperador = (
   cuenta: Cuenta,
   capacidad: CapacidadCuenta,
+  proveedorNombre?: string | null,
 ): CuentaOperadorDto => ({
   id: cuenta.id,
   proveedor_cuenta_id: cuenta.proveedorCuentaId,
   estado: cuenta.estado,
   es_exclusiva: cuenta.esExclusiva,
   empresa_revendedora_id: cuenta.empresaRevendedoraId,
+  proveedor: proveedorNombre ?? null,
   fijos: armarOcupacion(capacidad.fijo, capacidad.cercaDelTope),
   moviles: armarOcupacion(capacidad.movil, capacidad.cercaDelTope),
   capacidad: {
@@ -130,8 +134,9 @@ export const mapCuentaParaRevendedora = (
   cuenta: Cuenta,
   capacidad: CapacidadCuenta,
   credenciales: { password: string | null; pin: string | null } | null,
+  proveedorNombre?: string | null,
 ): CuentaRevendedoraDto => ({
-  ...mapCuentaParaOperador(cuenta, capacidad),
+  ...mapCuentaParaOperador(cuenta, capacidad, proveedorNombre),
   usuario: cuenta.usuario,
   password: credenciales?.password ?? undefined,
   pin: credenciales?.pin ?? undefined,

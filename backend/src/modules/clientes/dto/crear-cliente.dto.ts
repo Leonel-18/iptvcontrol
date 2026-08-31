@@ -101,15 +101,23 @@ export class CrearClienteDto {
 
   @ApiPropertyOptional({
     type: [String],
-    description:
-      'Servicios elegidos para una Cuenta compartida. El básico se agrega siempre. En Cuenta ' +
-      'completa el backend usa todos los servicios contratados.',
+    description: 'Servicios elegidos para la venta. El básico se agrega siempre.',
   })
   @IsOptional()
   @IsArray()
   @ArrayUnique()
   @IsString({ each: true })
   servicios?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      'Carga manual en una Cuenta compartida ya existente y vacía (ej. importada de SENSA sin ' +
+      'clientes). Sólo válida con `tipo_alta = dispositivo_compartido`; usa la firma de ' +
+      'servicios ya fijada en la Cuenta, no la de `servicios`.',
+  })
+  @IsOptional()
+  @IsUUID()
+  cuenta_id?: string;
 
   @ApiPropertyOptional({
     enum: [1, 2],

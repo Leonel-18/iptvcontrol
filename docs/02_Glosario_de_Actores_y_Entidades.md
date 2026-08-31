@@ -63,7 +63,7 @@ unidad que se **factura** del Operador Principal a la Empresa Revendedora, segú
 comercial vigente de esa Empresa Revendedora.
 
 Una Empresa Revendedora puede dar de alta un Cliente Final mediante una **Cuenta completa
-exclusiva**, que pertenece a ese Cliente Final e incluye todos los servicios contratados, o mediante
+exclusiva**, que pertenece a ese Cliente Final e incluye los servicios que el vendedor elija, o mediante
 una **venta compartida** (`dispositivo_compartido`) que reserva 1 fijo + 1 móvil o 2 fijos + 2
 móviles. Estas ventas comparten Cuenta únicamente cuando tienen idéntica firma de servicios y sus
 cupos caben dentro del máximo 3+3. La capacidad de cada modalidad la hace cumplir SENSA mismo, a través de sus

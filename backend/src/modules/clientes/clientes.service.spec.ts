@@ -1,4 +1,9 @@
-import { EstadoClienteFinal, EstadoDispositivo, TipoAltaClienteFinal } from '@prisma/client';
+import {
+  EstadoClienteFinal,
+  EstadoCuenta,
+  EstadoDispositivo,
+  TipoAltaClienteFinal,
+} from '@prisma/client';
 import { ClientesService } from './clientes.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -235,5 +240,165 @@ describe('ClientesService — ciclo de vida de una venta compartida', () => {
 
     expect(ventaDeleteMany).toHaveBeenCalledWith({ where: { clienteFinalId: 'cliente-1' } });
     expect(dispositivos.sincronizarCapacidadCuenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+  });
+});
+
+/**
+ * =============================================================================
+ * ClientesService — crear() con `cuenta_id` (carga manual en Cuenta vacía)
+ * =============================================================================
+ * Cuentas importadas de SENSA pueden llegar sin Clientes Finales, porque la API
+ * no informa esa relación. Este flujo permite cargar manualmente el primer
+ * Cliente Final de una Cuenta compartida vacía, usando la firma de servicios
+ * que la Cuenta ya tiene fijada (no una elegida en el wizard).
+ * =============================================================================
+ */
+describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', () => {
+  const dtoBase = {
+    nombre: 'Ana',
+    dni: '30123456',
+    tipo_alta: TipoAltaClienteFinal.dispositivo_compartido,
+    cupos_por_categoria: 1 as const,
+    dispositivo: {},
+  };
+
+  const crearServicio = (cuenta: Record<string, unknown> | null) => {
+    const clienteCreado = {
+      id: 'cliente-nuevo',
+      empresaRevendedoraId: 'empresa-1',
+      numeroCliente: 5,
+    };
+    const tx = { clienteFinal: { create: jest.fn().mockResolvedValue(clienteCreado) } };
+    const prisma = {
+      db: {
+        cuenta: { findUnique: jest.fn().mockResolvedValue(cuenta) },
+        clienteFinal: { delete: jest.fn().mockResolvedValue(undefined) },
+      },
+      transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const contexto = {
+      esOperador: false,
+      empresaRevendedoraId: 'empresa-1',
+    } as unknown as RequestContextService;
+    const alta = jest.fn().mockResolvedValue({
+      cuenta: { id: 'cuenta-vacia' },
+      cuentaCreada: false,
+      pendienteDeAutoprovision: true,
+      solicitudVinculacionId: 'solicitud-1',
+    });
+    const dispositivos = {
+      operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
+      alta,
+    } as unknown as DispositivosService;
+    const identificadores = {
+      siguienteNumeroCliente: jest.fn().mockResolvedValue(5),
+    } as unknown as IdentificadoresService;
+    const audit = { registrar: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+
+    const servicio = new ClientesService(
+      prisma,
+      audit,
+      {} as CryptoService,
+      contexto,
+      dispositivos,
+      identificadores,
+      {} as ProveedorService,
+    );
+    jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: clienteCreado.id } as never);
+    return { servicio, alta, audit, prisma };
+  };
+
+  it('rechaza cuenta_id junto con cuenta_exclusiva', async () => {
+    const { servicio } = crearServicio(null);
+
+    await expect(
+      servicio.crear({
+        ...dtoBase,
+        tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
+        cupos_por_categoria: undefined,
+        cuenta_id: 'cuenta-vacia',
+      }),
+    ).rejects.toThrow('sólo corresponden a una venta compartida');
+  });
+
+  it('rechaza si además se envían servicios', async () => {
+    const { servicio } = crearServicio(null);
+
+    await expect(
+      servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia', servicios: ['3'] }),
+    ).rejects.toThrow('ya tiene servicios fijados');
+  });
+
+  it('rechaza si la Cuenta no existe', async () => {
+    const { servicio } = crearServicio(null);
+
+    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
+      'no existe o no está disponible',
+    );
+  });
+
+  it('rechaza una Cuenta exclusiva', async () => {
+    const { servicio } = crearServicio({ id: 'cuenta-vacia', esExclusiva: true, dispositivos: [] });
+
+    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
+      'no admite carga manual',
+    );
+  });
+
+  it('rechaza una Cuenta que ya tiene un Cliente Final activo', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-vacia',
+      esExclusiva: false,
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: 'proveedor-cuenta-1',
+      dispositivos: [{ estado: EstadoDispositivo.activo, clienteFinalId: 'cliente-otro' }],
+      ventasCompartidas: [],
+    });
+
+    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
+      'ya tiene un Cliente Final activo',
+    );
+  });
+
+  it('rechaza una Cuenta que ya tiene una venta compartida reservada', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-vacia',
+      esExclusiva: false,
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: 'proveedor-cuenta-1',
+      dispositivos: [],
+      ventasCompartidas: [{ id: 'venta-1' }],
+    });
+
+    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
+      'ya tiene un Cliente Final activo',
+    );
+  });
+
+  it('carga el primer cliente usando la firma de servicios ya fijada en la Cuenta', async () => {
+    const { servicio, alta, audit } = crearServicio({
+      id: 'cuenta-vacia',
+      esExclusiva: false,
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: 'proveedor-cuenta-1',
+      servicios: '1|3|5',
+      dispositivos: [],
+      ventasCompartidas: [],
+    });
+
+    await servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia', cupos_por_categoria: 2 });
+
+    expect(alta).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cuentaIdForzada: 'cuenta-vacia',
+        servicios: '1|3|5',
+        cuposPorCategoria: 2,
+      }),
+    );
+    expect(audit.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detalle: expect.objectContaining({ cargado_manualmente_en_cuenta: true }),
+      }),
+    );
   });
 });

@@ -236,8 +236,9 @@ contacto**. Como IPTVControl no gestiona DNIs reales de personas físicas, ambos
    normal como Cliente Final nuevo e independiente) — ver `03_Reglas_de_Negocio.md`, sección 2.5.
 3. El wizard no pide tipo ni MAC. Si es `dispositivo_compartido`, permite elegir una venta 1+1 o
    2+2 y los servicios; agrega siempre el básico código 1 y calcula la firma canónica.
-4. **Si es `cuenta_exclusiva`:** crea una Cuenta nueva para ese único Cliente Final, con todos los
-   servicios contratados y capacidad comercial de hasta 3 fijos + 3 móviles.
+4. **Si es `cuenta_exclusiva`:** crea una Cuenta nueva para ese único Cliente Final, con los
+   servicios que el vendedor elija (el básico siempre incluido, igual que en una venta
+   compartida) y capacidad comercial de hasta 3 fijos + 3 móviles.
 5. **Si es `dispositivo_compartido`:** busca una Cuenta propia de firma idéntica con suficientes
    cupos libres para el 1+1 o 2+2 solicitado **y sin una Ventana de curiosidad activa** (sección
    15 de las reglas de negocio). Si existe, suma esos cupos a los contadores de SENSA antes de
@@ -253,6 +254,11 @@ contacto**. Como IPTVControl no gestiona DNIs reales de personas físicas, ambos
 9. Si la API falla en cualquier paso (fuera del caso "DNI repetido", que se maneja internamente)
    → notificación al usuario ("sistema congestionado...") sin dejar estado inconsistente en la
    base local.
+
+**Carga manual en Cuenta compartida vacía:** desde `/accounts/:id`, la Empresa Revendedora puede
+crear el primer Cliente Final de una Cuenta importada que no tenga ventas activas. El frontend
+envía `POST /customers` con `cuenta_id`; el backend conserva la firma de servicios de esa Cuenta,
+reserva 1+1 o 2+2 y abre la Ventana de curiosidad mediante el mismo flujo de alta normal.
 
 **Detección activa de Dispositivos no autorizados (confirmado 21/08/2026):** los contadores del
 paso 5 no bloquean un inicio de sesión por el reproductor web de SENSA (`cloud_client`), que
@@ -304,7 +310,8 @@ defensa real es comparar activamente el inventario de SENSA contra lo vendido:
 `PATCH /accounts/:id` (Empresa Revendedora dueña). Cambiar tipo exige a lo sumo un Cliente Final
 activo; de exclusiva a compartida, además, ≤2 Dispositivos por categoría (crea la venta 1+1/2+2
 correspondiente); de compartida a exclusiva, borra la venta y cierra cualquier Ventana de
-curiosidad activa. Servicios sólo editables en Cuenta compartida (validados contra licencias).
+curiosidad activa. Los servicios son editables en ambos tipos de Cuenta, validados contra las
+licencias contratadas y conservando siempre el servicio básico.
 Detalle completo en `03_Reglas_de_Negocio.md`, sección 2.3.1.
 
 ### 4.5. Cambio de modalidad comercial o escala

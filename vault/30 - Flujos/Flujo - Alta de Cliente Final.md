@@ -24,7 +24,7 @@ flowchart TD
     ELIGE -->|"Crear de todos modos"| METODO
 
     METODO{"Método de alta"}
-    METODO -->|"cuenta_exclusiva"| NUEVA["Crear Cuenta nueva<br/>todos los servicios contratados"]
+    METODO -->|"cuenta_exclusiva"| NUEVA["Elegir servicios y crear Cuenta nueva<br/>básico 1 siempre incluido"]
     METODO -->|"dispositivo_compartido"| FIRMA["Elegir 1+1 o 2+2 y servicios<br/>básico 1 siempre incluido"]
     FIRMA --> BUSCA{"¿Hay Cuenta propia con firma<br/>idéntica, cupos suficientes<br/>y sin Ventana de curiosidad activa?"}
     BUSCA -->|"Sí"| LIBERA["Reservar cupos, subir<br/>contadores SENSA y abrir<br/>Ventana de curiosidad"]
@@ -39,7 +39,7 @@ flowchart TD
     SONDEA --> CAND{"¿Cuántos candidatos nuevos?"}
     CAND -->|"Dentro del 1+1 o 2+2"| GUARDA["Vincular ID, MAC y tipo<br/>Dispositivo ↔ Cliente ↔ Cuenta"]
     CAND -->|"Excede cupos"| AMBIGUA["Incidencia pendiente<br/>de revisión manual"]
-    CAND -->|"Hasta 3 en Cuenta completa"| GUARDA
+    CAND -->|"Hasta 3 fijos + 3 móviles<br/>en Cuenta completa"| GUARDA
     CAND -->|"Ninguno al vencer"| REPONE["Liberar venta y<br/>resincronizar contadores"]
 
     classDef auto fill:#E9F9F0,stroke:#17B26A
@@ -72,8 +72,15 @@ SENSA exige un número de DNI para crear una Cuenta. Como el sistema no gestiona
 
 El equipo se autoprovisiona cuando el Cliente Final inicia sesión. SENSA informa ID, MAC y tipo;
 IPTVControl detecta candidatos por polling porque la API no tiene webhooks. En una Cuenta completa
-pueden vincularse hasta 3 candidatos al mismo Cliente Final. Una colisión de MAC nunca permite
+pueden vincularse hasta 3 fijos + 3 móviles al mismo Cliente Final. Una colisión de MAC nunca permite
 reasignar automáticamente un Dispositivo existente.
+
+## Carga manual en una Cuenta compartida vacía
+
+Una Cuenta importada desde SENSA puede no tener Clientes Finales asociados porque la API no informa
+esa relación. Desde su detalle, la Empresa Revendedora puede cargar el primer cliente, elegir 1+1 o
+2+2 y definir la duración de la [[Ventana de curiosidad]]. Los servicios no se vuelven a elegir: se
+usa la firma que la Cuenta ya tiene fijada.
 
 ## Si el Proveedor falla
 

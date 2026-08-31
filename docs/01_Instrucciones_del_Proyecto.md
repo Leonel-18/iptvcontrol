@@ -122,7 +122,13 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
   a las Empresas Revendedoras.
 - **Alta de Cliente Final:** implementada como **wizard** (asistente paso a paso), no un formulario
   único. En la venta compartida permite elegir 1+1 o 2+2 y servicios, con el servicio básico código
-  1 siempre incluido; la Cuenta completa recibe todos los servicios contratados.
+  1 siempre incluido; en la Cuenta completa los servicios también son seleccionables y el básico
+  permanece siempre incluido.
+
+**Nota de actualización (31/08/2026):** la Cuenta completa exclusiva **dejó de recibir
+automáticamente todos los servicios contratados**: ahora también son seleccionables en el wizard,
+igual que en la venta compartida (el básico sigue siempre incluido). Ver
+`03_Reglas_de_Negocio.md`, sección 2.1.
 - Aislamiento multi-tenant total entre Empresas Revendedoras (identificación por ID para soporte,
   sin acceso a datos sensibles entre sí; tampoco la Empresa Revendedora ve datos del Operador
   Principal).

@@ -94,7 +94,7 @@ export class CuentasController {
     description:
       'Cambiar de tipo sólo es posible con a lo sumo un Cliente Final activo; de exclusiva a ' +
       'compartida, además, sin superar 2 Dispositivos fijos ni 2 móviles (máximo de una venta ' +
-      '2+2). Los servicios sólo se editan en una Cuenta compartida.',
+      '2+2). Los servicios se validan siempre contra lo contratado.',
   })
   async actualizar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ActualizarCuentaDto) {
     return this.cuentas.actualizarPropiedades(id, dto);

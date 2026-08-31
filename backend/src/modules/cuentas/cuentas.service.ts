@@ -125,6 +125,7 @@ export class CuentasService {
     const cuenta = await this.prisma.db.cuenta.findUnique({
       where: { id },
       include: {
+        proveedor: { select: { nombre: true } },
         ventasCompartidas: { select: { cuposPorCategoria: true } },
         dispositivos: {
           include: {
@@ -146,7 +147,7 @@ export class CuentasService {
 
     if (this.contexto.esOperador) {
       return {
-        ...mapCuentaParaOperador(cuenta, capacidad),
+        ...mapCuentaParaOperador(cuenta, capacidad, cuenta.proveedor?.nombre),
         dispositivos: cuenta.dispositivos.map(mapDispositivoParaOperador),
       };
     }
@@ -162,7 +163,7 @@ export class CuentasService {
       ? { activa: null, historial: [] }
       : await this.ventanasCuriosidad.obtenerEstadoEHistorial(cuenta.id);
     return {
-      ...mapCuentaParaRevendedora(cuenta, capacidad, credenciales),
+      ...mapCuentaParaRevendedora(cuenta, capacidad, credenciales, cuenta.proveedor?.nombre),
       dispositivos: cuenta.dispositivos.map(mapDispositivoParaRevendedora),
       clientes_finales: this.resumirClientes(cuenta.dispositivos),
       ventana_curiosidad: ventanas.activa,
@@ -285,8 +286,8 @@ export class CuentasService {
    * Cambiar de tipo sólo es posible si la Cuenta tiene a lo sumo un Cliente
    * Final activo: de exclusiva a compartida, además, ese cliente no puede
    * tener más de 2 Dispositivos fijos ni 2 móviles (el máximo de una venta es
-   * 2+2). Los servicios sólo se editan manualmente en una Cuenta compartida;
-   * la exclusiva siempre incluye todos los contratados.
+   * 2+2). Los servicios se validan siempre contra lo contratado, sin importar
+   * el tipo de Cuenta (el básico se agrega siempre desde `normalizarServicios`).
    */
   async actualizarPropiedades(id: string, dto: ActualizarCuentaDto) {
     if (this.contexto.esOperador) {
@@ -314,12 +315,6 @@ export class CuentasService {
     const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
     const esExclusivaFinal = dto.es_exclusiva ?? cuenta.esExclusiva;
     const cambiaTipo = esExclusivaFinal !== cuenta.esExclusiva;
-
-    if (esExclusivaFinal && dto.servicios !== undefined) {
-      throw new BadRequestException(
-        'Una Cuenta exclusiva no permite elegir servicios manualmente: incluye todos los contratados.',
-      );
-    }
 
     const clientesActivos = new Set(
       cuenta.dispositivos
@@ -352,7 +347,7 @@ export class CuentasService {
     }
 
     let serviciosNuevos: string | undefined;
-    if (!esExclusivaFinal && dto.servicios !== undefined) {
+    if (dto.servicios !== undefined) {
       const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
       serviciosNuevos = normalizarServicios(dto.servicios);
       validarServiciosContratados(serviciosNuevos, licencias);

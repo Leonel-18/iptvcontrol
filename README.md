@@ -50,12 +50,12 @@ Operador Principal (Tecnología Activa)
 ## Funcionalidades del MVP
 
 - Alta de Cliente Final por **dos métodos**: Cuenta completa exclusiva para un único cliente, con
-  hasta 3 Dispositivos y todos los servicios contratados, o venta unitaria de exactamente 1
-  Dispositivo dentro de una Cuenta compartida con firma de servicios idéntica.
-- Alta como **wizard** paso a paso: la venta unitaria permite elegir servicios y siempre incluye el
-  básico código 1; no solicita tipo ni MAC.
-- Protección de los cupos no vendidos de Cuentas compartidas con Dispositivos de reserva técnicos:
-  2 reservas con una venta, 1 con dos y ninguna con tres.
+  hasta 3 fijos + 3 móviles, o venta 1+1/2+2 dentro de una Cuenta compartida con firma de servicios
+  idéntica y máximo de 3 cupos por categoría.
+- Alta como **wizard** paso a paso: ambos métodos permiten elegir servicios y siempre incluyen el
+  básico código 1; no solicitan tipo ni MAC.
+- Protección de capacidad mediante los contadores nativos de SENSA, sincronizados con los cupos
+  comprometidos por cada venta compartida.
 - Generación automática del **identificador tipo DNI** y del **correo de contacto** que SENSA exige
   (números parametrizables por el Operador Principal).
 - Descubrimiento del Dispositivo al primer login: SENSA reporta ID, MAC y tipo; IPTVControl sondea

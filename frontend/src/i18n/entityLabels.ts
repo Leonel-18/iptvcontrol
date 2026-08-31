@@ -149,7 +149,7 @@ export const customerIntakeLabels: Record<string, string> = {
 
 export const customerIntakeHelp: Record<string, string> = {
   cuenta_exclusiva:
-    "Se crea una Cuenta nueva para este cliente, con todos los servicios contratados y hasta 3 fijos + 3 móviles.",
+    "Se crea una Cuenta nueva para este cliente, con los servicios elegidos y hasta 3 fijos + 3 móviles.",
   dispositivo_compartido:
     "Reserva 1+1 o 2+2 Dispositivos, en una Cuenta compartida sólo con ventas de exactamente la misma selección de servicios.",
 };
