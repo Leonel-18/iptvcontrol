@@ -38,8 +38,9 @@ Revendedora no puede autogestionarlo) — depende 100% del trato comercial pacta
 Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
 1. **Cuenta completa exclusiva**: el sistema siempre crea una Cuenta nueva en SENSA para ese
    Cliente Final, sin buscar espacio en Cuentas existentes. La Cuenta pertenece a ese único cliente,
-   incluye todos los servicios contratados y permite registrar hasta **3 Dispositivos fijos + 3
-   móviles** (hasta 6 Dispositivos en total, sin relación entre sí).
+   incluye los servicios que el vendedor elija (el básico siempre incluido, igual que en una venta
+   compartida) y permite registrar hasta **3 Dispositivos fijos + 3 móviles** (hasta 6 Dispositivos
+   en total, sin relación entre sí).
 2. **Venta en Cuenta compartida** (`dispositivo_compartido`): el vendedor elige si reserva
    **1 fijo + 1 móvil** o **2 fijos + 2 móviles** para ese Cliente Final ("fijo" =
    TV/`stationary`; "móvil" = celular, tablet o PC por navegador
@@ -50,6 +51,11 @@ Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
    **3 cupos fijos + 3 móviles**: puede alojar tres ventas 1+1, o una venta 2+2 y otra 1+1.
    Una venta 2+2 no puede entrar donde sólo quede un cupo por categoría.
 3. El formulario no solicita tipo ni MAC: SENSA los informa al primer login de cada equipo.
+4. **Carga manual en una Cuenta compartida vacía** (`POST /customers` con `cuenta_id`): las
+   Cuentas importadas de SENSA pueden llegar sin Clientes Finales, porque la API no informa esa
+   relación. Sólo aplica si la Cuenta es compartida y no tiene ningún Cliente Final activo; usa la
+   firma de servicios que la Cuenta ya tiene fijada (no se re-elige) y sigue el mismo flujo de
+   reserva de cupos y Ventana de curiosidad que un alta normal.
 
 ### 2.2. Bloqueo de capacidad vía contadores de SENSA y descubrimiento del Dispositivo
 
@@ -120,8 +126,8 @@ compartida) y/o los **servicios** de una Cuenta ya creada:
   móviles (el máximo de una venta es 2+2); se crea la venta 1+1 o 2+2 que corresponda.
 - De compartida a exclusiva se elimina la venta y se cierra cualquier Ventana de curiosidad activa
   (sección 15).
-- Los servicios sólo se editan manualmente en una Cuenta compartida (validados contra lo
-  contratado); una Cuenta exclusiva siempre incluye todos los servicios contratados.
+- Los servicios se pueden editar en cualquier tipo de Cuenta, siempre validados contra lo
+  contratado (el básico nunca se puede quitar).
 - Todo cambio queda auditado (`cambio_tipo_cuenta`, `cambio_servicios_cuenta`).
 
 ### 2.4. Identificador (DNI), credenciales y datos enviados a SENSA

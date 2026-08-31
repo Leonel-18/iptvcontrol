@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, KeyRound, Lock, Pencil, RefreshCw, XCircle } from "lucide-react";
+import { ArrowLeft, KeyRound, Lock, Pencil, RefreshCw, UserPlus, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { AccountDevicesTab } from "./AccountDevicesTab";
 import { AccountProviderInventoryTab } from "./AccountProviderInventoryTab";
 import { CuriosityWindowPanel } from "./CuriosityWindowPanel";
 import { EditAccountDialog } from "./EditAccountDialog";
+import { AddManualCustomerDialog } from "./AddManualCustomerDialog";
 import { CapacityMeter } from "@/components/CapacityMeter";
 import {
   Alert,
@@ -67,6 +68,7 @@ export const AccountDetail = () => {
   const [confirmarLiberacion, setConfirmarLiberacion] = useState(false);
   const [cambiarPasswordAbierto, setCambiarPasswordAbierto] = useState(false);
   const [editarAbierto, setEditarAbierto] = useState(false);
+  const [agregarClienteAbierto, setAgregarClienteAbierto] = useState(false);
   const [passwordNueva, setPasswordNueva] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
 
@@ -296,6 +298,14 @@ export const AccountDetail = () => {
         <EditAccountDialog cuenta={data} abierto={editarAbierto} onCambio={setEditarAbierto} />
       ) : null}
 
+      {!esOperador && !data.es_exclusiva ? (
+        <AddManualCustomerDialog
+          cuenta={data}
+          abierto={agregarClienteAbierto}
+          onCambio={setAgregarClienteAbierto}
+        />
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {!esOperador && !data.es_exclusiva ? (
@@ -388,9 +398,21 @@ export const AccountDetail = () => {
                         </TBody>
                       </Table>
                     ) : (
-                      <p className="py-6 text-center text-sm texto-suave">
-                        Esta cuenta todavía no tiene clientes asociados.
-                      </p>
+                      <div className="space-y-3 py-6 text-center">
+                        <p className="text-sm texto-suave">
+                          Esta cuenta todavía no tiene clientes asociados.
+                        </p>
+                        {!data.es_exclusiva && data.capacidad.ocupados === 0 ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setAgregarClienteAbierto(true)}
+                          >
+                            <UserPlus className="size-3.5" />
+                            Cargar cliente manualmente
+                          </Button>
+                        ) : null}
+                      </div>
                     )}
                   </TabsContent>
                 ) : null}
@@ -543,6 +565,9 @@ export const AccountDetail = () => {
                   <Badge tone={data.es_exclusiva ? "info" : "neutral"}>
                     {data.es_exclusiva ? "Exclusiva" : "Compartida"}
                   </Badge>
+                </DetailRow>
+                <DetailRow etiqueta="Proveedor">
+                  {data.proveedor ?? "—"}
                 </DetailRow>
                 {data.servicios_nombres ? (
                   <DetailRow etiqueta="Contenido habilitado">

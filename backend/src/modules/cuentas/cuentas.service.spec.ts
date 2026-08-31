@@ -262,8 +262,7 @@ describe('CuentasService — cambiarPassword', () => {
  * =============================================================================
  * Cambiar de tipo sólo es seguro con a lo sumo un Cliente Final activo; de
  * exclusiva a compartida, además, sin superar 2 Dispositivos por categoría
- * (el máximo de una venta es 2+2). Los servicios sólo se editan manualmente
- * en una Cuenta compartida.
+ * (el máximo de una venta es 2+2). Los servicios se editan en ambos tipos.
  * =============================================================================
  */
 describe('CuentasService — actualizarPropiedades', () => {
@@ -386,17 +385,26 @@ describe('CuentasService — actualizarPropiedades', () => {
     ).rejects.toThrow('todavía no se confirmó en el Proveedor');
   });
 
-  it('rechaza servicios manuales para una Cuenta que queda exclusiva', async () => {
-    const { servicio } = crearServicio({
+  it('permite editar servicios de una Cuenta exclusiva (ya no incluye todo automático)', async () => {
+    const { servicio, actualizarServicios, cuentaUpdate } = crearServicio({
       id: 'cuenta-1',
       proveedorCuentaId: '30000001',
       esExclusiva: true,
+      servicios: '1',
+      empresaRevendedoraId: 'empresa-1',
       dispositivos: [],
     });
 
-    await expect(servicio.actualizarPropiedades('cuenta-1', { servicios: ['3'] })).rejects.toThrow(
-      'no permite elegir servicios manualmente',
-    );
+    await servicio.actualizarPropiedades('cuenta-1', { servicios: ['3'] });
+
+    expect(actualizarServicios).toHaveBeenCalledWith('operador-1', {
+      proveedorCuentaId: '30000001',
+      servicios: '1|3',
+    });
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: { id: 'cuenta-1' },
+      data: { esExclusiva: true, servicios: '1|3' },
+    });
   });
 
   it('rechaza el cambio de tipo con más de un Cliente Final activo', async () => {

@@ -44,6 +44,7 @@ export interface Account {
   estado: "activa" | "cerrada";
   es_exclusiva: boolean;
   empresa_revendedora_id: string;
+  proveedor?: string | null;
   capacidad: AccountCapacity;
   fijos: CapacityCategory;
   moviles: CapacityCategory;

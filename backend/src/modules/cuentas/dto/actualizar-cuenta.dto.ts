@@ -17,9 +17,7 @@ export class ActualizarCuentaDto {
 
   @ApiPropertyOptional({
     type: [String],
-    description:
-      'Códigos de servicio nuevos para una Cuenta compartida (el básico se agrega siempre). ' +
-      'No aplica a una Cuenta exclusiva, que siempre incluye todos los servicios contratados.',
+    description: 'Códigos de servicio nuevos para la Cuenta (el básico se agrega siempre).',
   })
   @IsOptional()
   @IsArray()

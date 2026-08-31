@@ -53,9 +53,10 @@ Unidad de contratación entre el Operador Principal y el Proveedor, y **la unida
 - Contraseña de exactamente **8 dígitos numéricos** y PIN de **6 dígitos numéricos**.
 - Un identificador tipo **DNI** exigido por SENSA, generado por IPTVControl (no es un DNI real).
 - Un correo de contacto derivado del correo de la Empresa Revendedora.
-- Capacidad comercial máxima global: **3 Dispositivos**, indistintamente del tipo.
-- Una Cuenta completa pertenece a un solo Cliente Final y recibe todos los servicios contratados.
-- Una Cuenta compartida aloja hasta 3 ventas unitarias con idéntica firma de servicios.
+- Una Cuenta completa pertenece a un solo Cliente Final, permite elegir servicios y admite hasta
+  **3 fijos + 3 móviles**.
+- Una Cuenta compartida aloja ventas 1+1 o 2+2 con idéntica firma de servicios, sin superar
+  **3 cupos fijos + 3 móviles**.
 
 ### Dispositivo
 
@@ -65,8 +66,8 @@ Cliente Final dentro de una Cuenta.
 - **No tiene precio propio** en el sistema: cuánto le cobra la Empresa Revendedora a su Cliente
   Final se define por fuera de IPTVControl.
 - El formulario no pide tipo ni MAC. SENSA reporta ID, MAC y tipo al primer login; IPTVControl los
-  detecta mediante sondeo durante la ventana inicial. Varios candidatos dejan ambigua una venta
-  unitaria; una Cuenta completa puede vincular hasta 3 al mismo Cliente Final.
+  detecta mediante sondeo durante la ventana inicial. Una Cuenta completa puede vincular hasta
+  3 fijos + 3 móviles al mismo Cliente Final.
 - Admite una **nota descriptiva** libre ("TV living"), que es dato interno: no se envía al
   Proveedor y no se expone al Operador Principal.
 - Puede ser una **reserva técnica** sin Cliente Final, con MAC unicast administrada localmente,
@@ -74,9 +75,9 @@ Cliente Final dentro de una Cuenta.
 
 ### Relación Cuenta – Dispositivo – Cliente Final
 
-Una Cuenta completa puede vincular hasta 3 Dispositivos al mismo Cliente Final. Una Cuenta
-compartida puede alojar hasta 3 ventas unitarias, cada una para un Cliente Final y exactamente 1
-Dispositivo, siempre que tengan idéntica firma de servicios.
+Una Cuenta completa puede vincular hasta 3 fijos + 3 móviles al mismo Cliente Final. Una Cuenta
+compartida puede alojar ventas 1+1 o 2+2 para distintos Clientes Finales, siempre que tengan
+idéntica firma de servicios y no superen 3 cupos por categoría.
 
 > **Punto crítico:** todos ellos reciben **las mismas credenciales**, sin saberlo entre sí. Ver
 > [[Riesgo aceptado - contraseña compartida]].

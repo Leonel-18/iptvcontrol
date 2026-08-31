@@ -60,7 +60,6 @@ export const EditAccountDialog = ({
 
   const cambioTipo = esExclusiva !== cuenta.es_exclusiva;
   const cambioServicios =
-    !esExclusiva &&
     (servicios.length !== serviciosActuales.length ||
       servicios.some((codigo) => !serviciosActuales.includes(codigo)));
   const hayCambios = cambioTipo || cambioServicios;
@@ -106,11 +105,7 @@ export const EditAccountDialog = ({
             </div>
           </fieldset>
 
-          {esExclusiva ? (
-            <Alert tone="info">
-              Una Cuenta exclusiva incluye automáticamente todos los servicios contratados.
-            </Alert>
-          ) : catalogo.isPending ? (
+          {catalogo.isPending ? (
             <Skeleton className="h-28" />
           ) : catalogo.isError ? (
             <Alert tone="danger" titulo="No se pudo cargar el catálogo de servicios">

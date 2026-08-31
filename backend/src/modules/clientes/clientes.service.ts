@@ -11,6 +11,7 @@ import {
   ClienteFinal,
   EntidadAuditada,
   EstadoClienteFinal,
+  EstadoCuenta,
   EstadoDispositivo,
   EstadoSolicitudVinculacion,
   Prisma,
@@ -25,14 +26,10 @@ import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { DispositivosService } from '../dispositivos/dispositivos.service';
 import { IdentificadoresService } from '../cuentas/identificadores.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
-import {
-  normalizarServicios,
-  serviciosContratados,
-  validarServiciosContratados,
-} from '../../proveedor/servicios.util';
+import { normalizarServicios, validarServiciosContratados } from '../../proveedor/servicios.util';
 import { CrearClienteDto } from './dto/crear-cliente.dto';
 import { ActualizarClienteDto, ListarClientesQueryDto } from './dto/listar-clientes.query';
-import { calcularCapacidad } from '../cuentas/capacidad.util';
+import { calcularCapacidad, ESTADOS_QUE_OCUPAN } from '../cuentas/capacidad.util';
 import { nombresDeServicios } from '../cuentas/cuentas.mapper';
 
 /** Coincidencia de `id_gestion_externo` dentro de la misma Empresa Revendedora. */
@@ -349,19 +346,61 @@ export class ClientesService {
     if (
       dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva &&
       (dto.cupos_por_categoria !== undefined ||
-        dto.duracion_ventana_curiosidad_minutos !== undefined)
+        dto.duracion_ventana_curiosidad_minutos !== undefined ||
+        dto.cuenta_id !== undefined)
     ) {
       throw new BadRequestException(
-        'Los cupos y la Ventana de curiosidad sólo corresponden a una venta compartida.',
+        'Los cupos, la Ventana de curiosidad y la carga manual en una Cuenta sólo corresponden ' +
+          'a una venta compartida.',
       );
     }
 
-    const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
-    const servicios =
-      dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva
-        ? serviciosContratados(licencias)
-        : normalizarServicios(dto.servicios ?? []);
-    validarServiciosContratados(servicios, licencias);
+    let servicios: string;
+    let cuentaVaciaId: string | undefined;
+
+    if (dto.cuenta_id) {
+      // Carga manual en una Cuenta compartida ya existente y vacía (ej.
+      // importada de SENSA sin clientes): usa la firma de servicios que ya
+      // tiene fijada la Cuenta, no una elegida en el wizard.
+      if (dto.servicios !== undefined) {
+        throw new BadRequestException(
+          'Esta Cuenta ya tiene servicios fijados: no se pueden re-seleccionar acá.',
+        );
+      }
+      const cuenta = await this.prisma.db.cuenta.findUnique({
+        where: { id: dto.cuenta_id },
+        include: {
+          dispositivos: { select: { estado: true, clienteFinalId: true } },
+          ventasCompartidas: { select: { id: true } },
+        },
+      });
+      if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
+      if (cuenta.esExclusiva) {
+        throw new BadRequestException(
+          'Esta Cuenta es exclusiva: no admite carga manual de clientes.',
+        );
+      }
+      if (cuenta.estado !== EstadoCuenta.activa || !cuenta.proveedorCuentaId) {
+        throw new BadRequestException(
+          'Esta Cuenta todavía no está activa y confirmada por el Proveedor.',
+        );
+      }
+      const tieneClientesActivos = cuenta.dispositivos.some(
+        (dispositivo) =>
+          ESTADOS_QUE_OCUPAN.includes(dispositivo.estado) && dispositivo.clienteFinalId,
+      );
+      if (tieneClientesActivos || cuenta.ventasCompartidas.length > 0) {
+        throw new BadRequestException(
+          'Esta Cuenta ya tiene un Cliente Final activo: use el alta normal en vez de la carga manual.',
+        );
+      }
+      servicios = cuenta.servicios;
+      cuentaVaciaId = dto.cuenta_id;
+    } else {
+      const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
+      servicios = normalizarServicios(dto.servicios ?? []);
+      validarServiciosContratados(servicios, licencias);
+    }
 
     // --- Alta normal ---------------------------------------------------------
     const cliente = await this.prisma.transaction(async (tx) => {
@@ -392,6 +431,7 @@ export class ClientesService {
         clienteFinal: cliente,
         notaDescriptiva: dto.dispositivo.nota_descriptiva,
         cuentaExclusiva: dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva,
+        cuentaIdForzada: cuentaVaciaId,
         operadorPrincipalId,
         servicios,
         cuposPorCategoria: dto.cupos_por_categoria,
@@ -410,6 +450,7 @@ export class ClientesService {
           cupos_por_categoria: dto.cupos_por_categoria ?? null,
           cuenta_id: resultado.cuenta.id,
           cuenta_creada: resultado.cuentaCreada,
+          cargado_manualmente_en_cuenta: Boolean(cuentaVaciaId),
           duplicado_confirmado: Boolean(dto.confirmar_duplicado),
         },
       });

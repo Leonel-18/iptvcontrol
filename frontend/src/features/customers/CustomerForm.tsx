@@ -214,10 +214,12 @@ export const CustomerForm = () => {
             direccion: valores.direccion.trim() || undefined,
             id_gestion_externo: valores.idGestionExterno.trim() || undefined,
             tipo_alta: valores.metodoAlta,
+            ...(decisionDuplicado?.tipo !== 'agrupar'
+              ? { servicios: valores.servicios }
+              : {}),
             ...(decisionDuplicado?.tipo !== 'agrupar' &&
             valores.metodoAlta === 'dispositivo_compartido'
               ? {
-                  servicios: valores.servicios,
                   cupos_por_categoria: valores.cuposPorCategoria,
                   duracion_ventana_curiosidad_minutos:
                     valores.duracionVentanaCuriosidadMinutos,
@@ -664,34 +666,12 @@ export const CustomerForm = () => {
                   No se puede continuar con el alta hasta que el Operador Principal disponga de al
                   menos un servicio contratado.
                 </Alert>
-              ) : valores.metodoAlta === 'cuenta_exclusiva' ? (
-                <div className="space-y-3">
-                  <Alert tone="info" titulo="Todos los servicios están incluidos">
-                    La Cuenta completa recibe automáticamente todos los servicios contratados. No es
-                    necesario elegirlos.
-                  </Alert>
-                  <ul className="grid gap-2 sm:grid-cols-2" aria-label="Servicios incluidos">
-                    {serviciosContratados.map((servicio) => (
-                      <li
-                        key={servicio.codigo}
-                        className="flex items-start gap-3 rounded-lg border px-3 py-3"
-                      >
-                        <Check className="mt-0.5 size-4 shrink-0 text-signal" aria-hidden="true" />
-                        <div>
-                          <p className="text-sm font-medium">{servicio.nombre}</p>
-                          {servicio.nota ? (
-                            <p className="mt-0.5 text-xs texto-suave">{servicio.nota}</p>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
               ) : (
                 <div className="space-y-3">
                   <Alert tone="info">
-                    Una Cuenta sólo se comparte con otras ventas que tengan exactamente la misma
-                    selección de servicios.
+                    {valores.metodoAlta === 'dispositivo_compartido'
+                      ? 'Una Cuenta sólo se comparte con otras ventas que tengan exactamente la misma selección de servicios.'
+                      : 'La Cuenta completa recibe únicamente los servicios que tilde acá.'}
                   </Alert>
                   <fieldset>
                     <legend className="mb-2 text-sm font-medium">Servicios de esta venta</legend>
@@ -806,11 +786,7 @@ export const CustomerForm = () => {
                   ) : (
                     <ul className="space-y-0.5">
                       {serviciosContratados
-                        .filter(
-                          (servicio) =>
-                            valores.metodoAlta === 'cuenta_exclusiva' ||
-                            valores.servicios.includes(servicio.codigo),
-                        )
+                        .filter((servicio) => valores.servicios.includes(servicio.codigo))
                         .map((servicio) => (
                           <li key={servicio.codigo}>{servicio.nombre}</li>
                         ))}
@@ -830,8 +806,8 @@ export const CustomerForm = () => {
                   </p>
                 ) : valores.metodoAlta === 'cuenta_exclusiva' ? (
                   <p>
-                    La Cuenta completa incluye todos los servicios contratados y permite hasta 3
-                    fijos + 3 móviles para este cliente.
+                    La Cuenta completa incluye los servicios seleccionados y permite hasta 3 fijos
+                    + 3 móviles para este cliente.
                   </p>
                 ) : (
                   <p>
