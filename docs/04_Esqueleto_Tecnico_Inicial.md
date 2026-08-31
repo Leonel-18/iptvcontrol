@@ -300,6 +300,13 @@ defensa real es comparar activamente el inventario de SENSA contra lo vendido:
    curiosidad activa) o crea una nueva. Los Dispositivos existentes permanecen donde están: nunca se
    fuerza un cupo imposible en la Cuenta actual.
 
+### 4.4.1. Edición de tipo y servicios de una Cuenta existente
+`PATCH /accounts/:id` (Empresa Revendedora dueña). Cambiar tipo exige a lo sumo un Cliente Final
+activo; de exclusiva a compartida, además, ≤2 Dispositivos por categoría (crea la venta 1+1/2+2
+correspondiente); de compartida a exclusiva, borra la venta y cierra cualquier Ventana de
+curiosidad activa. Servicios sólo editables en Cuenta compartida (validados contra licencias).
+Detalle completo en `03_Reglas_de_Negocio.md`, sección 2.3.1.
+
 ### 4.5. Cambio de modalidad comercial o escala
 1. Solo ejecutable por el Operador Principal (no autogestionable por la Empresa Revendedora),
    tanto para downgrade como para upgrade de escala.

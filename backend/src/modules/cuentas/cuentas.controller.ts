@@ -13,6 +13,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CuentasService } from './cuentas.service';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
+import { ActualizarCuentaDto } from './dto/actualizar-cuenta.dto';
 import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
@@ -84,6 +85,19 @@ export class CuentasController {
   })
   async obtener(@Param('id', ParseUUIDPipe) id: string) {
     return this.cuentas.obtener(id);
+  }
+
+  @Patch(':id')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Edita el tipo de Cuenta (exclusiva ↔ compartida) y/o sus servicios.',
+    description:
+      'Cambiar de tipo sólo es posible con a lo sumo un Cliente Final activo; de exclusiva a ' +
+      'compartida, además, sin superar 2 Dispositivos fijos ni 2 móviles (máximo de una venta ' +
+      '2+2). Los servicios sólo se editan en una Cuenta compartida.',
+  })
+  async actualizar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ActualizarCuentaDto) {
+    return this.cuentas.actualizarPropiedades(id, dto);
   }
 
   @Get(':id/credentials')

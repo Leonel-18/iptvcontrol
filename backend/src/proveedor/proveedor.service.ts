@@ -3,6 +3,7 @@ import {
   ActivarDispositivoParams,
   ActualizarCapacidadParams,
   ActualizarPasswordParams,
+  ActualizarServiciosParams,
   CredencialesProveedor,
   CrearCuentaParams,
   CuentaProveedor,
@@ -94,6 +95,14 @@ export class ProveedorService {
   ): Promise<void> {
     const { adapter, configuracion } = await this.resolver(operadorPrincipalId);
     await adapter.actualizarPassword(configuracion.credenciales, params);
+  }
+
+  async actualizarServicios(
+    operadorPrincipalId: string,
+    params: ActualizarServiciosParams,
+  ): Promise<void> {
+    const { adapter, configuracion } = await this.resolver(operadorPrincipalId);
+    await adapter.actualizarServicios(configuracion.credenciales, params);
   }
 
   async activarDispositivo(
