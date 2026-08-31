@@ -5,8 +5,17 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import type { CustomerDetail, ExternalIdMatch, ServiceCatalogItem } from '@/lib/types';
-import { customerIntakeHelp, customerIntakeLabels } from '@/i18n/entityLabels';
+import type {
+  CustomerDetail,
+  ExternalIdMatch,
+  ServiceCatalogItem,
+  SharedCapacity,
+} from '@/lib/types';
+import {
+  customerIntakeHelp,
+  customerIntakeLabels,
+  sharedCapacityLabels,
+} from '@/i18n/entityLabels';
 import { PageHeader } from '@/components/common';
 import {
   Alert,
@@ -87,6 +96,7 @@ interface EstadoFormulario {
   direccion: string;
   idGestionExterno: string;
   metodoAlta: MetodoAlta;
+  cuposPorCategoria: SharedCapacity;
   servicios: string[];
   notaDescriptiva: string;
 }
@@ -100,6 +110,7 @@ const INICIAL: EstadoFormulario = {
   direccion: '',
   idGestionExterno: '',
   metodoAlta: 'dispositivo_compartido',
+  cuposPorCategoria: 1,
   servicios: ['1'],
   notaDescriptiva: '',
 };
@@ -128,7 +139,7 @@ export const CustomerForm = () => {
   const serviciosContratados = (catalogo.data ?? []).filter((servicio) => servicio.contratado);
   const catalogoDisponible = catalogo.isSuccess && serviciosContratados.length > 0;
 
-  // Por defecto se ofrece la venta unitaria con TODOS los servicios contratados
+  // Por defecto se ofrece la venta compartida con TODOS los servicios contratados
   // marcados (igual que la Cuenta completa): la Empresa Revendedora desmarca lo
   // que no corresponda, en vez de tener que marcar uno por uno. Sólo se aplica
   // una vez, cuando el catálogo termina de cargar y todavía no se tocó nada.
@@ -182,7 +193,10 @@ export const CustomerForm = () => {
             tipo_alta: valores.metodoAlta,
             ...(decisionDuplicado?.tipo !== 'agrupar' &&
             valores.metodoAlta === 'dispositivo_compartido'
-              ? { servicios: valores.servicios }
+              ? {
+                  servicios: valores.servicios,
+                  cupos_por_categoria: valores.cuposPorCategoria,
+                }
               : {}),
             dispositivo: {
               nota_descriptiva: valores.notaDescriptiva.trim() || undefined,
@@ -524,6 +538,35 @@ export const CustomerForm = () => {
                 </button>
               ))}
 
+              {valores.metodoAlta === 'dispositivo_compartido' ? (
+                <fieldset className="rounded-lg border p-4">
+                  <legend className="px-1 text-sm font-medium">Dispositivos de esta venta</legend>
+                  <p className="mb-3 text-sm texto-suave">
+                    Esta reserva se descuenta de los 3 cupos fijos y 3 móviles de la Cuenta.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {([1, 2] as SharedCapacity[]).map((cantidad) => (
+                      <button
+                        key={cantidad}
+                        type="button"
+                        onClick={() => actualizar('cuposPorCategoria', cantidad)}
+                        className={cn(
+                          'rounded-lg border px-4 py-3 text-left transition-colors',
+                          valores.cuposPorCategoria === cantidad
+                            ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
+                            : 'hover:bg-navy-50 dark:hover:bg-navy-800',
+                        )}
+                      >
+                        <span className="block font-medium">{sharedCapacityLabels[cantidad]}</span>
+                        <span className="mt-0.5 block text-xs texto-suave">
+                          Consume {cantidad} de los 3 cupos por categoría.
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
+
               <Alert tone="info">
                 En una cuenta compartida, todos los clientes finales que estén ahí usan las mismas
                 credenciales. Es la contrapartida de aprovechar mejor cada cuenta.
@@ -684,6 +727,12 @@ export const CustomerForm = () => {
                     ? `Dispositivo adicional para ${decisionDuplicado.nombre}`
                     : customerIntakeLabels[valores.metodoAlta]}
                 </Resumen>
+                {decisionDuplicado?.tipo !== 'agrupar' &&
+                valores.metodoAlta === 'dispositivo_compartido' ? (
+                  <Resumen etiqueta="Dispositivos autorizados">
+                    {sharedCapacityLabels[valores.cuposPorCategoria]}
+                  </Resumen>
+                ) : null}
                 <Resumen etiqueta="Servicios">
                   {decisionDuplicado?.tipo === 'agrupar' ? (
                     'Heredados de la Cuenta existente'
@@ -709,8 +758,8 @@ export const CustomerForm = () => {
               <Alert tone="info" titulo="Qué va a pasar al confirmar">
                 {decisionDuplicado?.tipo === 'agrupar' ? (
                   <p>
-                    Se autoriza un Dispositivo adicional con los servicios de la Cuenta existente
-                    (hasta 1 fijo + 1 móvil por venta, en una Cuenta compartida).
+                    Se autoriza un Dispositivo adicional con los servicios y los cupos disponibles
+                    de la venta existente.
                   </p>
                 ) : valores.metodoAlta === 'cuenta_exclusiva' ? (
                   <p>
@@ -719,9 +768,9 @@ export const CustomerForm = () => {
                   </p>
                 ) : (
                   <p>
-                    La venta unitaria autoriza hasta 1 Dispositivo fijo + 1 móvil para este cliente,
-                    en una Cuenta compartida sólo con otras ventas de exactamente la misma selección
-                    de servicios.
+                    La venta reserva {sharedCapacityLabels[valores.cuposPorCategoria]} para este
+                    cliente, en una Cuenta compartida sólo con otras ventas de exactamente la misma
+                    selección de servicios y con cupos suficientes.
                   </p>
                 )}
               </Alert>

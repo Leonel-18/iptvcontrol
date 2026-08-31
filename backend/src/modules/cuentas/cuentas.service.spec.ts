@@ -22,7 +22,9 @@ describe('CuentasService — cerrar', () => {
     const prisma = {
       db: {
         cuenta: {
-          findUnique: jest.fn().mockResolvedValue(cuenta),
+          findUnique: jest
+            .fn()
+            .mockResolvedValue(cuenta ? { ventasCompartidas: [], ...cuenta } : null),
           delete: cuentaDelete,
           update: cuentaUpdate,
         },

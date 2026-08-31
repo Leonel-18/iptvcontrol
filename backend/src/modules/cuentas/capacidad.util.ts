@@ -8,12 +8,11 @@ import { EstadoDispositivo, TipoDispositivo } from '@prisma/client';
  * fantasma". El bloqueo real de capacidad ahora lo hace SENSA mismo, a través
  * de sus contadores nativos `auto_provision_count_mobile` /
  * `auto_provision_count_stationary`: IPTVControl sólo tiene que mantenerlos
- * sincronizados con la cantidad de ventas activas de la Cuenta.
+ * sincronizados con los cupos comprometidos por sus ventas activas.
  *
- *  - Cuenta COMPARTIDA (es_exclusiva = false): aloja hasta 3 ventas unitarias
- *    (Clientes Finales distintos). Cada venta tiene derecho a hasta 1
- *    Dispositivo fijo + 1 móvil ("fijo" = TV/stationary; "móvil" = celular,
- *    tablet o PC por navegador `cloud_client`).
+ *  - Cuenta COMPARTIDA (es_exclusiva = false): tiene 3 cupos por categoría.
+ *    Cada venta reserva 1+1 o 2+2; por ejemplo, admite tres ventas 1+1 o una
+ *    venta 2+2 más otra 1+1.
  *  - Cuenta EXCLUSIVA (es_exclusiva = true): un único Cliente Final, con hasta
  *    3 fijos + 3 móviles (6 Dispositivos en total), sin relación con ventas.
  * =============================================================================
@@ -27,8 +26,8 @@ export const ESTADOS_QUE_OCUPAN: EstadoDispositivo[] = [
 
 /** Tope por categoría en una Cuenta exclusiva: hasta 3 fijos y hasta 3 móviles. */
 export const LIMITE_POR_CATEGORIA_EXCLUSIVA = 3;
-/** Tope de ventas (Clientes Finales distintos) en una Cuenta compartida. */
-export const LIMITE_VENTAS_COMPARTIDA = 3;
+/** Tope comercial por categoría en una Cuenta compartida. */
+export const LIMITE_POR_CATEGORIA_COMPARTIDA = 3;
 
 export interface DispositivoCapacidadInput {
   tipo: TipoDispositivo | null;
@@ -39,6 +38,7 @@ export interface DispositivoCapacidadInput {
 export interface CuentaCapacidadInput {
   esExclusiva: boolean;
   dispositivos: DispositivoCapacidadInput[];
+  ventasCompartidas?: { cuposPorCategoria: number }[];
 }
 
 export interface CapacidadCategoria {
@@ -50,7 +50,7 @@ export interface CapacidadCategoria {
 
 export interface CapacidadCuenta {
   esExclusiva: boolean;
-  /** Ventas activas (Clientes Finales distintos con lugar ocupado). Sólo tiene sentido en compartidas. */
+  /** Ventas compartidas activas. Sólo tiene sentido en Cuentas compartidas. */
   ventas: number;
   limiteVentas: number;
   fijo: CapacidadCategoria;
@@ -107,10 +107,9 @@ const armarCategoria = (ocupados: number, limite: number): CapacidadCategoria =>
 /**
  * Calcula la capacidad de una Cuenta según su modo (compartida o exclusiva).
  *
- * Para Cuentas compartidas, `fijo`/`movil` reflejan cuántos Dispositivos de esa
- * categoría hay ocupados vs. habilitados según las ventas activas (1 por venta);
- * `libres`/`completa` a nivel de Cuenta indican si hay lugar para una VENTA
- * nueva (Cliente Final nuevo), no para una categoría suelta.
+ * Para Cuentas compartidas, `fijo`/`movil` reflejan Dispositivos vinculados
+ * contra cupos comprometidos. A nivel de Cuenta, `ocupados` representa esos
+ * cupos comerciales (no la cantidad de Clientes Finales ni de equipos reales).
  */
 export const calcularCapacidad = (
   cuenta: CuentaCapacidadInput,
@@ -138,26 +137,25 @@ export const calcularCapacidad = (
     };
   }
 
-  const ventas = contarVentasActivas(cuenta.dispositivos);
-  const limiteVentas = LIMITE_VENTAS_COMPARTIDA;
-  const libresVentas = Math.max(0, limiteVentas - ventas);
-  const completa = libresVentas === 0;
+  const ventas = cuenta.ventasCompartidas?.length ?? contarVentasActivas(cuenta.dispositivos);
+  const cuposComprometidos = cuenta.ventasCompartidas
+    ? cuenta.ventasCompartidas.reduce((total, venta) => total + venta.cuposPorCategoria, 0)
+    : ventas;
+  const limite = LIMITE_POR_CATEGORIA_COMPARTIDA;
+  const libres = Math.max(0, limite - cuposComprometidos);
+  const completa = libres === 0;
 
   return {
     esExclusiva: false,
     ventas,
-    limiteVentas,
-    // Habilitado por categoría = cantidad de ventas activas (1 por venta): es
-    // justo el valor que se le pide a SENSA en dispositivos_fijos/moviles.
-    fijo: armarCategoria(ocupadosFijo, ventas),
-    movil: armarCategoria(ocupadosMovil, ventas),
-    // A nivel de Cuenta, "ocupados/limite" son ventas (no Dispositivos crudos):
-    // es lo que hay que comparar contra el tope comercial de 3.
-    ocupados: ventas,
-    limite: limiteVentas,
-    libres: libresVentas,
+    limiteVentas: limite,
+    fijo: armarCategoria(ocupadosFijo, cuposComprometidos),
+    movil: armarCategoria(ocupadosMovil, cuposComprometidos),
+    ocupados: cuposComprometidos,
+    limite,
+    libres,
     completa,
-    cercaDelTope: ventas >= Math.min(umbralAlerta, limiteVentas),
+    cercaDelTope: cuposComprometidos >= Math.min(umbralAlerta, limite),
   };
 };
 

@@ -9,8 +9,8 @@ implementado-en: backend/src/modules/cuentas/capacidad.util.ts
 El tope comercial depende del **modo** de la Cuenta:
 
 - **Exclusiva**: un único Cliente Final, hasta **3 fijos + 3 móviles** (6 Dispositivos en total).
-- **Compartida**: hasta **3 ventas** de Clientes Finales distintos, cada una con hasta **1 fijo +
-  1 móvil** (2 Dispositivos por venta, 6 en total como máximo).
+- **Compartida**: **3 cupos fijos + 3 móviles**, repartidos entre ventas **1+1** o **2+2**.
+  Puede alojar tres ventas 1+1, o una 2+2 y otra 1+1.
 
 > [!info] Reemplaza el modelo anterior
 > Este documento reemplaza el esquema previo de "3 Dispositivos globales sin distinción de tipo" y
@@ -22,13 +22,13 @@ El tope comercial depende del **modo** de la Cuenta:
 SENSA expone en cada Cuenta dos contadores por categoría —
 `auto_provision_count_mobile` y `auto_provision_count_stationary`— que limitan cuántos
 Dispositivos de esa categoría puede auto-provisionar la Cuenta. IPTVControl los mantiene
-sincronizados con la cantidad de **ventas activas**:
+sincronizados con los **cupos comprometidos** por las ventas activas:
 
 | Cuenta | Contadores |
 |---|---|
-| Compartida, 1 venta | 1 / 1 |
-| Compartida, 2 ventas | 2 / 2 |
-| Compartida, 3 ventas (tope) | 3 / 3 |
+| Compartida, venta 1+1 | 1 / 1 |
+| Compartida, venta 2+2 | 2 / 2 |
+| Compartida, ventas 2+2 y 1+1 (tope) | 3 / 3 |
 | Exclusiva | fijo en 3 / 3, no varía |
 
 Al sumarse una venta nueva, IPTVControl sube el contador **antes** de abrir la ventana de
@@ -40,14 +40,14 @@ debajo de 1 mientras la Cuenta esté activa).
 
 ```mermaid
 flowchart TD
-    A["Nueva venta unitaria"] --> B["Calcular firma canónica<br/>de servicios"]
-    B --> C{"¿Hay Cuenta compartida<br/>con la misma firma y menos de 3 ventas?"}
-    C -->|"Sí"| D["Subir contadores de SENSA<br/>a ventas + 1"]
-    C -->|"No"| E["Crear Cuenta nueva<br/>(arranca en 1/1)"]
+    A["Nueva venta compartida<br/>elegir 1+1 o 2+2"] --> B["Calcular firma canónica<br/>de servicios"]
+    B --> C{"¿Hay Cuenta compartida<br/>con firma idéntica y cupos suficientes?"}
+    C -->|"Sí"| D["Sumar los cupos reservados<br/>a contadores SENSA"]
+    C -->|"No"| E["Crear Cuenta nueva<br/>(arranca en 1/1 o 2/2)"]
     D --> F["Abrir descubrimiento<br/>10 min, cada 30 s"]
     E --> F
     F --> G{"¿Candidatos nuevos?"}
-    G -->|"1 fijo y/o 1 móvil<br/>dentro del cupo del cliente"| H["Vincular al Cliente Final"]
+    G -->|"Hasta el 1+1 o 2+2<br/>reservado"| H["Vincular al Cliente Final"]
     G -->|"Exceden el cupo<br/>de esta venta/Cuenta"| I["Incidencia pendiente<br/>de revisión manual"]
     G -->|"Ninguno al vencer"| J["Dispositivo vuelve a disponible;<br/>contador se resincroniza"]
 
@@ -57,15 +57,15 @@ flowchart TD
     class I,J alerta
 ```
 
-Antes de crear una venta unitaria, el wizard permite elegir servicios y siempre incluye el básico
-código 1. Solo se reutilizan Cuentas con firma de servicios idéntica.
+Antes de crear una venta compartida, el wizard permite elegir 1+1 o 2+2 y los servicios; siempre
+incluye el básico código 1. Sólo se reutilizan Cuentas con firma idéntica y cupos suficientes.
 
 ## Descubrimiento después del primer login
 
 El formulario no solicita tipo ni MAC. SENSA reporta ID, MAC y tipo al primer login. IPTVControl
 toma una instantánea previa y sondea cada 30 segundos durante 10 minutos:
 
-- En una venta unitaria se pueden vincular hasta 1 candidato fijo + 1 candidato móvil al mismo
+- En una venta compartida se pueden vincular hasta 1+1 o 2+2 candidatos al mismo
   Cliente Final ("fijo" = TV/`stationary`; "móvil" = celular, tablet o PC por navegador
   `cloud_client` — confirmado por Bruno el 24/08/2026, caso Valentín Alamo).
 - En una Cuenta exclusiva pueden vincularse hasta 3 fijos + 3 móviles al mismo Cliente Final.
@@ -90,7 +90,7 @@ Ver [[Ciclo de vida del Cliente Final]].
 
 ## Alerta de "cerca del tope"
 
-Cuando una Cuenta compartida llega a **2 de 3 ventas**, o una Cuenta exclusiva se acerca a su tope
+Cuando una Cuenta compartida compromete **2 de 3 cupos por categoría**, o una Cuenta exclusiva se acerca a su tope
 de 3 fijos + 3 móviles, el panel de la Empresa Revendedora muestra un aviso visual. Anticipa que
 una venta adicional puede requerir otra Cuenta compatible.
 
@@ -103,7 +103,7 @@ La ocupación se representa con un medidor de barras segmentadas (3 en una Cuent
 una exclusiva), que toma el vocabulario visual del propio logo (las barras de señal junto al
 monitor):
 
-- barra azul llena → lugar ocupado (venta o Dispositivo, según el modo)
+- barra azul llena → cupo comprometido o Dispositivo, según el modo
 - barra ámbar llena → bloqueado por suspensión
 - barra vacía → cupo comercial disponible
 

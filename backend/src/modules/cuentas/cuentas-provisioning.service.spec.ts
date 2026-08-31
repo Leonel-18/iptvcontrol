@@ -1,5 +1,8 @@
 import { EstadoCuenta } from '@prisma/client';
-import { CuentasProvisioningService } from './cuentas-provisioning.service';
+import {
+  CuentasProvisioningService,
+  SincronizacionContadoresPendienteError,
+} from './cuentas-provisioning.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -171,7 +174,7 @@ describe('CuentasProvisioningService — contadores de venta', () => {
   };
 
   const crearServicio = (
-    dispositivos: { estado: string; clienteFinalId: string | null }[],
+    ventasCompartidas: { clienteFinalId: string; cuposPorCategoria: number }[],
     overrides?: Partial<typeof cuentaCompartida>,
   ) => {
     const actualizarCapacidadDispositivos = jest.fn().mockResolvedValue(undefined);
@@ -180,14 +183,42 @@ describe('CuentasProvisioningService — contadores de venta', () => {
     } as unknown as ProveedorService;
 
     const cuentaUpdate = jest.fn().mockResolvedValue(cuentaCompartida);
+    const ventaDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const cuenta = { ...cuentaCompartida, ...overrides, ventasCompartidas };
+    const ventaCreate = jest.fn().mockImplementation(({ data }) => {
+      cuenta.ventasCompartidas.push({
+        clienteFinalId: data.clienteFinalId,
+        cuposPorCategoria: data.cuposPorCategoria,
+      });
+      return undefined;
+    });
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      cuenta: { findUniqueOrThrow: jest.fn().mockResolvedValue(cuenta) },
+      ventaCompartida: { create: ventaCreate },
+    };
+    const operadorTx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      cuenta: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue(cuenta),
+        update: cuentaUpdate,
+      },
+      dispositivo: { count: jest.fn().mockResolvedValue(0) },
+      ventaCompartida: { deleteMany: ventaDeleteMany },
+    };
     const prisma = {
+      transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_operador: string, fn: (client: unknown) => unknown) =>
+          fn(operadorTx),
+        ),
       db: {
         cuenta: {
-          findUniqueOrThrow: jest
-            .fn()
-            .mockResolvedValue({ ...cuentaCompartida, ...overrides, dispositivos }),
+          findUniqueOrThrow: jest.fn().mockResolvedValue(cuenta),
           update: cuentaUpdate,
         },
+        ventaCompartida: { deleteMany: ventaDeleteMany },
       },
     } as unknown as PrismaService;
 
@@ -200,22 +231,118 @@ describe('CuentasProvisioningService — contadores de venta', () => {
       {} as AuditService,
     );
 
-    return { servicio, actualizarCapacidadDispositivos, cuentaUpdate };
+    return {
+      servicio,
+      actualizarCapacidadDispositivos,
+      cuentaUpdate,
+      ventaCreate,
+      ventaDeleteMany,
+      operadorTx,
+    };
   };
 
-  it('al sumar la 2ª venta, sube los tres contadores de 1 a 2 (no sólo fijos/móviles)', async () => {
-    const { servicio, actualizarCapacidadDispositivos } = crearServicio([
-      { estado: 'activo', clienteFinalId: 'cliente-1' },
+  it('reserva una venta 2+2 junto a una 1+1 y sube los tres contadores a 3', async () => {
+    const { servicio, actualizarCapacidadDispositivos, ventaCreate } = crearServicio([
+      { clienteFinalId: 'cliente-1', cuposPorCategoria: 1 },
     ]);
 
-    await servicio.incrementarCapacidadPorNuevaVenta('cuenta-1', 'operador-1');
+    await servicio.reservarCapacidadPorNuevaVenta({
+      cuentaId: 'cuenta-1',
+      clienteFinalId: 'cliente-2',
+      empresaRevendedoraId: 'empresa-1',
+      cuposPorCategoria: 2,
+      operadorPrincipalId: 'operador-1',
+      actualizarProveedor: true,
+    });
+
+    expect(ventaCreate).toHaveBeenCalledWith({
+      data: {
+        cuentaId: 'cuenta-1',
+        clienteFinalId: 'cliente-2',
+        empresaRevendedoraId: 'empresa-1',
+        cuposPorCategoria: 2,
+      },
+    });
 
     expect(actualizarCapacidadDispositivos).toHaveBeenCalledWith('operador-1', {
       proveedorCuentaId: '30000026',
-      limiteDispositivos: 2,
-      dispositivosFijos: 2,
-      dispositivosMoviles: 2,
+      limiteDispositivos: 3,
+      dispositivosFijos: 3,
+      dispositivosMoviles: 3,
     });
+  });
+
+  it('rechaza una venta 2+2 cuando sólo queda un cupo por categoría', async () => {
+    const { servicio, actualizarCapacidadDispositivos, ventaCreate } = crearServicio([
+      { clienteFinalId: 'cliente-1', cuposPorCategoria: 2 },
+    ]);
+
+    await expect(
+      servicio.reservarCapacidadPorNuevaVenta({
+        cuentaId: 'cuenta-1',
+        clienteFinalId: 'cliente-2',
+        empresaRevendedoraId: 'empresa-1',
+        cuposPorCategoria: 2,
+        operadorPrincipalId: 'operador-1',
+        actualizarProveedor: true,
+      }),
+    ).rejects.toThrow('límite comercial');
+
+    expect(ventaCreate).not.toHaveBeenCalled();
+    expect(actualizarCapacidadDispositivos).not.toHaveBeenCalled();
+  });
+
+  it('no elimina una venta preexistente si SENSA falla al resincronizarla', async () => {
+    const { servicio, actualizarCapacidadDispositivos, ventaDeleteMany } = crearServicio([
+      { clienteFinalId: 'cliente-1', cuposPorCategoria: 1 },
+    ]);
+    actualizarCapacidadDispositivos.mockRejectedValueOnce(new Error('SENSA caído'));
+
+    await expect(
+      servicio.reservarCapacidadPorNuevaVenta({
+        cuentaId: 'cuenta-1',
+        clienteFinalId: 'cliente-1',
+        empresaRevendedoraId: 'empresa-1',
+        cuposPorCategoria: 1,
+        operadorPrincipalId: 'operador-1',
+        actualizarProveedor: true,
+      }),
+    ).rejects.toThrow('SENSA caído');
+
+    expect(ventaDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it('señala un reintento durable si SENSA confirmó pero falla la proyección local', async () => {
+    const { servicio, operadorTx, ventaDeleteMany } = crearServicio([]);
+    operadorTx.cuenta.update.mockRejectedValueOnce(new Error('PostgreSQL no disponible'));
+
+    const operacion = servicio.reservarCapacidadPorNuevaVenta({
+      cuentaId: 'cuenta-1',
+      clienteFinalId: 'cliente-1',
+      empresaRevendedoraId: 'empresa-1',
+      cuposPorCategoria: 1,
+      operadorPrincipalId: 'operador-1',
+      actualizarProveedor: true,
+    });
+
+    await expect(operacion).rejects.toMatchObject({
+      constructor: SincronizacionContadoresPendienteError,
+      cuentaId: 'cuenta-1',
+      ventaCreada: true,
+    });
+    expect(ventaDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it('no compensa la reserva si otra operación ya creó un Dispositivo para esa venta', async () => {
+    const { servicio, operadorTx, ventaDeleteMany, actualizarCapacidadDispositivos } =
+      crearServicio([{ clienteFinalId: 'cliente-1', cuposPorCategoria: 1 }]);
+    operadorTx.dispositivo.count.mockResolvedValueOnce(1);
+
+    const eliminada = await servicio.liberarCapacidadDeVenta('cuenta-1', 'cliente-1', 'operador-1');
+
+    expect(eliminada).toBe(false);
+    expect(ventaDeleteMany).not.toHaveBeenCalled();
+    expect(actualizarCapacidadDispositivos).not.toHaveBeenCalled();
   });
 
   it('al quedarse sin ventas activas, resincroniza los tres contadores hacia abajo (mínimo 1)', async () => {
@@ -236,30 +363,59 @@ describe('CuentasProvisioningService — contadores de venta', () => {
   });
 
   it('una Cuenta exclusiva nunca toca los contadores de SENSA por ventas', async () => {
-    const actualizarCapacidadDispositivos = jest.fn();
+    const { servicio, actualizarCapacidadDispositivos } = crearServicio([], {
+      esExclusiva: true,
+    });
+
+    await servicio.reservarCapacidadPorNuevaVenta({
+      cuentaId: 'cuenta-1',
+      clienteFinalId: 'cliente-1',
+      empresaRevendedoraId: 'empresa-1',
+      cuposPorCategoria: 1,
+      operadorPrincipalId: 'operador-1',
+      actualizarProveedor: true,
+    });
+    await servicio.sincronizarContadoresVenta('cuenta-1', 'operador-1');
+
+    expect(actualizarCapacidadDispositivos).not.toHaveBeenCalled();
+  });
+});
+
+describe('CuentasProvisioningService — búsqueda por cupos', () => {
+  const crearServicio = () => {
     const prisma = {
       db: {
         cuenta: {
-          findUniqueOrThrow: jest.fn().mockResolvedValue({
-            ...cuentaCompartida,
-            esExclusiva: true,
-            dispositivos: [],
-          }),
+          findMany: jest.fn().mockResolvedValue([
+            {
+              id: 'cuenta-con-un-cupo',
+              esExclusiva: false,
+              dispositivos: [],
+              ventasCompartidas: [{ cuposPorCategoria: 2 }],
+            },
+          ]),
         },
       },
     } as unknown as PrismaService;
-    const servicio = new CuentasProvisioningService(
+    return new CuentasProvisioningService(
       prisma,
       {} as CryptoService,
-      { actualizarCapacidadDispositivos } as unknown as ProveedorService,
+      {} as ProveedorService,
       {} as ConfiguracionProveedorService,
       {} as IdentificadoresService,
       {} as AuditService,
     );
+  };
 
-    await servicio.incrementarCapacidadPorNuevaVenta('cuenta-1', 'operador-1');
-    await servicio.sincronizarContadoresVenta('cuenta-1', 'operador-1');
+  it('acepta una venta 1+1 cuando queda un cupo por categoría', async () => {
+    await expect(crearServicio().buscarCuentaConLugar('empresa-1', 2, [], '1', 1)).resolves.toBe(
+      'cuenta-con-un-cupo',
+    );
+  });
 
-    expect(actualizarCapacidadDispositivos).not.toHaveBeenCalled();
+  it('rechaza una venta 2+2 cuando queda un solo cupo por categoría', async () => {
+    await expect(
+      crearServicio().buscarCuentaConLugar('empresa-1', 2, [], '1', 2),
+    ).resolves.toBeNull();
   });
 });

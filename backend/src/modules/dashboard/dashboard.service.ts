@@ -54,6 +54,7 @@ export class DashboardService {
           id: true,
           esExclusiva: true,
           dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+          ventasCompartidas: { select: { cuposPorCategoria: true } },
         },
       }),
       this.prisma.db.dispositivo.groupBy({ by: ['estado'], _count: { _all: true } }),

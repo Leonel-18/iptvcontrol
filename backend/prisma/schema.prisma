@@ -297,6 +297,7 @@ model EmpresaRevendedora {
 
   clientesFinales        ClienteFinal[]
   cuentas                Cuenta[]
+  ventasCompartidas      VentaCompartida[]
   dispositivos           Dispositivo[]
   solicitudesVinculacion SolicitudVinculacionDispositivo[]
   incidenciasDispositivo IncidenciaDispositivoProveedor[]
@@ -322,7 +323,7 @@ model ClienteFinal {
   /// de la misma Empresa Revendedora, sin bloquear el alta (reglas 2.4).
   idGestionExterno String? @map("id_gestion_externo") @db.VarChar(40)
 
-  nombre String  @db.VarChar(120)
+  nombre   String  @db.VarChar(120)
   apellido String? @db.VarChar(120)
 
   /// DNI real de la persona (dato administrativo de la Empresa Revendedora).
@@ -353,7 +354,8 @@ model ClienteFinal {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  dispositivos Dispositivo[]
+  dispositivos      Dispositivo[]
+  ventasCompartidas VentaCompartida[]
 
   @@unique([empresaRevendedoraId, numeroCliente])
   @@index([empresaRevendedoraId, estado])
@@ -409,11 +411,40 @@ model Cuenta {
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
   dispositivos           Dispositivo[]
+  ventasCompartidas      VentaCompartida[]
   solicitudesVinculacion SolicitudVinculacionDispositivo[]
   incidenciasDispositivo IncidenciaDispositivoProveedor[]
 
   @@index([empresaRevendedoraId, estado])
   @@map("cuenta")
+}
+
+/// Reserva comercial de cupos entre un Cliente Final y una Cuenta compartida.
+/// No se infiere desde los equipos detectados: la venta debe conservar su 1+1
+/// o 2+2 aunque el cliente todavía no haya vinculado todos sus Dispositivos.
+model VentaCompartida {
+  id String @id @default(uuid()) @db.Uuid
+
+  cuentaId String @map("cuenta_id") @db.Uuid
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  clienteFinalId String       @map("cliente_final_id") @db.Uuid
+  clienteFinal   ClienteFinal @relation(fields: [clienteFinalId], references: [id], onDelete: Cascade)
+
+  /// Denormalizado para RLS y consultas multi-tenant sin joins.
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  /// Únicos valores comerciales válidos: 1 (1+1) o 2 (2+2).
+  cuposPorCategoria Int @map("cupos_por_categoria")
+
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  @@unique([cuentaId, clienteFinalId])
+  @@index([empresaRevendedoraId])
+  @@index([cuentaId])
+  @@index([clienteFinalId])
+  @@map("venta_compartida")
 }
 
 /// Dispositivo físico (TV o móvil) vinculado a un Cliente Final dentro de una
@@ -489,6 +520,9 @@ model SolicitudVinculacionDispositivo {
   ultimoSondeoEn             DateTime?                  @map("ultimo_sondeo_en")
   cantidadIntentos           Int                        @default(0) @map("cantidad_intentos")
   motivoAmbiguedad           String?                    @map("motivo_ambiguedad") @db.VarChar(300)
+  /// Permite liberar la reserva si vence el primer intento de una venta nueva,
+  /// sin borrar una venta existente cuando sólo venció un Dispositivo adicional.
+  creaVentaCompartida        Boolean                    @default(false) @map("crea_venta_compartida")
 
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")

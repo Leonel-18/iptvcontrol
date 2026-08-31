@@ -57,18 +57,18 @@ una contraseña y un PIN únicos**, un identificador tipo **DNI** exigido por SE
 (generado internamente por el sistema, no un DNI real — ver `03_Reglas_de_Negocio.md`, sección 2),
 un **correo de contacto** procedimental derivado del correo de la Empresa Revendedora, y una
 capacidad comercial que depende de su modo: **exclusiva** (hasta 3 fijos + 3 móviles para un único
-Cliente Final) o **compartida** (hasta 3 ventas, cada una con hasta 1 fijo + 1 móvil). La contraseña
+Cliente Final) o **compartida** (3 cupos por categoría, repartidos entre ventas 1+1 o 2+2). La contraseña
 de la Cuenta tiene exactamente **8 dígitos numéricos** y el PIN, **6 dígitos numéricos**. Es la
 unidad que se **factura** del Operador Principal a la Empresa Revendedora, según la modalidad
 comercial vigente de esa Empresa Revendedora.
 
 Una Empresa Revendedora puede dar de alta un Cliente Final mediante una **Cuenta completa
 exclusiva**, que pertenece a ese Cliente Final e incluye todos los servicios contratados, o mediante
-una **venta unitaria** (`dispositivo_compartido`) que autoriza hasta 1 Dispositivo fijo + 1 móvil.
-Las ventas unitarias comparten Cuenta únicamente cuando tienen idéntica firma de servicios, hasta 3
-ventas por Cuenta. La capacidad de cada modalidad la hace cumplir SENSA mismo, a través de sus
+una **venta compartida** (`dispositivo_compartido`) que reserva 1 fijo + 1 móvil o 2 fijos + 2
+móviles. Estas ventas comparten Cuenta únicamente cuando tienen idéntica firma de servicios y sus
+cupos caben dentro del máximo 3+3. La capacidad de cada modalidad la hace cumplir SENSA mismo, a través de sus
 contadores nativos `auto_provision_count_mobile`/`auto_provision_count_stationary`, que IPTVControl
-mantiene sincronizados con la cantidad de ventas activas (ver `03_Reglas_de_Negocio.md`,
+mantiene sincronizados con la cantidad de cupos comprometidos (ver `03_Reglas_de_Negocio.md`,
 sección 2.2).
 
 ### Dispositivo
@@ -79,7 +79,7 @@ a cada Cliente Final por su Dispositivo.
 
 El formulario de alta no pide tipo ni MAC. Al primer login, SENSA reporta el **ID**, la **MAC** y el
 **tipo** del equipo; IPTVControl detecta candidatos durante 10 minutos, con sondeo cada 30 segundos.
-En una venta unitaria se pueden vincular hasta 1 candidato fijo + 1 candidato móvil al mismo Cliente
+En una venta compartida se pueden vincular hasta 1+1 o 2+2 candidatos al mismo Cliente
 Final; en una Cuenta completa, hasta 3 fijos + 3 móviles al mismo Cliente Final. Un candidato que
 exceda el cupo de su categoría queda como incidencia pendiente de revisión manual (nunca se elimina
 solo). Sobre el Dispositivo vinculado, la Empresa Revendedora puede agregar una **nota descriptiva
@@ -91,8 +91,8 @@ titular siga suspendido (ver `03_Reglas_de_Negocio.md`, sección 3).
 
 ### Relación Cuenta – Dispositivo – Cliente Final
 Una Cuenta completa pertenece a un único Cliente Final, que puede vincular hasta 3 fijos + 3
-móviles. Una Cuenta compartida aloja hasta 3 ventas unitarias de idéntica firma de servicios, cada
-una para un Cliente Final con hasta 1 fijo + 1 móvil. **Punto crítico de diseño (riesgo de negocio
+móviles. Una Cuenta compartida aloja ventas de idéntica firma de servicios que reservan 1+1 o 2+2,
+sin superar sus 3 cupos por categoría. **Punto crítico de diseño (riesgo de negocio
 aceptado):** los Clientes Finales que comparten Cuenta reciben las mismas credenciales de acceso,
 sin saberlo entre sí, y el sistema no rota la contraseña cuando ingresa una venta nueva después de
 una baja definitiva — ver riesgo aceptado en `03_Reglas_de_Negocio.md`, sección 6.

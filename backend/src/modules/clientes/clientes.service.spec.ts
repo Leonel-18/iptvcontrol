@@ -171,3 +171,68 @@ describe('ClientesService — visibilidad según el rol (regla 4.2)', () => {
     });
   });
 });
+
+describe('ClientesService — ciclo de vida de una venta compartida', () => {
+  const crearServicio = () => {
+    const cliente = {
+      id: 'cliente-1',
+      empresaRevendedoraId: 'empresa-1',
+      numeroCliente: 10,
+      estado: EstadoClienteFinal.activo,
+      dispositivos: [
+        {
+          id: 'dispositivo-1',
+          estado: EstadoDispositivo.activo,
+          notaDescriptiva: null,
+        },
+      ],
+      ventasCompartidas: [{ cuentaId: 'cuenta-1', cuposPorCategoria: 2 }],
+    };
+    const ventaDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    const tx = {
+      clienteFinal: { update: jest.fn().mockResolvedValue(undefined) },
+      ventaCompartida: { deleteMany: ventaDeleteMany },
+    };
+    const prisma = {
+      db: { clienteFinal: { findUnique: jest.fn().mockResolvedValue(cliente) } },
+      transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const dispositivos = {
+      operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
+      liberar: jest.fn().mockResolvedValue(undefined),
+      sincronizarCapacidadCuenta: jest.fn().mockResolvedValue(undefined),
+    } as unknown as DispositivosService;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+    const servicio = new ClientesService(
+      prisma,
+      audit,
+      {} as CryptoService,
+      { esOperador: false } as RequestContextService,
+      dispositivos,
+      {} as IdentificadoresService,
+      {} as ProveedorService,
+    );
+    jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: cliente.id } as never);
+    return { servicio, dispositivos, ventaDeleteMany };
+  };
+
+  it('conserva los cupos 2+2 durante una suspensión', async () => {
+    const { servicio, dispositivos, ventaDeleteMany } = crearServicio();
+
+    await servicio.suspender('cliente-1');
+
+    expect(ventaDeleteMany).not.toHaveBeenCalled();
+    expect(dispositivos.sincronizarCapacidadCuenta).not.toHaveBeenCalled();
+  });
+
+  it('libera los cupos y resincroniza la Cuenta en la baja definitiva', async () => {
+    const { servicio, dispositivos, ventaDeleteMany } = crearServicio();
+
+    await servicio.darDeBaja('cliente-1');
+
+    expect(ventaDeleteMany).toHaveBeenCalledWith({ where: { clienteFinalId: 'cliente-1' } });
+    expect(dispositivos.sincronizarCapacidadCuenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+  });
+});

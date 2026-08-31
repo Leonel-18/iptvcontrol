@@ -125,8 +125,8 @@ export class ClientesController {
     summary: 'Alta de Cliente Final.',
     description:
       'Dos métodos: `cuenta_exclusiva` (siempre crea una Cuenta nueva) o ' +
-      '`dispositivo_compartido` (busca lugar en una Cuenta propia y, si no hay, crea una nueva ' +
-      'con la misma firma de servicios). Cada Cuenta admite hasta 3 Dispositivos.',
+      '`dispositivo_compartido` (reserva 1+1 o 2+2 y busca una Cuenta propia con firma idéntica ' +
+      'y cupos suficientes). Una Cuenta compartida admite 3 cupos por categoría.',
   })
   async crear(@Body() dto: CrearClienteDto) {
     return this.clientes.crear(dto);

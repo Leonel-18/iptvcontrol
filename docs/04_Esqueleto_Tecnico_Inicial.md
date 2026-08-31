@@ -65,10 +65,17 @@ Cuenta
 ├── es_exclusiva (boolean — true si fue creada para un único Cliente Final vía "cuenta exclusiva")
 ├── firma_servicios (firma canónica; obliga compatibilidad exacta en Cuentas compartidas)
 ├── dispositivos_fijos_habilitados (contador nativo de SENSA; exclusiva: fijo en 3; compartida:
-│                                    igual a la cantidad de ventas activas, ver sección 2.2 de
+│                                    igual a los cupos comprometidos, ver sección 2.2 de
 │                                    03_Reglas_de_Negocio.md)
 ├── dispositivos_moviles_habilitados (ídem, para la categoría móvil)
 └── estado (activa/cerrada)
+
+VentaCompartida
+├── id
+├── cuenta_id (FK)
+├── cliente_final_id (FK)
+├── empresa_revendedora_id (FK denormalizada para RLS)
+└── cupos_por_categoria (1 para una venta 1+1; 2 para una venta 2+2)
 
 Dispositivo
 ├── id
@@ -144,7 +151,7 @@ integración es por consulta activa (polling) desde IPTVControl.
 - Un **Operador Principal** tiene muchas **Empresas Revendedoras**.
 - Una **Empresa Revendedora** tiene muchos **Clientes Finales** y muchas **Cuentas**.
 - Una **Cuenta** exclusiva admite hasta 3 fijos + 3 móviles para su único Cliente Final; una Cuenta
-  compartida admite hasta 3 ventas, cada una con hasta 1 fijo + 1 móvil.
+  compartida tiene 3 cupos por categoría y admite ventas 1+1 o 2+2 mientras quepan.
 - Un **Dispositivo** pertenece a una única **Cuenta**, y a un único **Cliente Final** mientras esté
   activo (puede quedar sin Cliente Final asociado si está bloqueado por suspensión).
 - Un **Cliente Final** puede tener uno o más **Dispositivos**, incluso en **Cuentas distintas**. Si
@@ -205,19 +212,18 @@ contacto**. Como IPTVControl no gestiona DNIs reales de personas físicas, ambos
    muestra una advertencia con dos opciones: **agrupar** (deriva al flujo 4.4, alta de Dispositivo
    adicional para el Cliente Final ya existente) o **crear de todos modos** (continúa el flujo
    normal como Cliente Final nuevo e independiente) — ver `03_Reglas_de_Negocio.md`, sección 2.5.
-3. El wizard no pide tipo ni MAC. Si es `dispositivo_compartido`, permite elegir servicios y agrega
-   siempre el básico código 1; después calcula la firma canónica.
+3. El wizard no pide tipo ni MAC. Si es `dispositivo_compartido`, permite elegir una venta 1+1 o
+   2+2 y los servicios; agrega siempre el básico código 1 y calcula la firma canónica.
 4. **Si es `cuenta_exclusiva`:** crea una Cuenta nueva para ese único Cliente Final, con todos los
    servicios contratados y capacidad comercial de hasta 3 fijos + 3 móviles.
-5. **Si es `dispositivo_compartido`:** busca una Cuenta propia con menos de 3 ventas y firma de
-   servicios idéntica. Si existe, sube los contadores `dispositivos_fijos`/`dispositivos_moviles`
-   de SENSA a la cantidad de ventas + 1 antes de abrir la ventana; si no, crea una Cuenta nueva
-   (arranca en 1/1).
+5. **Si es `dispositivo_compartido`:** busca una Cuenta propia de firma idéntica con suficientes
+   cupos libres para el 1+1 o 2+2 solicitado. Si existe, suma esos cupos a los contadores de SENSA
+   antes de abrir la ventana; si no, crea una Cuenta nueva que arranca en 1/1 o 2/2.
 6. Al crear Cuenta, genera `dni_alta_sensa` y `email_contacto` (ver 3.1). Si SENSA responde "DNI
    repetido", incrementa el DNI y reintenta.
 7. Toma una instantánea de Dispositivos, abre una ventana de 10 minutos y consulta a SENSA cada 30
-   segundos desde el primer login. En una venta unitaria, se pueden vincular hasta 1 candidato fijo
-   + 1 candidato móvil al mismo Cliente Final; en Cuenta completa, hasta 3 fijos + 3 móviles.
+   segundos desde el primer login. En una venta compartida se pueden vincular hasta 1+1 o 2+2,
+   según lo reservado; en Cuenta completa, hasta 3 fijos + 3 móviles.
 8. Si vence la ventana de una venta nueva sin ningún candidato, el Dispositivo vuelve a `disponible`
    y el contador de SENSA se resincroniza contra las ventas activas reales (baja solo).
 9. Si la API falla en cualquier paso (fuera del caso "DNI repetido", que se maneja internamente)
@@ -262,10 +268,10 @@ defensa real es comparar activamente el inventario de SENSA contra lo vendido:
    (coincidencia de `id_gestion_externo`, opción "agrupar").
 2. Si es una Cuenta completa con menos de 3 fijos o menos de 3 móviles para ese cliente, abre el
    flujo de descubrimiento de la sección 4.1 sin pedir tipo ni MAC.
-3. Si es una venta unitaria y el cliente todavía no completó su par (1 fijo + 1 móvil) en esa misma
-   Cuenta compartida, el Dispositivo adicional se suma ahí mismo, sin crear una venta nueva.
-4. Si la Cuenta exclusiva ya llegó a 3 fijos y 3 móviles, o el cliente de una venta unitaria ya
-   completó su par, el Dispositivo adicional constituye una venta nueva: usa otra Cuenta compatible
+3. Si es una venta compartida y el cliente todavía no completó sus cupos 1+1 o 2+2 en esa misma
+   Cuenta, el Dispositivo adicional se suma ahí mismo, sin crear una venta nueva.
+4. Si la Cuenta exclusiva ya llegó a 3 fijos y 3 móviles, o el cliente de una venta compartida ya
+   completó sus cupos, el Dispositivo adicional constituye una venta nueva: usa otra Cuenta compatible
    con la misma firma de servicios o crea una nueva. Los Dispositivos existentes permanecen donde
    están: nunca se fuerza un cupo imposible en la Cuenta actual.
 
@@ -410,8 +416,8 @@ export class TeamMembersService {
   responsive** — los Revendedores operan mayormente desde el celular.
 - **Alta de Cliente Final:** implementada como **wizard** (asistente paso a paso), no como un
   formulario único, dados los dos métodos de alta (sección 2.1 de `03_Reglas_de_Negocio.md`) y la
-  validación de `id_gestion_externo` (sección 2.5 de `03_Reglas_de_Negocio.md`). La venta unitaria
-  permite elegir servicios y fuerza el básico código 1; el formulario no solicita tipo ni MAC.
+  validación de `id_gestion_externo` (sección 2.5 de `03_Reglas_de_Negocio.md`). La venta compartida
+  permite elegir 1+1 o 2+2 y servicios, y fuerza el básico código 1; el formulario no solicita tipo ni MAC.
 - **Vista por Cuenta:** usuario, contraseña, PIN, parametrización de contenido, y listado de
   Clientes Finales + Dispositivos relacionados con esa Cuenta.
 - **Vista por Cliente:** usuario, contraseña y PIN de la Cuenta del cliente, parametrización de

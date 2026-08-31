@@ -90,11 +90,10 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
 
 **Incluido:**
 - Alta de Operadores Principales, Empresas Revendedoras y Clientes Finales.
-- Alta de Cliente Final por **dos métodos**: Cuenta completa exclusiva, con hasta 3 Dispositivos
-  para un único Cliente Final, o venta unitaria de exactamente 1 Dispositivo dentro de una Cuenta
-  compartida con ventas de idéntica firma de servicios (ver `03_Reglas_de_Negocio.md`).
-- Creación y parametrización de Cuentas SENSA vía API con un máximo comercial global de
-  **3 Dispositivos por Cuenta**, indistintamente del tipo informado después por SENSA.
+- Alta de Cliente Final por **dos métodos**: Cuenta completa exclusiva, con hasta 3 fijos + 3 móviles
+  para un único Cliente Final, o venta compartida 1+1/2+2 dentro de una Cuenta con firma idéntica
+  y máximo de 3 cupos por categoría (ver `03_Reglas_de_Negocio.md`).
+- Creación y parametrización de Cuentas SENSA vía API con capacidad según el modo de la Cuenta.
 - Protección de la capacidad no vendida de las Cuentas compartidas mediante Dispositivos de
   reserva técnicos, con MAC unicast administrada localmente y sin Cliente Final asociado.
   **[Superado — ver nota abajo]**
@@ -103,11 +102,10 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
   contacto asociado (ver `03_Reglas_de_Negocio.md`, sección 2).
 - Alta de Dispositivos sin solicitar tipo ni MAC en el formulario: SENSA informa ID, MAC y tipo al
   primer login y el sistema los detecta durante una ventana inicial de 10 minutos, con sondeo cada
-  30 segundos. En una venta unitaria, un candidato se vincula y varios dejan el alta ambigua; una
-  Cuenta completa puede vincular hasta 3 candidatos al mismo Cliente Final.
-- Alta de un Dispositivo adicional para un Cliente Final ya existente: si su Cuenta alcanzó el
-  máximo global de 3, la venta adicional usa otra Cuenta compatible; nunca se intentan migrar
-  cuatro Dispositivos a una sola Cuenta.
+  30 segundos. En una venta compartida se vinculan candidatos hasta el 1+1 o 2+2 reservado; una
+  Cuenta completa puede vincular hasta 3 fijos + 3 móviles al mismo Cliente Final.
+- Alta de un Dispositivo adicional para un Cliente Final ya existente: si completó los cupos de su
+  venta, la venta adicional usa otra Cuenta compatible; nunca se fuerzan cupos imposibles.
 - **Baja definitiva de Cliente Final**, con liberación de capacidad comercial para una venta
   posterior dentro de esta misma etapa.
 - **Suspensión de Cliente Final**, con bloqueo del Dispositivo liberado (no reasignable mientras
@@ -123,8 +121,8 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
   desde el celular) — panel completamente separado del de Operador Principal, ya que administra
   a las Empresas Revendedoras.
 - **Alta de Cliente Final:** implementada como **wizard** (asistente paso a paso), no un formulario
-  único. En la venta unitaria permite elegir servicios, con el servicio básico código 1 siempre
-  incluido; la Cuenta completa recibe todos los servicios contratados.
+  único. En la venta compartida permite elegir 1+1 o 2+2 y servicios, con el servicio básico código
+  1 siempre incluido; la Cuenta completa recibe todos los servicios contratados.
 - Aislamiento multi-tenant total entre Empresas Revendedoras (identificación por ID para soporte,
   sin acceso a datos sensibles entre sí; tampoco la Empresa Revendedora ve datos del Operador
   Principal).
@@ -156,9 +154,9 @@ stack genérico usado en otros proyectos de Tecnología Activa — este proyecto
 
 **Nota sobre puntos superados de este listado:** el mecanismo de "Dispositivos de reserva técnicos"
 (marcado arriba) fue reemplazado por los contadores nativos de SENSA
-(`auto_provision_count_mobile`/`auto_provision_count_stationary`), que IPTVControl sincroniza con la
-cantidad de ventas activas de cada Cuenta. Además, el tope por venta unitaria pasó de "exactamente 1
-Dispositivo" a "hasta 1 fijo + 1 móvil", y la Cuenta exclusiva pasó de un máximo global de 3 a hasta
+(`auto_provision_count_mobile`/`auto_provision_count_stationary`), que IPTVControl sincroniza con los
+cupos comprometidos de cada Cuenta. Además, la venta compartida permite elegir 1+1 o 2+2 sin superar
+3+3 por Cuenta, y la Cuenta exclusiva pasó de un máximo global de 3 a hasta
 3 fijos + 3 móviles (6 en total). Detalle completo y vigente en `03_Reglas_de_Negocio.md`, sección 2.
 
 **Explícitamente fuera de alcance (primera etapa):**

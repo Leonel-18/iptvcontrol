@@ -13,7 +13,7 @@ describe('capacidad de Cuenta', () => {
     estado: EstadoDispositivo = EstadoDispositivo.activo,
   ) => ({ tipo, estado, clienteFinalId });
 
-  describe('Cuenta compartida (por ventas)', () => {
+  describe('Cuenta compartida (por cupos reservados)', () => {
     it('sin ventas, no hay categorías habilitadas', () => {
       const capacidad = calcularCapacidad({ esExclusiva: false, dispositivos: [] });
       expect(capacidad.ventas).toBe(0);
@@ -23,10 +23,11 @@ describe('capacidad de Cuenta', () => {
       expect(capacidad.movil.limite).toBe(0);
     });
 
-    it('una venta habilita 1 fijo + 1 móvil para ese cliente', () => {
+    it('una venta 1+1 compromete un cupo por categoría', () => {
       const capacidad = calcularCapacidad({
         esExclusiva: false,
         dispositivos: [dispositivo(TipoDispositivo.fijo, 'cliente-1')],
+        ventasCompartidas: [{ cuposPorCategoria: 1 }],
       });
       expect(capacidad.ventas).toBe(1);
       expect(capacidad.fijo.limite).toBe(1);
@@ -38,21 +39,32 @@ describe('capacidad de Cuenta', () => {
       expect(capacidad.libres).toBe(2);
     });
 
-    it('tres ventas dejan la Cuenta completa aunque cada cliente tenga un solo Dispositivo', () => {
+    it('una venta 2+2 deja un único cupo por categoría disponible', () => {
       const capacidad = calcularCapacidad({
         esExclusiva: false,
-        dispositivos: [
-          dispositivo(TipoDispositivo.fijo, 'cliente-1'),
-          dispositivo(TipoDispositivo.movil, 'cliente-2'),
-          dispositivo(TipoDispositivo.fijo, 'cliente-3'),
-        ],
+        dispositivos: [],
+        ventasCompartidas: [{ cuposPorCategoria: 2 }],
       });
-      expect(capacidad.ventas).toBe(3);
+      expect(capacidad.ventas).toBe(1);
+      expect(capacidad.ocupados).toBe(2);
+      expect(capacidad.libres).toBe(1);
+      expect(capacidad.fijo.limite).toBe(2);
+      expect(capacidad.movil.limite).toBe(2);
+    });
+
+    it('una venta 2+2 más otra 1+1 completan los tres cupos', () => {
+      const capacidad = calcularCapacidad({
+        esExclusiva: false,
+        dispositivos: [],
+        ventasCompartidas: [{ cuposPorCategoria: 2 }, { cuposPorCategoria: 1 }],
+      });
+      expect(capacidad.ventas).toBe(2);
+      expect(capacidad.ocupados).toBe(3);
       expect(capacidad.libres).toBe(0);
       expect(capacidad.completa).toBe(true);
     });
 
-    it('un cliente con sus 2 Dispositivos (1 fijo + 1 móvil) sigue contando como 1 sola venta', () => {
+    it('mantiene compatibilidad con ventas históricas sin reserva explícita', () => {
       const capacidad = calcularCapacidad({
         esExclusiva: false,
         dispositivos: [
@@ -61,7 +73,7 @@ describe('capacidad de Cuenta', () => {
         ],
       });
       expect(capacidad.ventas).toBe(1);
-      expect(capacidad.libres).toBe(2);
+      expect(capacidad.ocupados).toBe(1);
     });
 
     it('los suspendidos siguen consumiendo la venta y los disponibles no', () => {

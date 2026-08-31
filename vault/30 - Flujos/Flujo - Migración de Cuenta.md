@@ -6,18 +6,18 @@ implementado-en: backend/src/modules/dispositivos/dispositivos.service.ts
 
 # Flujo — Dispositivo adicional sin migración imposible
 
-Cuando un Cliente Final que ya tiene Dispositivos pide uno más, el sistema respeta el máximo global
-de 3 por Cuenta. Si la Cuenta actual está completa, los Dispositivos existentes **no se migran**:
+Cuando un Cliente Final que ya tiene Dispositivos pide uno más, el sistema respeta los cupos de su
+venta y el máximo 3+3 de la Cuenta. Si la venta actual está completa, los Dispositivos existentes **no se migran**:
 la venta adicional usa otra Cuenta compatible o crea una nueva.
 
 ```mermaid
 flowchart TD
-    A["Agregar un Dispositivo<br/>a un cliente existente"] --> B{"¿Es Cuenta completa<br/>con menos de 3 Dispositivos?"}
+    A["Agregar un Dispositivo<br/>a un cliente existente"] --> B{"¿Tiene cupo en su<br/>venta o Cuenta exclusiva?"}
     B -->|"Sí"| C["Abrir descubrimiento<br/>en la misma Cuenta"]
     B -->|"No"| D["Tratar como venta adicional<br/>con firma de servicios"]
-    D --> E{"¿Hay Cuenta compartida<br/>compatible y con menos de 3 ventas?"}
-    E -->|"Sí"| F["Eliminar una reserva técnica<br/>y abrir descubrimiento"]
-    E -->|"No"| G["Crear Cuenta nueva,<br/>reservas y descubrimiento"]
+    D --> E{"¿Hay Cuenta compartida<br/>compatible con cupo?"}
+    E -->|"Sí"| F["Reservar cupo y<br/>abrir descubrimiento"]
+    E -->|"No"| G["Crear Cuenta nueva<br/>y abrir descubrimiento"]
     C --> H["Los Dispositivos existentes<br/>permanecen donde están"]
     F --> H
     G --> H
@@ -28,17 +28,17 @@ flowchart TD
 
 ## Regla central
 
-> Nunca se intentan alojar cuatro Dispositivos en una Cuenta ni se trasladan los tres existentes
-> para hacerlo posible.
+> Nunca se supera el 1+1/2+2 contratado por una venta ni el 3+3 de la Cuenta, y los Dispositivos
+> existentes no se trasladan para forzar un cupo imposible.
 
 La venta adicional puede quedar en otra Cuenta y, por lo tanto, usar las credenciales de esa nueva
 Cuenta. El panel debe mostrarlo antes de confirmar.
 
-## Venta unitaria
+## Venta compartida
 
-Una venta unitaria autoriza exactamente 1 Dispositivo. Agregar otro servicio al mismo Cliente Final
-es una venta nueva: el wizard calcula su firma de servicios, busca una Cuenta compartida compatible
-y libera exactamente una reserva técnica antes del descubrimiento.
+Una venta compartida autoriza 1+1 o 2+2. Mientras el Cliente Final no complete esos cupos, el equipo
+adicional queda en la misma Cuenta. Al completarlos, el alta adicional constituye una venta nueva:
+busca una Cuenta de firma compatible con cupo o crea una nueva, sin mover equipos existentes.
 
 ## Ver también
 

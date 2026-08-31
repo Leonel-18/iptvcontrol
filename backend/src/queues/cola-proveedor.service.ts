@@ -95,9 +95,9 @@ export class ColaProveedorService implements OnModuleInit {
   async encolarSincronizacionContadoresVenta(
     datos: DatosSincronizarContadoresVenta,
   ): Promise<void> {
-    await this.encolar(TRABAJOS_PROVEEDOR.SINCRONIZAR_CONTADORES_VENTA, datos, {
-      jobId: `contadores-venta:${datos.cuentaId}`,
-    });
+    // No se usa un jobId fijo: BullMQ conserva trabajos completados durante 24
+    // horas y rechazaría una corrección nueva de la misma Cuenta en ese lapso.
+    await this.encolar(TRABAJOS_PROVEEDOR.SINCRONIZAR_CONTADORES_VENTA, datos, {});
   }
 
   /** Estado de la cola para el panel de salud del Operador Principal. */

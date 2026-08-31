@@ -40,13 +40,15 @@ Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
    Cliente Final, sin buscar espacio en Cuentas existentes. La Cuenta pertenece a ese único cliente,
    incluye todos los servicios contratados y permite registrar hasta **3 Dispositivos fijos + 3
    móviles** (hasta 6 Dispositivos en total, sin relación entre sí).
-2. **Venta unitaria** (`dispositivo_compartido`): autoriza hasta **1 Dispositivo fijo + 1 móvil**
-   para ese Cliente Final ("fijo" = TV/`stationary`; "móvil" = celular, tablet o PC por navegador
+2. **Venta en Cuenta compartida** (`dispositivo_compartido`): el vendedor elige si reserva
+   **1 fijo + 1 móvil** o **2 fijos + 2 móviles** para ese Cliente Final ("fijo" =
+   TV/`stationary`; "móvil" = celular, tablet o PC por navegador
    `cloud_client` — confirmado por Bruno el 24/08/2026, caso Valentín Alamo). En el wizard la
    Empresa Revendedora elige los servicios de esa venta; el
    servicio básico código 1 está siempre incluido. El sistema calcula una firma canónica de
-   servicios y solo comparte Cuenta con otras ventas de firma idéntica. Una Cuenta compartida aloja
-   como máximo **3 ventas** (hasta 6 Dispositivos en total, 2 por venta).
+   servicios y solo comparte Cuenta con otras ventas de firma idéntica. Una Cuenta compartida tiene
+   **3 cupos fijos + 3 móviles**: puede alojar tres ventas 1+1, o una venta 2+2 y otra 1+1.
+   Una venta 2+2 no puede entrar donde sólo quede un cupo por categoría.
 3. El formulario no solicita tipo ni MAC: SENSA los informa al primer login de cada equipo.
 
 ### 2.2. Bloqueo de capacidad vía contadores de SENSA y descubrimiento del Dispositivo
@@ -55,16 +57,16 @@ Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
   SENSA expone en cada Cuenta dos contadores por categoría —
   `auto_provision_count_mobile` y `auto_provision_count_stationary` — que limitan cuántos
   Dispositivos de esa categoría puede auto-provisionar la Cuenta. IPTVControl mantiene esos
-  contadores sincronizados con la cantidad de **ventas activas** de la Cuenta: una Cuenta compartida
-  nueva arranca en 1/1 (su primera venta); al sumarse una 2ª venta compatible, sube a 2/2 **antes**
-  de abrir su ventana de vinculación; al darse de baja o suspenderse la última venta de un cliente,
-  baja de nuevo (nunca por debajo de 1 mientras la Cuenta esté activa). Una Cuenta exclusiva nace
-  fija en 3/3 y no varía con las altas/bajas de su único cliente.
+  contadores sincronizados con los **cupos comprometidos** por las ventas activas. Una Cuenta
+  compartida nueva arranca en 1/1 o 2/2 según lo elegido; al sumarse otra venta compatible, sube
+  por la cantidad de cupos solicitada **antes** de abrir su ventana de vinculación. El compromiso
+  se persiste por relación Cliente Final–Cuenta y no se infiere de los equipos ya detectados. Una
+  Cuenta exclusiva nace fija en 3/3 y no varía con las altas/bajas de su único cliente.
 - Después del primer login del Cliente Final, SENSA informa ID, MAC y tipo. IPTVControl toma una
   instantánea previa, abre una ventana de **10 minutos** y consulta cada **30 segundos** para detectar
   candidatos nuevos.
-- En una venta unitaria se pueden vincular hasta 1 candidato fijo + 1 candidato móvil al mismo
-  Cliente Final. En una Cuenta completa, hasta 3 fijos + 3 móviles al mismo Cliente Final. Cualquier
+- En una venta compartida se pueden vincular hasta 1+1 o 2+2 candidatos, según los cupos elegidos
+  para ese Cliente Final. En una Cuenta completa, hasta 3 fijos + 3 móviles. Cualquier
   candidato que exceda el cupo de su categoría (para ese cliente, o para la Cuenta si es exclusiva)
   no se vincula: queda como incidencia pendiente de revisión manual, igual que un Dispositivo
   detectado por el barrido de inventario (no requiere el estado "ambiguo" del modelo anterior).
@@ -95,11 +97,11 @@ Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
 La Empresa Revendedora puede sumarle a un Cliente Final que ya tiene Dispositivo(s) uno adicional:
 - Si es una Cuenta completa y tiene menos de 3 fijos o menos de 3 móviles, se abre el mismo flujo de
   descubrimiento sin pedir tipo ni MAC.
-- Si es una venta unitaria y el cliente todavía no completó su par (1 fijo + 1 móvil) en esa misma
-  Cuenta compartida, el Dispositivo adicional se suma ahí mismo, sin crear una venta nueva ni tocar
-  los contadores de SENSA (la venta ya estaba contada).
-- Si la Cuenta exclusiva ya alcanzó 3 fijos y 3 móviles, o el cliente de una venta unitaria ya
-  completó su par, un Dispositivo adicional constituye **una venta nueva**: usa otra Cuenta
+- Si es una venta compartida y el cliente todavía no completó los cupos 1+1 o 2+2 reservados en esa
+  misma Cuenta, el Dispositivo adicional se suma ahí mismo, sin crear una venta nueva ni tocar los
+  contadores de SENSA (la capacidad ya estaba comprometida).
+- Si la Cuenta exclusiva ya alcanzó 3 fijos y 3 móviles, o el cliente de una venta compartida ya
+  completó sus cupos, un Dispositivo adicional constituye **una venta nueva**: usa otra Cuenta
   compatible con la misma firma de servicios o crea una Cuenta nueva. No se migran los Dispositivos
   existentes para forzar un cupo imposible en la Cuenta actual.
 - La baja de uno de varios Dispositivos de un mismo Cliente Final (sin dar de baja al cliente
