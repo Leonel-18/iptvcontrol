@@ -111,8 +111,8 @@ export class CrearClienteDto {
 
   @ApiPropertyOptional({
     description:
-      'Carga manual en una Cuenta ya existente y sin cliente (ej. importada de SENSA). El ' +
-      '`tipo_alta` debe coincidir con el tipo de Cuenta y usa sus servicios ya fijados.',
+      'Alta contextual en una Cuenta existente. El `tipo_alta` debe coincidir con el tipo de ' +
+      'Cuenta y usa sus servicios ya fijados. Una exclusiva sólo admite su primer titular.',
   })
   @IsOptional()
   @IsUUID()

@@ -176,6 +176,7 @@ export class DispositivosService {
             );
           }
         } else {
+          await this.ventanasCuriosidad.asegurarClientePermitido(cuentaId, clienteFinal.id);
           try {
             ventaReservada = await reservarVenta(cuentaId, !cuentaCreada);
           } catch (error) {

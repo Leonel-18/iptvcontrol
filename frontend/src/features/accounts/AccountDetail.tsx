@@ -26,7 +26,6 @@ import {
   WhatsappTemplateButton,
 } from "@/components/common";
 import { AccountDevicesTab } from "./AccountDevicesTab";
-import { AccountProviderInventoryTab } from "./AccountProviderInventoryTab";
 import { CuriosityWindowPanel } from "./CuriosityWindowPanel";
 import { EditAccountDialog } from "./EditAccountDialog";
 import { AddManualCustomerDialog } from "./AddManualCustomerDialog";
@@ -370,7 +369,6 @@ export const AccountDetail = () => {
               <div className="px-5 pt-2">
                 <TabsList>
                   <TabsTrigger value="devices">Dispositivos</TabsTrigger>
-                  <TabsTrigger value="provider">En el proveedor</TabsTrigger>
                   {!esOperador ? (
                     <TabsTrigger value="customers">Clientes</TabsTrigger>
                   ) : null}
@@ -379,17 +377,8 @@ export const AccountDetail = () => {
               <CardContent>
                 <TabsContent value="devices">
                   <AccountDevicesTab
-                    dispositivos={data.dispositivos}
+                    cuenta={data}
                     esOperador={esOperador}
-                    clientesFinales={data.clientes_finales}
-                    cuentaId={data.id}
-                  />
-                </TabsContent>
-                <TabsContent value="provider">
-                  <AccountProviderInventoryTab
-                    cuentaId={data.id}
-                    esOperador={esOperador}
-                    clienteExclusivo={data.cliente_final_exclusivo}
                   />
                 </TabsContent>
                 {!esOperador ? (
