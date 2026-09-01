@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -30,15 +29,12 @@ export const AddManualCustomerDialog = ({
   cuenta,
   abierto,
   onCambio,
-  onCreated,
 }: {
   cuenta: AccountDetailData;
   abierto: boolean;
   onCambio: (abierto: boolean) => void;
-  onCreated?: (customer: CustomerDetail) => void;
 }) => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [dni, setDni] = useState("");
@@ -86,16 +82,11 @@ export const AddManualCustomerDialog = ({
           dispositivo: {},
         },
       }),
-    onSuccess: (resultado) => {
+    onSuccess: () => {
       toast.success("Cliente cargado en la Cuenta.");
       onCambio(false);
       void queryClient.invalidateQueries({ queryKey: ["account", cuenta.id] });
       void queryClient.invalidateQueries({ queryKey: ["customers"] });
-      if (onCreated) {
-        onCreated(resultado.cliente);
-      } else {
-        navigate(`/customers/${resultado.cliente.id}`);
-      }
       setNombre("");
       setApellido("");
       setDni("");
@@ -128,8 +119,8 @@ export const AddManualCustomerDialog = ({
         titulo="Cargar cliente en esta Cuenta"
         descripcion={
           cuenta.es_exclusiva
-            ? "Asigna el titular de esta Cuenta exclusiva. Los Dispositivos se agregan después desde el inventario del Proveedor."
-            : "Crea una nueva venta dentro de esta Cuenta compartida usando sus servicios actuales."
+            ? "Asigna el titular de esta Cuenta exclusiva."
+            : "Crea una venta en esta Cuenta sin generar un Dispositivo pendiente. Después podrá asignar los equipos informados por el Proveedor."
         }
       >
         <div className="space-y-4">

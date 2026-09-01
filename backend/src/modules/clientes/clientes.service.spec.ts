@@ -290,9 +290,11 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
       pendienteDeAutoprovision: true,
       solicitudVinculacionId: 'solicitud-1',
     });
+    const reservarVentaContextual = jest.fn().mockResolvedValue(undefined);
     const dispositivos = {
       operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
       alta,
+      reservarVentaContextual,
     } as unknown as DispositivosService;
     const identificadores = {
       siguienteNumeroCliente: jest.fn().mockResolvedValue(5),
@@ -309,7 +311,7 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
       {} as ProveedorService,
     );
     jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: clienteCreado.id } as never);
-    return { servicio, alta, audit, prisma, cuentaUpdate };
+    return { servicio, alta, reservarVentaContextual, audit, prisma, cuentaUpdate };
   };
 
   it('asigna el primer Cliente Final a una Cuenta exclusiva sin crear un Dispositivo ficticio', async () => {
@@ -377,7 +379,7 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
   });
 
   it('permite sumar otro Cliente Final a una Cuenta compartida con clientes', async () => {
-    const { servicio, alta } = crearServicio({
+    const { servicio, alta, reservarVentaContextual } = crearServicio({
       id: 'cuenta-vacia',
       esExclusiva: false,
       estado: EstadoCuenta.activa,
@@ -390,16 +392,18 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
 
     await servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' });
 
-    expect(alta).toHaveBeenCalledWith(
+    expect(alta).not.toHaveBeenCalled();
+    expect(reservarVentaContextual).toHaveBeenCalledWith(
       expect.objectContaining({
-        cuentaIdForzada: 'cuenta-vacia',
-        servicios: '1|3',
+        cuentaId: 'cuenta-vacia',
+        clienteFinalId: 'cliente-nuevo',
+        cuposPorCategoria: 1,
       }),
     );
   });
 
   it('carga el primer cliente usando la firma de servicios ya fijada en la Cuenta', async () => {
-    const { servicio, alta, audit } = crearServicio({
+    const { servicio, alta, reservarVentaContextual, audit } = crearServicio({
       id: 'cuenta-vacia',
       esExclusiva: false,
       estado: EstadoCuenta.activa,
@@ -411,10 +415,11 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
 
     await servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia', cupos_por_categoria: 2 });
 
-    expect(alta).toHaveBeenCalledWith(
+    expect(alta).not.toHaveBeenCalled();
+    expect(reservarVentaContextual).toHaveBeenCalledWith(
       expect.objectContaining({
-        cuentaIdForzada: 'cuenta-vacia',
-        servicios: '1|3|5',
+        cuentaId: 'cuenta-vacia',
+        clienteFinalId: 'cliente-nuevo',
         cuposPorCategoria: 2,
       }),
     );

@@ -454,7 +454,28 @@ export class ClientesService {
       return creado;
     });
 
-    if (cuentaForzadaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+    if (cuentaForzadaId) {
+      try {
+        if (dto.tipo_alta === TipoAltaClienteFinal.dispositivo_compartido) {
+          await this.dispositivos.reservarVentaContextual({
+            cuentaId: cuentaForzadaId,
+            clienteFinalId: cliente.id,
+            empresaRevendedoraId,
+            cuposPorCategoria: dto.cupos_por_categoria!,
+            operadorPrincipalId,
+            duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
+          });
+        }
+      } catch (error) {
+        await this.prisma.db.clienteFinal
+          .delete({ where: { id: cliente.id } })
+          .catch((cause) =>
+            this.logger.error(
+              `No se pudo revertir el alta contextual del Cliente Final ${cliente.id}: ${(cause as Error).message}`,
+            ),
+          );
+        throw error;
+      }
       await this.audit.registrar({
         accion: AccionAuditoria.alta_cliente,
         entidad: EntidadAuditada.ClienteFinal,
@@ -464,7 +485,7 @@ export class ClientesService {
           numero_cliente: cliente.numeroCliente,
           tipo_alta: dto.tipo_alta,
           servicios,
-          cupos_por_categoria: null,
+          cupos_por_categoria: dto.cupos_por_categoria ?? null,
           cuenta_id: cuentaForzadaId,
           cuenta_creada: false,
           cargado_manualmente_en_cuenta: true,

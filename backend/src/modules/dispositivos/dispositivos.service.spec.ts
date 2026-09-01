@@ -465,3 +465,39 @@ describe('DispositivosService — reasignar y la Ventana de curiosidad', () => {
     expect(asegurarClientePermitido).not.toHaveBeenCalled();
   });
 });
+
+describe('DispositivosService — reserva contextual sin Dispositivo pendiente', () => {
+  it('reserva la venta y no abre una ventana de vinculación automática', async () => {
+    const asegurarClientePermitido = jest.fn().mockResolvedValue(undefined);
+    const reservarCapacidadPorNuevaVenta = jest.fn().mockResolvedValue(true);
+    const proveedor = { listarDispositivos: jest.fn() } as unknown as ProveedorService;
+    const servicio = new DispositivosService(
+      {} as PrismaService,
+      {} as AuditService,
+      { teamMemberId: 'team-1' } as RequestContextService,
+      proveedor,
+      { reservarCapacidadPorNuevaVenta } as unknown as CuentasProvisioningService,
+      {} as ColaProveedorService,
+      { asegurarClientePermitido } as unknown as VentanasCuriosidadService,
+    );
+
+    await servicio.reservarVentaContextual({
+      cuentaId: 'cuenta-1',
+      clienteFinalId: 'cliente-1',
+      empresaRevendedoraId: 'empresa-1',
+      cuposPorCategoria: 1,
+      operadorPrincipalId: 'operador-1',
+    });
+
+    expect(asegurarClientePermitido).toHaveBeenCalledWith('cuenta-1', 'cliente-1');
+    expect(reservarCapacidadPorNuevaVenta).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cuentaId: 'cuenta-1',
+        clienteFinalId: 'cliente-1',
+        cuposPorCategoria: 1,
+        actualizarProveedor: true,
+      }),
+    );
+    expect(proveedor.listarDispositivos).not.toHaveBeenCalled();
+  });
+});

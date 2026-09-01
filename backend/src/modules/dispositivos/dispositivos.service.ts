@@ -53,6 +53,15 @@ export interface ResultadoAltaDispositivo {
   solicitudVinculacionId: string;
 }
 
+export interface ReservaVentaContextualParams {
+  cuentaId: string;
+  clienteFinalId: string;
+  empresaRevendedoraId: string;
+  cuposPorCategoria: 1 | 2;
+  operadorPrincipalId: string;
+  duracionVentanaCuriosidadMinutos?: number;
+}
+
 @Injectable()
 export class DispositivosService {
   private readonly logger = new Logger(DispositivosService.name);
@@ -66,6 +75,29 @@ export class DispositivosService {
     private readonly cola: ColaProveedorService,
     private readonly ventanasCuriosidad: VentanasCuriosidadService,
   ) {}
+
+  /** Reserva una venta en una Cuenta existente sin crear un Dispositivo pendiente. */
+  async reservarVentaContextual(params: ReservaVentaContextualParams): Promise<void> {
+    await this.ventanasCuriosidad.asegurarClientePermitido(params.cuentaId, params.clienteFinalId);
+    try {
+      await this.provisioning.reservarCapacidadPorNuevaVenta({
+        cuentaId: params.cuentaId,
+        clienteFinalId: params.clienteFinalId,
+        empresaRevendedoraId: params.empresaRevendedoraId,
+        cuposPorCategoria: params.cuposPorCategoria,
+        operadorPrincipalId: params.operadorPrincipalId,
+        actualizarProveedor: true,
+        duracionVentanaCuriosidadMinutos: params.duracionVentanaCuriosidadMinutos,
+        teamMemberId: this.contexto.teamMemberId,
+      });
+    } catch (error) {
+      if (!(error instanceof SincronizacionContadoresPendienteError)) throw error;
+      await this.cola.encolarSincronizacionContadoresVenta({
+        cuentaId: params.cuentaId,
+        operadorPrincipalId: params.operadorPrincipalId,
+      });
+    }
+  }
 
   async alta(params: AltaDispositivoParams): Promise<ResultadoAltaDispositivo> {
     const { clienteFinal, operadorPrincipalId } = params;
