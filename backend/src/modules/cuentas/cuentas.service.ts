@@ -126,7 +126,18 @@ export class CuentasService {
       where: { id },
       include: {
         proveedor: { select: { nombre: true } },
-        ventasCompartidas: { select: { cuposPorCategoria: true } },
+        ventasCompartidas: {
+          select: {
+            cuposPorCategoria: true,
+            clienteFinalId: true,
+            clienteFinal: {
+              select: { id: true, numeroCliente: true, nombre: true, apellido: true },
+            },
+          },
+        },
+        clienteFinalExclusivo: {
+          select: { id: true, numeroCliente: true, nombre: true, apellido: true },
+        },
         dispositivos: {
           include: {
             clienteFinal: {
@@ -165,7 +176,19 @@ export class CuentasService {
     return {
       ...mapCuentaParaRevendedora(cuenta, capacidad, credenciales, cuenta.proveedor?.nombre),
       dispositivos: cuenta.dispositivos.map(mapDispositivoParaRevendedora),
-      clientes_finales: this.resumirClientes(cuenta.dispositivos),
+      cliente_final_exclusivo: cuenta.clienteFinalExclusivo
+        ? {
+            id: cuenta.clienteFinalExclusivo.id,
+            numero_cliente: cuenta.clienteFinalExclusivo.numeroCliente,
+            nombre: [cuenta.clienteFinalExclusivo.nombre, cuenta.clienteFinalExclusivo.apellido]
+              .filter(Boolean)
+              .join(' '),
+          }
+        : null,
+      clientes_finales: this.resumirClientes(cuenta.dispositivos, [
+        ...(cuenta.clienteFinalExclusivo ? [cuenta.clienteFinalExclusivo] : []),
+        ...cuenta.ventasCompartidas.map((venta) => venta.clienteFinal),
+      ]),
       ventana_curiosidad: ventanas.activa,
       historial_ventanas_curiosidad: ventanas.historial,
     };
@@ -303,6 +326,7 @@ export class CuentasService {
       where: { id },
       include: {
         dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+        ventasCompartidas: { select: { clienteFinalId: true, cuposPorCategoria: true } },
       },
     });
     if (!cuenta) throw new NotFoundException('La cuenta no existe o no está disponible.');
@@ -316,15 +340,21 @@ export class CuentasService {
     const esExclusivaFinal = dto.es_exclusiva ?? cuenta.esExclusiva;
     const cambiaTipo = esExclusivaFinal !== cuenta.esExclusiva;
 
-    const clientesActivos = new Set(
+    const clientesRelacionados = new Set(
       cuenta.dispositivos
         .filter((d) => ESTADOS_QUE_OCUPAN.includes(d.estado) && d.clienteFinalId)
         .map((d) => d.clienteFinalId as string),
     );
+    for (const venta of cuenta.ventasCompartidas) {
+      clientesRelacionados.add(venta.clienteFinalId);
+    }
+    if (cuenta.clienteFinalExclusivoId) {
+      clientesRelacionados.add(cuenta.clienteFinalExclusivoId);
+    }
 
     let cuposParaVentaNueva: 1 | 2 | undefined;
     if (cambiaTipo) {
-      if (clientesActivos.size > 1) {
+      if (clientesRelacionados.size > 1) {
         throw new BadRequestException(
           'La Cuenta tiene más de un Cliente Final activo: no se puede cambiar su tipo.',
         );
@@ -365,7 +395,7 @@ export class CuentasService {
 
     const ahora = new Date();
     await this.prisma.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
 
       if (cambiaTipo && esExclusivaFinal) {
         await tx.ventaCompartida.deleteMany({ where: { cuentaId: id } });
@@ -373,8 +403,8 @@ export class CuentasService {
           where: { cuentaId: id, finRealEn: null },
           data: { finRealEn: ahora, motivoFin: MotivoFinVentanaCuriosidad.cancelacion_venta },
         });
-      } else if (cambiaTipo && clientesActivos.size === 1 && cuposParaVentaNueva) {
-        const [clienteFinalId] = clientesActivos;
+      } else if (cambiaTipo && clientesRelacionados.size === 1 && cuposParaVentaNueva) {
+        const [clienteFinalId] = clientesRelacionados;
         await tx.ventaCompartida.create({
           data: {
             cuentaId: id,
@@ -387,7 +417,17 @@ export class CuentasService {
 
       await tx.cuenta.update({
         where: { id },
-        data: { esExclusiva: esExclusivaFinal, servicios: serviciosNuevos ?? cuenta.servicios },
+        data: {
+          esExclusiva: esExclusivaFinal,
+          ...(cambiaTipo
+            ? {
+                clienteFinalExclusivoId: esExclusivaFinal
+                  ? ([...clientesRelacionados][0] ?? null)
+                  : null,
+              }
+            : {}),
+          servicios: serviciosNuevos ?? cuenta.servicios,
+        },
       });
 
       if (cambiaTipo) {
@@ -556,11 +596,26 @@ export class CuentasService {
         apellido: string | null;
       } | null;
     }[],
+    clientesRelacionados: {
+      id: string;
+      numeroCliente: number;
+      nombre: string;
+      apellido: string | null;
+    }[] = [],
   ) {
     const mapa = new Map<
       string,
       { id: string; numero_cliente: number; nombre: string; dispositivos: number }
     >();
+
+    for (const cliente of clientesRelacionados) {
+      mapa.set(cliente.id, {
+        id: cliente.id,
+        numero_cliente: cliente.numeroCliente,
+        nombre: [cliente.nombre, cliente.apellido].filter(Boolean).join(' '),
+        dispositivos: 0,
+      });
+    }
 
     for (const dispositivo of dispositivos) {
       const cliente = dispositivo.clienteFinal;

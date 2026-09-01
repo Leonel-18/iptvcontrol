@@ -83,7 +83,16 @@ export class ClientesService {
       empresaRevendedoraId: query.reseller_id,
       estado: query.status,
       idGestionExterno: query.external_id,
-      dispositivos: query.account_id ? { some: { cuentaId: query.account_id } } : undefined,
+      AND: query.account_id
+        ? [
+            {
+              OR: [
+                { dispositivos: { some: { cuentaId: query.account_id } } },
+                { cuentasExclusivas: { some: { id: query.account_id } } },
+              ],
+            },
+          ]
+        : undefined,
       // La búsqueda libre del Operador Principal NO puede tocar nombre, teléfono,
       // correo ni dirección: aunque esos campos no se serialicen, poder filtrar
       // por ellos permitiría confirmar su contenido por prueba y error, y sería
@@ -110,6 +119,7 @@ export class ClientesService {
           dispositivos: {
             select: { id: true, tipo: true, estado: true, cuentaId: true },
           },
+          cuentasExclusivas: { select: { id: true } },
         },
         orderBy: { numeroCliente: 'desc' },
         skip: esCsv ? undefined : query.skip,
@@ -134,6 +144,7 @@ export class ClientesService {
     const cliente = await this.prisma.db.clienteFinal.findUnique({
       where: { id },
       include: {
+        cuentasExclusivas: true,
         dispositivos: {
           include: {
             cuenta: true,
@@ -187,7 +198,7 @@ export class ClientesService {
       };
     }
 
-    const cuentaPrincipal = cliente.dispositivos[0]?.cuenta ?? null;
+    const cuentaPrincipal = cliente.dispositivos[0]?.cuenta ?? cliente.cuentasExclusivas[0] ?? null;
     const capacidad = cuentaPrincipal
       ? calcularCapacidad({
           ...cuentaPrincipal,
@@ -346,12 +357,10 @@ export class ClientesService {
     if (
       dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva &&
       (dto.cupos_por_categoria !== undefined ||
-        dto.duracion_ventana_curiosidad_minutos !== undefined ||
-        dto.cuenta_id !== undefined)
+        dto.duracion_ventana_curiosidad_minutos !== undefined)
     ) {
       throw new BadRequestException(
-        'Los cupos, la Ventana de curiosidad y la carga manual en una Cuenta sólo corresponden ' +
-          'a una venta compartida.',
+        'Los cupos y la Ventana de curiosidad sólo corresponden a una venta compartida.',
       );
     }
 
@@ -359,9 +368,9 @@ export class ClientesService {
     let cuentaVaciaId: string | undefined;
 
     if (dto.cuenta_id) {
-      // Carga manual en una Cuenta compartida ya existente y vacía (ej.
-      // importada de SENSA sin clientes): usa la firma de servicios que ya
-      // tiene fijada la Cuenta, no una elegida en el wizard.
+      // Asignación manual del primer cliente a una Cuenta importada. En una
+      // exclusiva sólo fija el titular; los equipos se vinculan después desde
+      // el inventario real del Proveedor.
       if (dto.servicios !== undefined) {
         throw new BadRequestException(
           'Esta Cuenta ya tiene servicios fijados: no se pueden re-seleccionar acá.',
@@ -375,9 +384,10 @@ export class ClientesService {
         },
       });
       if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
-      if (cuenta.esExclusiva) {
+      const altaExclusiva = dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva;
+      if (cuenta.esExclusiva !== altaExclusiva) {
         throw new BadRequestException(
-          'Esta Cuenta es exclusiva: no admite carga manual de clientes.',
+          `Esta Cuenta es ${cuenta.esExclusiva ? 'exclusiva' : 'compartida'}: el tipo de alta no coincide.`,
         );
       }
       if (cuenta.estado !== EstadoCuenta.activa || !cuenta.proveedorCuentaId) {
@@ -389,9 +399,15 @@ export class ClientesService {
         (dispositivo) =>
           ESTADOS_QUE_OCUPAN.includes(dispositivo.estado) && dispositivo.clienteFinalId,
       );
-      if (tieneClientesActivos || cuenta.ventasCompartidas.length > 0) {
+      if (
+        cuenta.clienteFinalExclusivoId ||
+        tieneClientesActivos ||
+        cuenta.ventasCompartidas.length > 0
+      ) {
         throw new BadRequestException(
-          'Esta Cuenta ya tiene un Cliente Final activo: use el alta normal en vez de la carga manual.',
+          cuenta.esExclusiva
+            ? 'Esta Cuenta exclusiva ya tiene un Cliente Final asignado.'
+            : 'Esta Cuenta ya tiene un Cliente Final activo: use el alta normal en vez de la carga manual.',
         );
       }
       servicios = cuenta.servicios;
@@ -404,12 +420,15 @@ export class ClientesService {
 
     // --- Alta normal ---------------------------------------------------------
     const cliente = await this.prisma.transaction(async (tx) => {
+      if (cuentaVaciaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaVaciaId}))`;
+      }
       const numeroCliente = await this.identificadores.siguienteNumeroCliente(
         tx,
         empresaRevendedoraId,
       );
 
-      return tx.clienteFinal.create({
+      const creado = await tx.clienteFinal.create({
         data: {
           empresaRevendedoraId,
           numeroCliente,
@@ -424,7 +443,44 @@ export class ClientesService {
           estado: EstadoClienteFinal.activo,
         },
       });
+      if (cuentaVaciaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+        const asignada = await tx.cuenta.updateMany({
+          where: { id: cuentaVaciaId, clienteFinalExclusivoId: null },
+          data: { clienteFinalExclusivoId: creado.id },
+        });
+        if (asignada.count !== 1) {
+          throw new BadRequestException(
+            'Esta Cuenta exclusiva ya tiene un Cliente Final asignado.',
+          );
+        }
+      }
+      return creado;
     });
+
+    if (cuentaVaciaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+      await this.audit.registrar({
+        accion: AccionAuditoria.alta_cliente,
+        entidad: EntidadAuditada.ClienteFinal,
+        entidadId: cliente.id,
+        empresaRevendedoraId,
+        detalle: {
+          numero_cliente: cliente.numeroCliente,
+          tipo_alta: dto.tipo_alta,
+          servicios,
+          cupos_por_categoria: null,
+          cuenta_id: cuentaVaciaId,
+          cuenta_creada: false,
+          cargado_manualmente_en_cuenta: true,
+          duplicado_confirmado: Boolean(dto.confirmar_duplicado),
+        },
+      });
+      return {
+        cliente: await this.obtener(cliente.id),
+        cuenta_creada: false,
+        dispositivo_pendiente_de_activacion: false,
+        solicitud_vinculacion_id: null,
+      };
+    }
 
     try {
       const resultado = await this.dispositivos.alta({
@@ -715,6 +771,7 @@ export class ClientesService {
   private mapClienteParaOperador(
     cliente: ClienteFinal & {
       dispositivos: { id: string; tipo: string | null; estado: string; cuentaId: string }[];
+      cuentasExclusivas?: { id: string }[];
     },
   ) {
     return {
@@ -724,7 +781,12 @@ export class ClientesService {
       estado: cliente.estado,
       tipo_alta: cliente.tipoAlta,
       cantidad_dispositivos: this.contarDispositivosOcupados(cliente.dispositivos),
-      cuenta_ids: [...new Set(cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId))],
+      cuenta_ids: [
+        ...new Set([
+          ...cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId),
+          ...(cliente.cuentasExclusivas ?? []).map((cuenta) => cuenta.id),
+        ]),
+      ],
       suspendido_en: cliente.suspendidoEn,
       dado_de_baja_en: cliente.dadoDeBajaEn,
       creado_en: cliente.creadoEn,
@@ -742,6 +804,7 @@ export class ClientesService {
   private mapCliente(
     cliente: ClienteFinal & {
       dispositivos: { id: string; tipo: string | null; estado: string; cuentaId: string }[];
+      cuentasExclusivas?: { id: string }[];
     },
   ) {
     return {
@@ -763,7 +826,12 @@ export class ClientesService {
           dispositivo.estado === EstadoDispositivo.activo ||
           dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension,
       ).length,
-      cuenta_ids: [...new Set(cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId))],
+      cuenta_ids: [
+        ...new Set([
+          ...cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId),
+          ...(cliente.cuentasExclusivas ?? []).map((cuenta) => cuenta.id),
+        ]),
+      ],
       suspendido_en: cliente.suspendidoEn,
       dado_de_baja_en: cliente.dadoDeBajaEn,
       creado_en: cliente.creadoEn,

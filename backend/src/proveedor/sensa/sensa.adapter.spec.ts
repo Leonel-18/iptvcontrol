@@ -111,6 +111,28 @@ describe('SensaAdapter', () => {
       expect(SensaAdapter.normalizarMac('03-AC-1A-E6-0C-A7')).toBe('03AC1AE60CA7');
     });
 
+    it('conserva sin truncar el identificador MAC informado por el Proveedor', async () => {
+      const { adapter } = crearAdapter();
+      const macProveedor = '0123456789012345678901234567890123456789';
+      jest.spyOn(global, 'fetch').mockImplementation(() =>
+        responder(
+          envelope(200, [
+            {
+              device_id: 'device-1',
+              mac: macProveedor,
+              device_type: 'cloud_client',
+              status: 'A',
+            },
+          ]),
+        ),
+      );
+
+      const dispositivos = await adapter.listarDispositivos(credenciales, '30000001');
+
+      expect(dispositivos[0].mac).toBe(macProveedor);
+      expect(dispositivos[0].mac).toHaveLength(40);
+    });
+
     it('la referencia externa queda alfanumérica y de hasta 40 caracteres', () => {
       const referencia = SensaAdapter.sanitizarReferencia(
         'a1b2-c3d4-e5f6-a7b8-c9d0e1f2a3b4-extra-largo-de-mas',

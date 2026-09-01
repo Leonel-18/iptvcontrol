@@ -41,7 +41,7 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
     const ventaDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
     const solicitudUpdate = jest.fn().mockResolvedValue(undefined);
     const tx = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
       solicitudVinculacionDispositivo: {
         findUnique: jest.fn().mockResolvedValue({
           ...solicitudBase,

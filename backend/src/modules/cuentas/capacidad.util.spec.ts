@@ -98,6 +98,14 @@ describe('capacidad de Cuenta', () => {
   });
 
   describe('Cuenta exclusiva (por categoría)', () => {
+    it('una Cuenta vacía informa 0 de 3 cupos 1+1', () => {
+      const capacidad = calcularCapacidad({ esExclusiva: true, dispositivos: [] });
+
+      expect(capacidad.ocupados).toBe(0);
+      expect(capacidad.limite).toBe(3);
+      expect(capacidad.libres).toBe(3);
+    });
+
     it('admite hasta 3 fijos y 3 móviles para el único cliente', () => {
       const capacidad = calcularCapacidad({
         esExclusiva: true,
@@ -119,7 +127,21 @@ describe('capacidad de Cuenta', () => {
       ).concat(Array.from({ length: 3 }, () => dispositivo(TipoDispositivo.movil, 'cliente-1')));
       const capacidad = calcularCapacidad({ esExclusiva: true, dispositivos });
       expect(capacidad.completa).toBe(true);
-      expect(capacidad.ocupados).toBe(6);
+      expect(capacidad.ocupados).toBe(3);
+      expect(capacidad.limite).toBe(3);
+    });
+
+    it('cada par fijo/móvil consume un único cupo 1+1', () => {
+      const capacidad = calcularCapacidad({
+        esExclusiva: true,
+        dispositivos: [
+          dispositivo(TipoDispositivo.fijo, 'cliente-1'),
+          dispositivo(TipoDispositivo.movil, 'cliente-1'),
+        ],
+      });
+
+      expect(capacidad.ocupados).toBe(1);
+      expect(capacidad.libres).toBe(2);
     });
   });
 });

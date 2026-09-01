@@ -50,7 +50,7 @@ export interface CrearCuentaOpciones {
   operadorPrincipalId: string;
   /** true si la Cuenta se crea para un único Cliente Final (cuenta exclusiva). */
   esExclusiva: boolean;
-  clienteFinal?: Pick<ClienteFinal, 'nombre' | 'apellido' | 'telefono' | 'direccion'>;
+  clienteFinal?: Pick<ClienteFinal, 'id' | 'nombre' | 'apellido' | 'telefono' | 'direccion'>;
   /** Firma canónica de servicios. */
   servicios?: string;
   /**
@@ -141,6 +141,7 @@ export class CuentasProvisioningService {
           pinCifrado: this.crypto.encrypt(pin),
           emailContacto: email,
           esExclusiva,
+          clienteFinalExclusivoId: esExclusiva ? opciones.clienteFinal?.id : null,
           servicios: opciones.servicios ?? config.serviciosPorDefecto,
           limiteDispositivos,
           dispositivosFijosHabilitados: dispositivosFijos,
@@ -302,7 +303,7 @@ export class CuentasProvisioningService {
     const reserva = await this.prisma.transaction(async (tx) => {
       // Serializa ventas concurrentes sobre la misma Cuenta: dos requests no
       // pueden observar el mismo último cupo y comprometerlo a la vez.
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
       const cuenta = await tx.cuenta.findUniqueOrThrow({
         where: { id: cuentaId },
         include: { ventasCompartidas: true },
@@ -367,7 +368,7 @@ export class CuentasProvisioningService {
     operadorPrincipalId: string,
   ): Promise<boolean> {
     const eliminada = await this.prisma.transactionComoOperador(operadorPrincipalId, async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
       const dispositivosVigentes = await tx.dispositivo.count({
         where: {
           cuentaId,
@@ -466,7 +467,7 @@ export class CuentasProvisioningService {
         // La llamada externa queda serializada con reservas, altas, incidencias
         // y vencimientos de esta Cuenta. Así ninguna respuesta tardía de SENSA
         // puede sobrescribir un total más nuevo.
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuenta.id}))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuenta.id}))`;
         const vigente = await tx.cuenta.findUniqueOrThrow({
           where: { id: cuenta.id },
           select: { ventasCompartidas: { select: { cuposPorCategoria: true } } },

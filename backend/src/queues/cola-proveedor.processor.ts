@@ -192,7 +192,7 @@ export class ColaProveedorProcessor extends WorkerHost {
       const equipoYaVinculado =
         solicitud.dispositivo.estadoVinculacion === EstadoVinculacionDispositivo.vinculado;
       await this.prisma.transactionComoOperador(datos.operadorPrincipalId, async (tx) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${solicitud.cuentaId}))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${solicitud.cuentaId}))`;
         if (equipoYaVinculado) {
           await tx.solicitudVinculacionDispositivo.update({
             where: { id: solicitud.id },

@@ -36,6 +36,7 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
     pinCifrado: 'v1:aa:bb:cc',
     emailContacto: 'contacto1@isp.com',
     esExclusiva: false,
+    clienteFinalExclusivoId: null,
     servicios: '1|3|5',
     limiteDispositivos: 3,
     dispositivosFijosHabilitados: 2,

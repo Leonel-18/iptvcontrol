@@ -185,26 +185,7 @@ async function main(): Promise<void> {
             RETURNING "secuencia_numero_cliente"`;
           const numeroCliente = secuencia[0].secuencia_numero_cliente;
 
-          await tx.cuenta.create({
-            data: {
-              empresaRevendedoraId: EMPRESA_REVENDEDORA_ID,
-              proveedorId: proveedor.id,
-              proveedorCuentaId,
-              dniAltaSensa: dni,
-              usuario: dni,
-              passwordCifrado: cifrar(password, claveMaestra),
-              pinCifrado: cifrar(pin, claveMaestra),
-              emailContacto: email,
-              esExclusiva: true,
-              servicios,
-              limiteDispositivos: LIMITE_DISPOSITIVOS,
-              dispositivosFijosHabilitados: fijos,
-              dispositivosMovilesHabilitados: moviles,
-              estado: estaDeBaja ? EstadoCuenta.cerrada : EstadoCuenta.activa,
-            },
-          });
-
-          await tx.clienteFinal.create({
+          const cliente = await tx.clienteFinal.create({
             data: {
               empresaRevendedoraId: EMPRESA_REVENDEDORA_ID,
               numeroCliente,
@@ -217,6 +198,26 @@ async function main(): Promise<void> {
               tipoAlta: TipoAltaClienteFinal.cuenta_exclusiva,
               estado: estaDeBaja ? EstadoClienteFinal.dado_de_baja : EstadoClienteFinal.activo,
               dadoDeBajaEn: estaDeBaja ? new Date(fila['Fecha baja']) : null,
+            },
+          });
+
+          await tx.cuenta.create({
+            data: {
+              empresaRevendedoraId: EMPRESA_REVENDEDORA_ID,
+              proveedorId: proveedor.id,
+              proveedorCuentaId,
+              dniAltaSensa: dni,
+              usuario: dni,
+              passwordCifrado: cifrar(password, claveMaestra),
+              pinCifrado: cifrar(pin, claveMaestra),
+              emailContacto: email,
+              esExclusiva: true,
+              clienteFinalExclusivoId: cliente.id,
+              servicios,
+              limiteDispositivos: LIMITE_DISPOSITIVOS,
+              dispositivosFijosHabilitados: fijos,
+              dispositivosMovilesHabilitados: moviles,
+              estado: estaDeBaja ? EstadoCuenta.cerrada : EstadoCuenta.activa,
             },
           });
         });

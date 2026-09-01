@@ -43,7 +43,7 @@ export interface CrearCuentaParams {
   telefono: string;
   /** Parametrización de contenido, ej. "1|3|5". */
   servicios: string;
-  /** Límite comercial global de Dispositivos de la Cuenta. */
+  /** Límite comercial de cupos por categoría de la Cuenta. */
   limiteDispositivos: number;
   /** Proyección técnica para Proveedores que separan categorías. */
   dispositivosFijos: number;
@@ -92,6 +92,7 @@ export interface ActivarDispositivoParams {
 /** Dispositivo tal como lo reporta el Proveedor. */
 export interface DispositivoProveedor {
   proveedorDeviceId: string;
+  /** Identificador informado por el Proveedor; puede tener hasta 40 caracteres. */
   mac?: string;
   nombre?: string;
   modelo?: string;

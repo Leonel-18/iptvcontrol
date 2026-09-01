@@ -55,7 +55,7 @@ export interface CapacidadCuenta {
   limiteVentas: number;
   fijo: CapacidadCategoria;
   movil: CapacidadCategoria;
-  /** Total de Dispositivos ocupando lugar, sin importar categoría. */
+  /** Cupos comerciales 1+1 ocupados (hasta tres), no cantidad física de equipos. */
   ocupados: number;
   limite: number;
   libres: number;
@@ -117,12 +117,13 @@ export const calcularCapacidad = (
 ): CapacidadCuenta => {
   const ocupadosFijo = contarOcupados(cuenta.dispositivos, TipoDispositivo.fijo);
   const ocupadosMovil = contarOcupados(cuenta.dispositivos, TipoDispositivo.movil);
-  const ocupados = contarOcupados(cuenta.dispositivos);
 
   if (cuenta.esExclusiva) {
     const fijo = armarCategoria(ocupadosFijo, LIMITE_POR_CATEGORIA_EXCLUSIVA);
     const movil = armarCategoria(ocupadosMovil, LIMITE_POR_CATEGORIA_EXCLUSIVA);
-    const limite = LIMITE_POR_CATEGORIA_EXCLUSIVA * 2;
+    const totalDispositivos = contarOcupados(cuenta.dispositivos);
+    const ocupados = Math.max(ocupadosFijo, ocupadosMovil, Math.ceil(totalDispositivos / 2));
+    const limite = LIMITE_POR_CATEGORIA_EXCLUSIVA;
     return {
       esExclusiva: true,
       ventas: 1,
@@ -131,9 +132,9 @@ export const calcularCapacidad = (
       movil,
       ocupados,
       limite,
-      libres: fijo.libres + movil.libres,
+      libres: Math.max(0, limite - ocupados),
       completa: fijo.completa && movil.completa,
-      cercaDelTope: ocupados >= Math.min(umbralAlerta * 2, limite),
+      cercaDelTope: ocupados >= Math.min(umbralAlerta, limite),
     };
   }
 
