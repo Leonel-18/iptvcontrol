@@ -268,7 +268,12 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
       empresaRevendedoraId: 'empresa-1',
       numeroCliente: 5,
     };
-    const tx = { clienteFinal: { create: jest.fn().mockResolvedValue(clienteCreado) } };
+    const cuentaUpdate = jest.fn().mockResolvedValue({ count: 1 });
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      clienteFinal: { create: jest.fn().mockResolvedValue(clienteCreado) },
+      cuenta: { updateMany: cuentaUpdate },
+    };
     const prisma = {
       db: {
         cuenta: { findUnique: jest.fn().mockResolvedValue(cuenta) },
@@ -305,20 +310,33 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
       {} as ProveedorService,
     );
     jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: clienteCreado.id } as never);
-    return { servicio, alta, audit, prisma };
+    return { servicio, alta, audit, prisma, cuentaUpdate };
   };
 
-  it('rechaza cuenta_id junto con cuenta_exclusiva', async () => {
-    const { servicio } = crearServicio(null);
+  it('asigna el primer Cliente Final a una Cuenta exclusiva sin crear un Dispositivo ficticio', async () => {
+    const { servicio, alta, cuentaUpdate } = crearServicio({
+      id: 'cuenta-vacia',
+      esExclusiva: true,
+      clienteFinalExclusivoId: null,
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: 'proveedor-cuenta-1',
+      servicios: '1|3',
+      dispositivos: [],
+      ventasCompartidas: [],
+    });
 
-    await expect(
-      servicio.crear({
-        ...dtoBase,
-        tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
-        cupos_por_categoria: undefined,
-        cuenta_id: 'cuenta-vacia',
-      }),
-    ).rejects.toThrow('sólo corresponden a una venta compartida');
+    await servicio.crear({
+      ...dtoBase,
+      tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
+      cupos_por_categoria: undefined,
+      cuenta_id: 'cuenta-vacia',
+    });
+
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: { id: 'cuenta-vacia', clienteFinalExclusivoId: null },
+      data: { clienteFinalExclusivoId: 'cliente-nuevo' },
+    });
+    expect(alta).not.toHaveBeenCalled();
   });
 
   it('rechaza si además se envían servicios', async () => {
@@ -337,12 +355,26 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
     );
   });
 
-  it('rechaza una Cuenta exclusiva', async () => {
-    const { servicio } = crearServicio({ id: 'cuenta-vacia', esExclusiva: true, dispositivos: [] });
+  it('rechaza una Cuenta exclusiva que ya tiene propietario', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-vacia',
+      esExclusiva: true,
+      clienteFinalExclusivoId: 'cliente-existente',
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: 'proveedor-cuenta-1',
+      servicios: '1',
+      dispositivos: [],
+      ventasCompartidas: [],
+    });
 
-    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
-      'no admite carga manual',
-    );
+    await expect(
+      servicio.crear({
+        ...dtoBase,
+        tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
+        cupos_por_categoria: undefined,
+        cuenta_id: 'cuenta-vacia',
+      }),
+    ).rejects.toThrow('ya tiene un Cliente Final asignado');
   });
 
   it('rechaza una Cuenta que ya tiene un Cliente Final activo', async () => {

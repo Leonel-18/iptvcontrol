@@ -37,6 +37,7 @@ describe('InventarioProveedorService — sincronizar', () => {
       incidenciaExistente?: Record<string, unknown> | null;
       cuenta?: Record<string, unknown>;
       pendientesConDueno?: Record<string, unknown>[];
+      inventario?: Record<string, unknown>[];
     },
   ) => {
     const findUniqueCuenta = jest.fn().mockResolvedValue(overrides?.cuenta ?? cuentaBase);
@@ -73,16 +74,18 @@ describe('InventarioProveedorService — sincronizar', () => {
       operadorPrincipalId: 'operador-1',
     } as unknown as RequestContextService;
 
-    const listarDispositivos = jest.fn().mockResolvedValue([
-      { proveedorDeviceId: 'sensa-vinculado', mac: '030000000001', tipo: 'phone', activo: true },
-      {
-        proveedorDeviceId: 'sensa-desconocido',
-        mac: '040000000003',
-        tipo: 'cloud_client',
-        activo: true,
-        nombre: 'Chrome',
-      },
-    ]);
+    const listarDispositivos = jest.fn().mockResolvedValue(
+      overrides?.inventario ?? [
+        { proveedorDeviceId: 'sensa-vinculado', mac: '030000000001', tipo: 'phone', activo: true },
+        {
+          proveedorDeviceId: 'sensa-desconocido',
+          mac: '0123456789012345678901234567890123456789',
+          tipo: 'cloud_client',
+          activo: true,
+          nombre: 'Chrome',
+        },
+      ],
+    );
     const proveedor = { listarDispositivos } as unknown as ProveedorService;
     const audit = { registrarEnTx: jest.fn() } as unknown as AuditService;
 
@@ -113,6 +116,13 @@ describe('InventarioProveedorService — sincronizar', () => {
     expect(vinculado?.cliente_final?.nombre).toBe('Ana Pérez');
     expect(desconocido?.clasificacion).toBe('desconocido');
     expect(desconocido?.incidencia_id).toBe('incidencia-nueva');
+    expect(createIncidencia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          mac: '0123456789012345678901234567890123456789',
+        }),
+      }),
+    );
     expect(createIncidencia).toHaveBeenCalledTimes(1);
   });
 
@@ -213,5 +223,21 @@ describe('InventarioProveedorService — sincronizar', () => {
     expect(desconocido?.clasificacion).toBe('desconocido');
     expect(desconocido?.incidencia_id).toBeNull();
     expect(desconocido?.ventana_activa).toBe(true);
+  });
+
+  it('registra seis Dispositivos desconocidos con identificadores largos sin fallar', async () => {
+    const inventario = Array.from({ length: 6 }, (_, indice) => ({
+      proveedorDeviceId: `sensa-desconocido-${indice + 1}`,
+      mac: `${indice}`.repeat(40),
+      tipo: indice % 2 === 0 ? 'stationary' : 'cloud_client',
+      activo: true,
+    }));
+    const { servicio, createIncidencia } = crearServicio(false, { inventario });
+
+    const resultado = await servicio.sincronizar('cuenta-1');
+
+    expect(resultado.dispositivos).toHaveLength(6);
+    expect(resultado.dispositivos.every((item) => item.clasificacion === 'desconocido')).toBe(true);
+    expect(createIncidencia).toHaveBeenCalledTimes(6);
   });
 });

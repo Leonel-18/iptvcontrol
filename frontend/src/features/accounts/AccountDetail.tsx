@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, KeyRound, Lock, Pencil, RefreshCw, UserPlus, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  KeyRound,
+  Lock,
+  Pencil,
+  RefreshCw,
+  UserPlus,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -93,7 +101,10 @@ export const AccountDetail = () => {
         void queryClient.invalidateQueries({ queryKey: ["account", id] });
         return;
       }
-      timer = window.setTimeout(refreshAtEnd, Math.min(remaining + 100, 2_147_483_647));
+      timer = window.setTimeout(
+        refreshAtEnd,
+        Math.min(remaining + 100, 2_147_483_647),
+      );
     };
     refreshAtEnd();
 
@@ -152,7 +163,9 @@ export const AccountDetail = () => {
       toast.success("Contraseña actualizada en el proveedor.");
       setCambiarPasswordAbierto(false);
       setPasswordNueva("");
-      void queryClient.invalidateQueries({ queryKey: ["account-credentials", id] });
+      void queryClient.invalidateQueries({
+        queryKey: ["account-credentials", id],
+      });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -227,8 +240,8 @@ export const AccountDetail = () => {
         onConfirmar={() => cerrarCuenta.mutate()}
       >
         <Alert tone="warning">
-          Esta acción no se puede deshacer. Úsela sólo para Cuentas creadas por error o
-          abandonadas.
+          Esta acción no se puede deshacer. Úsela sólo para Cuentas creadas por
+          error o abandonadas.
         </Alert>
       </ConfirmDialog>
 
@@ -242,30 +255,42 @@ export const AccountDetail = () => {
         onConfirmar={() => liberarVentanaCuriosidad.mutate()}
       >
         <Alert tone="warning">
-          Confirme sólo si ya no necesita mantener esta Cuenta reservada durante el plazo indicado.
+          Confirme sólo si ya no necesita mantener esta Cuenta reservada durante
+          el plazo indicado.
         </Alert>
       </ConfirmDialog>
 
-      <Dialog open={cambiarPasswordAbierto} onOpenChange={setCambiarPasswordAbierto}>
+      <Dialog
+        open={cambiarPasswordAbierto}
+        onOpenChange={setCambiarPasswordAbierto}
+      >
         <DialogContent
           titulo="Cambiar contraseña de la Cuenta"
           descripcion="Reemplaza la contraseña generada automáticamente por una definida a mano. Debe ser numérica, de 8 a 20 dígitos."
         >
           <div className="space-y-4">
-            <Field label="Contraseña nueva" htmlFor="password-nueva" required error={errorPassword}>
+            <Field
+              label="Contraseña nueva"
+              htmlFor="password-nueva"
+              required
+              error={errorPassword}
+            >
               <Input
                 id="password-nueva"
                 inputMode="numeric"
                 value={passwordNueva}
                 onChange={(evento) =>
-                  setPasswordNueva(evento.target.value.replace(/\D/g, "").slice(0, 20))
+                  setPasswordNueva(
+                    evento.target.value.replace(/\D/g, "").slice(0, 20),
+                  )
                 }
                 autoFocus
               />
             </Field>
             <Alert tone="warning">
-              Los Clientes Finales que usan esta Cuenta van a necesitar la contraseña nueva para
-              seguir accediendo. Avíseles antes de cambiarla.
+              Los Clientes Finales que usan esta Cuenta van a necesitar la
+              contraseña nueva para seguir accediendo. Avíseles antes de
+              cambiarla.
             </Alert>
             <div className="flex justify-end gap-2">
               <Button
@@ -287,7 +312,9 @@ export const AccountDetail = () => {
                 }}
                 disabled={cambiarPassword.isPending}
               >
-                {cambiarPassword.isPending ? "Guardando…" : "Guardar contraseña"}
+                {cambiarPassword.isPending
+                  ? "Guardando…"
+                  : "Guardar contraseña"}
               </Button>
             </div>
           </div>
@@ -295,10 +322,14 @@ export const AccountDetail = () => {
       </Dialog>
 
       {!esOperador ? (
-        <EditAccountDialog cuenta={data} abierto={editarAbierto} onCambio={setEditarAbierto} />
+        <EditAccountDialog
+          cuenta={data}
+          abierto={editarAbierto}
+          onCambio={setEditarAbierto}
+        />
       ) : null}
 
-      {!esOperador && !data.es_exclusiva ? (
+      {!esOperador ? (
         <AddManualCustomerDialog
           cuenta={data}
           abierto={agregarClienteAbierto}
@@ -323,7 +354,7 @@ export const AccountDetail = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <CapacityMeter capacidad={data.capacidad} />
-              <OcupacionDetalle ocupacion={data.capacidad} esExclusiva={data.es_exclusiva} />
+              <OcupacionDetalle ocupacion={data.capacidad} />
               {data.capacidad.cerca_del_tope ? (
                 <Alert tone="warning" titulo="Cerca del tope de capacidad">
                   {data.es_exclusiva
@@ -358,6 +389,7 @@ export const AccountDetail = () => {
                   <AccountProviderInventoryTab
                     cuentaId={data.id}
                     esOperador={esOperador}
+                    clienteExclusivo={data.cliente_final_exclusivo}
                   />
                 </TabsContent>
                 {!esOperador ? (
@@ -402,7 +434,7 @@ export const AccountDetail = () => {
                         <p className="text-sm texto-suave">
                           Esta cuenta todavía no tiene clientes asociados.
                         </p>
-                        {!data.es_exclusiva && data.capacidad.ocupados === 0 ? (
+                        {data.es_exclusiva || data.capacidad.ocupados === 0 ? (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -544,7 +576,11 @@ export const AccountDetail = () => {
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Datos de la cuenta</CardTitle>
               {!esOperador ? (
-                <Button variant="ghost" size="sm" onClick={() => setEditarAbierto(true)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditarAbierto(true)}
+                >
                   <Pencil className="size-3.5" />
                   Editar
                 </Button>
@@ -615,13 +651,11 @@ export const AccountDetail = () => {
 
 const OcupacionDetalle = ({
   ocupacion,
-  esExclusiva,
 }: {
   ocupacion: AccountDetailData["capacidad"];
-  esExclusiva: boolean;
 }) => (
   <div className="rounded-lg border p-3">
-    <p className="eyebrow">{esExclusiva ? "Dispositivos" : "Ventas"}</p>
+    <p className="eyebrow">Cupos 1+1</p>
     <p className="mt-1 font-display text-lg font-bold tabular-nums">
       {ocupacion.ocupados}{" "}
       <span className="text-sm font-normal texto-suave">
@@ -630,7 +664,7 @@ const OcupacionDetalle = ({
     </p>
     <p className="text-xs texto-suave">
       {ocupacion.libres > 0
-        ? `${ocupacion.libres} lugar${ocupacion.libres === 1 ? "" : "es"} libre${ocupacion.libres === 1 ? "" : "s"}`
+        ? `${ocupacion.libres} cupo${ocupacion.libres === 1 ? "" : "s"} libre${ocupacion.libres === 1 ? "" : "s"}`
         : "Cuenta en el límite"}
     </p>
   </div>

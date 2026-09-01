@@ -111,9 +111,8 @@ export class CrearClienteDto {
 
   @ApiPropertyOptional({
     description:
-      'Carga manual en una Cuenta compartida ya existente y vacía (ej. importada de SENSA sin ' +
-      'clientes). Sólo válida con `tipo_alta = dispositivo_compartido`; usa la firma de ' +
-      'servicios ya fijada en la Cuenta, no la de `servicios`.',
+      'Carga manual en una Cuenta ya existente y sin cliente (ej. importada de SENSA). El ' +
+      '`tipo_alta` debe coincidir con el tipo de Cuenta y usa sus servicios ya fijados.',
   })
   @IsOptional()
   @IsUUID()

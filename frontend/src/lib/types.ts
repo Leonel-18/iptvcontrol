@@ -82,7 +82,10 @@ export interface AccountDevice {
    * Ventana de vinculación activa (hasta 10 min desde el alta, SENSA se
    * revisa cada 30 s). `null` si ya se vinculó, si venció o si nunca hubo.
    */
-  ventana_vinculacion?: { expira_en: string; proximo_sondeo_en?: string } | null;
+  ventana_vinculacion?: {
+    expira_en: string;
+    proximo_sondeo_en?: string;
+  } | null;
 }
 
 export interface DeviceIncident {
@@ -98,6 +101,11 @@ export interface DeviceIncident {
 
 export interface AccountDetail extends Account {
   dispositivos: AccountDevice[];
+  cliente_final_exclusivo?: {
+    id: string;
+    numero_cliente: number;
+    nombre: string;
+  } | null;
   clientes_finales?: {
     id: string;
     numero_cliente: number;
@@ -164,7 +172,7 @@ export interface AccountCredentials {
 export interface CapacityAlert {
   cuenta_id: string;
   proveedor_cuenta_id: string | null;
-  /** Exclusiva: "X de 6" (Dispositivos). Compartida: "X de 3 cupos". */
+  /** Cupos comerciales 1+1 ocupados, siempre sobre un máximo de tres. */
   dispositivos: string;
   fijos: string;
   moviles: string;

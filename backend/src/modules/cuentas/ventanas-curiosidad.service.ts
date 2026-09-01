@@ -103,7 +103,7 @@ export class VentanasCuriosidadService {
   async asegurarClientePermitido(cuentaId: string, clienteFinalId: string): Promise<void> {
     const ahora = new Date();
     await this.prisma.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
       await this.cerrarVencidasEnTx(tx, cuentaId, ahora);
       const activa = await tx.ventanaCuriosidad.findFirst({
         where: { cuentaId, finRealEn: null, finPrevistoEn: { gt: ahora } },
@@ -136,7 +136,7 @@ export class VentanasCuriosidadService {
     const teamMemberId = this.contexto.teamMemberId;
     const ahora = new Date();
     const ventana = await this.prisma.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
       const cuenta = await tx.cuenta.findUnique({ where: { id: cuentaId } });
       if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
       if (cuenta.esExclusiva) {

@@ -195,12 +195,12 @@ describe('CuentasProvisioningService — contadores de venta', () => {
       return { id: 'venta-nueva' };
     });
     const tx = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
       cuenta: { findUniqueOrThrow: jest.fn().mockResolvedValue(cuenta) },
       ventaCompartida: { create: ventaCreate },
     };
     const operadorTx = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
       cuenta: {
         findUniqueOrThrow: jest.fn().mockResolvedValue(cuenta),
         update: cuentaUpdate,

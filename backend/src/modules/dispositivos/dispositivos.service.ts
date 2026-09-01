@@ -6,6 +6,7 @@ import {
   Dispositivo,
   EntidadAuditada,
   EstadoClienteFinal,
+  EstadoCuenta,
   EstadoDispositivo,
   EstadoSolicitudVinculacion,
   EstadoVinculacionDispositivo,
@@ -140,6 +141,12 @@ export class DispositivosService {
       const capacidad = calcularCapacidad(cuentaConDispositivos, umbral);
 
       if (cuentaConDispositivos.esExclusiva) {
+        if (
+          cuentaConDispositivos.clienteFinalExclusivoId &&
+          cuentaConDispositivos.clienteFinalExclusivoId !== clienteFinal.id
+        ) {
+          throw new BadRequestException('La Cuenta exclusiva pertenece a otro Cliente Final.');
+        }
         if (capacidad.completa) {
           throw new BadRequestException(
             'La Cuenta llegó al límite de 3 Dispositivos fijos y 3 móviles.',
@@ -215,8 +222,19 @@ export class DispositivosService {
       const expiraEn = new Date(ahora.getTime() + DURACION_VINCULACION_MS);
       const proximoSondeoEn = new Date(ahora.getTime() + INTERVALO_SONDEO_MS);
       const resultado = await this.prisma.transaction(async (tx) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${cuenta.id}))`;
-        if (!cuenta.esExclusiva) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuenta.id}))`;
+        if (cuenta.esExclusiva && !cuenta.clienteFinalExclusivoId) {
+          const asignada = await tx.cuenta.updateMany({
+            where: {
+              id: cuenta.id,
+              OR: [{ clienteFinalExclusivoId: null }, { clienteFinalExclusivoId: clienteFinal.id }],
+            },
+            data: { clienteFinalExclusivoId: clienteFinal.id },
+          });
+          if (asignada.count !== 1) {
+            throw new BadRequestException('La Cuenta exclusiva pertenece a otro Cliente Final.');
+          }
+        } else if (!cuenta.esExclusiva) {
           await tx.ventaCompartida.findUniqueOrThrow({
             where: {
               cuentaId_clienteFinalId: {
@@ -550,13 +568,18 @@ export class DispositivosService {
           include: { cuenta: true },
           orderBy: { creadoEn: 'asc' },
         },
+        cuentasExclusivas: {
+          where: { estado: EstadoCuenta.activa },
+          orderBy: { creadoEn: 'asc' },
+          take: 1,
+        },
       },
     });
     if (clienteFinal.estado !== EstadoClienteFinal.activo) {
       throw new BadRequestException('Sólo se pueden agregar Dispositivos a un cliente activo.');
     }
 
-    const cuentaActual = clienteFinal.dispositivos[0]?.cuenta;
+    const cuentaActual = clienteFinal.dispositivos[0]?.cuenta ?? clienteFinal.cuentasExclusivas[0];
     if (cuentaActual) {
       const cuentaConDispositivos = await this.prisma.db.cuenta.findUniqueOrThrow({
         where: { id: cuentaActual.id },

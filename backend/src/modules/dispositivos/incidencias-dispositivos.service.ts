@@ -127,6 +127,15 @@ export class IncidenciasDispositivosService {
     if (cliente.estado !== EstadoClienteFinal.activo) {
       throw new BadRequestException('Sólo se puede vincular a un Cliente Final activo.');
     }
+    if (
+      incidencia.cuenta.esExclusiva &&
+      incidencia.cuenta.clienteFinalExclusivoId &&
+      incidencia.cuenta.clienteFinalExclusivoId !== clienteFinalId
+    ) {
+      throw new BadRequestException(
+        'La Cuenta exclusiva pertenece a otro Cliente Final: sólo se pueden agregar sus propios Dispositivos.',
+      );
+    }
 
     // Puede pasar que el sondeo normal (cada 30 s) ya haya reclamado este
     // mismo equipo entre que se detectó como "desconocido" y que alguien
@@ -199,7 +208,39 @@ export class IncidenciasDispositivosService {
     let dispositivo: Dispositivo;
     try {
       dispositivo = await this.prisma.transaction(async (tx) => {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${incidencia.cuentaId}))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${incidencia.cuentaId}))`;
+        if (incidencia.cuenta.esExclusiva && !incidencia.cuenta.clienteFinalExclusivoId) {
+          const asignada = await tx.cuenta.updateMany({
+            where: {
+              id: incidencia.cuentaId,
+              OR: [{ clienteFinalExclusivoId: null }, { clienteFinalExclusivoId: clienteFinalId }],
+            },
+            data: { clienteFinalExclusivoId: clienteFinalId },
+          });
+          if (asignada.count !== 1) {
+            throw new BadRequestException('La Cuenta exclusiva pertenece a otro Cliente Final.');
+          }
+        }
+        const vinculadoDuranteBloqueo = await tx.dispositivo.findUnique({
+          where: {
+            cuentaId_proveedorDeviceId: {
+              cuentaId: incidencia.cuentaId,
+              proveedorDeviceId: incidencia.proveedorDeviceId,
+            },
+          },
+        });
+        if (vinculadoDuranteBloqueo) {
+          if (vinculadoDuranteBloqueo.clienteFinalId !== clienteFinalId) {
+            throw new BadRequestException(
+              'Este equipo ya está vinculado a otro Cliente Final de esta Cuenta.',
+            );
+          }
+          await tx.incidenciaDispositivoProveedor.update({
+            where: { id },
+            data: { estado: EstadoIncidenciaDispositivo.reconocido, resueltaEn: new Date() },
+          });
+          return vinculadoDuranteBloqueo;
+        }
         const venta = incidencia.cuenta.esExclusiva
           ? null
           : await tx.ventaCompartida.findUniqueOrThrow({

@@ -374,6 +374,7 @@ model ClienteFinal {
   dispositivos       Dispositivo[]
   ventasCompartidas  VentaCompartida[]
   ventanasCuriosidad VentanaCuriosidad[]
+  cuentasExclusivas  Cuenta[]             @relation("ClienteFinalCuentaExclusiva")
 
   @@unique([empresaRevendedoraId, numeroCliente])
   @@index([empresaRevendedoraId, estado])
@@ -382,8 +383,8 @@ model ClienteFinal {
 }
 
 /// Unidad de contratación entre el Operador Principal y el Proveedor.
-/// Capacidad comercial máxima global: 3 Dispositivos. Es la unidad que se
-/// factura del Operador Principal a la Empresa Revendedora.
+/// Capacidad comercial máxima: 3 cupos 1+1 (hasta 3 fijos + 3 móviles). Es la
+/// unidad que se factura del Operador Principal a la Empresa Revendedora.
 model Cuenta {
   id String @id @default(uuid()) @db.Uuid
 
@@ -412,10 +413,15 @@ model Cuenta {
   /// true si fue creada para un único Cliente Final vía "cuenta exclusiva".
   esExclusiva Boolean @default(false) @map("es_exclusiva")
 
+  /// Titular explícito de una Cuenta exclusiva. No se infiere desde los
+  /// Dispositivos porque una Cuenta puede tener cliente antes del primer login.
+  clienteFinalExclusivoId String?       @map("cliente_final_exclusivo_id") @db.Uuid
+  clienteFinalExclusivo   ClienteFinal? @relation("ClienteFinalCuentaExclusiva", fields: [clienteFinalExclusivoId], references: [id], onDelete: SetNull)
+
   /// Parametrización de contenido vigente en el Proveedor (ej. "1|3|5").
   servicios String @default("1") @db.VarChar(40)
 
-  /// Máximo comercial global de Dispositivos vinculables a la Cuenta.
+  /// Máximo comercial de cupos por categoría vinculables a la Cuenta.
   limiteDispositivos Int @default(3) @map("limite_dispositivos")
 
   /// Proyección técnica de la parametrización por categoría del Proveedor.
@@ -435,6 +441,7 @@ model Cuenta {
   ventanasCuriosidad     VentanaCuriosidad[]
 
   @@index([empresaRevendedoraId, estado])
+  @@index([clienteFinalExclusivoId])
   @@map("cuenta")
 }
 
@@ -532,7 +539,7 @@ model Dispositivo {
   proveedorDeviceId String? @map("proveedor_device_id") @db.VarChar(60)
 
   /// MAC reportada por el Proveedor al detectar el primer inicio de sesión.
-  mac String? @db.VarChar(12)
+  mac String? @db.VarChar(40)
 
   /// Se completa cuando el sondeo detecta el tipo informado por el Proveedor.
   tipo          TipoDispositivo?
@@ -604,7 +611,7 @@ model IncidenciaDispositivoProveedor {
   empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
 
   proveedorDeviceId   String                      @map("proveedor_device_id") @db.VarChar(60)
-  mac                 String?                     @db.VarChar(12)
+  mac                 String?                     @db.VarChar(40)
   tipoProveedor       String?                     @map("tipo_proveedor") @db.VarChar(40)
   estado              EstadoIncidenciaDispositivo @default(pendiente)
   cantidadDetecciones Int                         @default(1) @map("cantidad_detecciones")

@@ -12,12 +12,18 @@ import type {
   CustomerDetail,
   SharedCapacity,
 } from "@/lib/types";
-import { Alert, Button, Field, Input, Skeleton } from "@/components/ui/primitives";
+import {
+  Alert,
+  Button,
+  Field,
+  Input,
+  Skeleton,
+} from "@/components/ui/primitives";
 import { Dialog, DialogContent } from "@/components/ui/overlays";
 
 /**
- * Carga manual del primer Cliente Final de una Cuenta compartida ya existente
- * y vacía (ej. importada de SENSA, que no informa esa relación). Reusa el
+ * Carga manual del primer Cliente Final de una Cuenta ya existente y vacía
+ * (ej. importada de SENSA, que no informa esa relación). Reusa el
  * endpoint normal de alta (`POST /customers`) forzando `cuenta_id`: usa la
  * firma de servicios que la Cuenta ya tiene fijada, no una elegida acá.
  */
@@ -45,15 +51,15 @@ export const AddManualCustomerDialog = ({
   const settings = useQuery({
     queryKey: ["settings-curiosity-window"],
     queryFn: () => api<CuriosityWindowSettings>("/settings/curiosity-window"),
-    enabled: abierto,
+    enabled: abierto && !cuenta.es_exclusiva,
     staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
-    if (abierto && settings.data) {
+    if (abierto && !cuenta.es_exclusiva && settings.data) {
       setDuracion(settings.data.duracion_predeterminada_minutos);
     }
-  }, [abierto, settings.data]);
+  }, [abierto, cuenta.es_exclusiva, settings.data]);
 
   const crear = useMutation({
     mutationFn: () =>
@@ -66,10 +72,16 @@ export const AddManualCustomerDialog = ({
           telefono: telefono.trim() || undefined,
           email: email.trim() || undefined,
           direccion: direccion.trim() || undefined,
-          tipo_alta: "dispositivo_compartido",
+          tipo_alta: cuenta.es_exclusiva
+            ? "cuenta_exclusiva"
+            : "dispositivo_compartido",
           cuenta_id: cuenta.id,
-          cupos_por_categoria: cuposPorCategoria,
-          duracion_ventana_curiosidad_minutos: duracion,
+          ...(cuenta.es_exclusiva
+            ? {}
+            : {
+                cupos_por_categoria: cuposPorCategoria,
+                duracion_ventana_curiosidad_minutos: duracion,
+              }),
           dispositivo: {},
         },
       }),
@@ -100,12 +112,17 @@ export const AddManualCustomerDialog = ({
     <Dialog open={abierto} onOpenChange={onCambio}>
       <DialogContent
         titulo="Cargar cliente en esta Cuenta"
-        descripcion="Para Cuentas compartidas vacías (ej. importadas), donde el proveedor no informó sus clientes."
+        descripcion={
+          cuenta.es_exclusiva
+            ? "Asigna el titular de esta Cuenta exclusiva. Los Dispositivos se agregan después desde el inventario del Proveedor."
+            : "Para Cuentas compartidas vacías donde el Proveedor no informó sus clientes."
+        }
       >
         <div className="space-y-4">
           {cuenta.servicios_nombres ? (
             <Alert tone="info">
-              Esta Cuenta ya tiene fijados los servicios: {cuenta.servicios_nombres.join(", ")}.
+              Esta Cuenta ya tiene fijados los servicios:{" "}
+              {cuenta.servicios_nombres.join(", ")}.
             </Alert>
           ) : null}
 
@@ -113,26 +130,54 @@ export const AddManualCustomerDialog = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre" htmlFor="manual-nombre" required>
-              <Input id="manual-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus />
+              <Input
+                id="manual-nombre"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                autoFocus
+              />
             </Field>
             <Field label="Apellido" htmlFor="manual-apellido">
-              <Input id="manual-apellido" value={apellido} onChange={(e) => setApellido(e.target.value)} />
+              <Input
+                id="manual-apellido"
+                value={apellido}
+                onChange={(e) => setApellido(e.target.value)}
+              />
             </Field>
             <Field label="DNI" htmlFor="manual-dni" required>
               <Input
                 id="manual-dni"
                 inputMode="numeric"
                 value={dni}
-                onChange={(e) => setDni(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onChange={(e) =>
+                  setDni(e.target.value.replace(/\D/g, "").slice(0, 10))
+                }
               />
             </Field>
             <Field label="Teléfono" htmlFor="manual-telefono">
-              <Input id="manual-telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+              <Input
+                id="manual-telefono"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+              />
             </Field>
-            <Field label="Correo" htmlFor="manual-email" className="sm:col-span-2">
-              <Input id="manual-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Field
+              label="Correo"
+              htmlFor="manual-email"
+              className="sm:col-span-2"
+            >
+              <Input
+                id="manual-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </Field>
-            <Field label="Dirección" htmlFor="manual-direccion" className="sm:col-span-2">
+            <Field
+              label="Dirección"
+              htmlFor="manual-direccion"
+              className="sm:col-span-2"
+            >
               <Input
                 id="manual-direccion"
                 value={direccion}
@@ -141,49 +186,72 @@ export const AddManualCustomerDialog = ({
             </Field>
           </div>
 
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">Dispositivos autorizados</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {([1, 2] as SharedCapacity[]).map((cantidad) => (
-                <button
-                  key={cantidad}
-                  type="button"
-                  onClick={() => setCuposPorCategoria(cantidad)}
-                  className={cn(
-                    "rounded-lg border px-4 py-3 text-left transition-colors",
-                    cuposPorCategoria === cantidad
-                      ? "border-azure-500 bg-azure-50 dark:bg-azure-900/30"
-                      : "hover:bg-navy-50 dark:hover:bg-navy-800",
-                  )}
-                >
-                  <span className="block font-medium">{sharedCapacityLabels[cantidad]}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          {!cuenta.es_exclusiva ? (
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">
+                Dispositivos autorizados
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {([1, 2] as SharedCapacity[]).map((cantidad) => (
+                  <button
+                    key={cantidad}
+                    type="button"
+                    onClick={() => setCuposPorCategoria(cantidad)}
+                    className={cn(
+                      "rounded-lg border px-4 py-3 text-left transition-colors",
+                      cuposPorCategoria === cantidad
+                        ? "border-azure-500 bg-azure-50 dark:bg-azure-900/30"
+                        : "hover:bg-navy-50 dark:hover:bg-navy-800",
+                    )}
+                  >
+                    <span className="block font-medium">
+                      {sharedCapacityLabels[cantidad]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
 
-          {settings.isPending ? (
+          {!cuenta.es_exclusiva && settings.isPending ? (
             <Skeleton className="h-28" />
-          ) : settings.isError ? (
-            <Alert tone="danger" titulo="No se pudo cargar la duración predeterminada">
-              <Button variant="secondary" size="sm" onClick={() => void settings.refetch()}>
+          ) : !cuenta.es_exclusiva && settings.isError ? (
+            <Alert
+              tone="danger"
+              titulo="No se pudo cargar la duración predeterminada"
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void settings.refetch()}
+              >
                 Reintentar
               </Button>
             </Alert>
-          ) : (
+          ) : !cuenta.es_exclusiva && settings.data ? (
             <CuriosityDurationInput
               value={duracion}
               maxMinutes={settings.data.duracion_predeterminada_minutos}
               onChange={setDuracion}
               help="Ponga 0 días, 0 horas y 0 minutos si no quiere bloquear la Cuenta para otro cliente."
             />
-          )}
+          ) : null}
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => onCambio(false)} disabled={crear.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => onCambio(false)}
+              disabled={crear.isPending}
+            >
               Cancelar
             </Button>
-            <Button variant="primary" onClick={confirmar} disabled={crear.isPending || !settings.isSuccess}>
+            <Button
+              variant="primary"
+              onClick={confirmar}
+              disabled={
+                crear.isPending || (!cuenta.es_exclusiva && !settings.isSuccess)
+              }
+            >
               {crear.isPending ? "Cargando…" : "Cargar cliente"}
             </Button>
           </div>

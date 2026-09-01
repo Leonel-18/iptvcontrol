@@ -282,7 +282,11 @@ describe('CuentasService — actualizarPropiedades', () => {
   ) => {
     const cuentaFindUnique = jest
       .fn()
-      .mockResolvedValueOnce(cuentaPrevia)
+      .mockResolvedValueOnce({
+        ventasCompartidas: [],
+        clienteFinalExclusivoId: null,
+        ...cuentaPrevia,
+      })
       .mockResolvedValueOnce({
         id: 'cuenta-1',
         proveedorCuentaId: '30000001',
@@ -303,7 +307,7 @@ describe('CuentasService — actualizarPropiedades', () => {
     const ventanaCuriosidadUpdateMany = jest.fn().mockResolvedValue({ count: 0 });
     const cuentaUpdate = jest.fn().mockResolvedValue(undefined);
     const tx = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      $executeRaw: jest.fn().mockResolvedValue(1),
       ventaCompartida: { deleteMany: ventaCompartidaDeleteMany, create: ventaCompartidaCreate },
       ventanaCuriosidad: { updateMany: ventanaCuriosidadUpdateMany },
       cuenta: { update: cuentaUpdate },
@@ -358,6 +362,7 @@ describe('CuentasService — actualizarPropiedades', () => {
       aplicarLimiteExclusiva,
       sincronizarContadoresVenta,
       encolarSincronizacionContadoresVenta,
+      executeRaw: tx.$executeRaw,
     };
   };
 
@@ -403,7 +408,10 @@ describe('CuentasService — actualizarPropiedades', () => {
     });
     expect(cuentaUpdate).toHaveBeenCalledWith({
       where: { id: 'cuenta-1' },
-      data: { esExclusiva: true, servicios: '1|3' },
+      data: {
+        esExclusiva: true,
+        servicios: '1|3',
+      },
     });
   });
 
@@ -467,13 +475,45 @@ describe('CuentasService — actualizarPropiedades', () => {
     );
     expect(cuentaUpdate).toHaveBeenCalledWith({
       where: { id: 'cuenta-1' },
-      data: { esExclusiva: true, servicios: '1|3' },
+      data: {
+        esExclusiva: true,
+        clienteFinalExclusivoId: 'cliente-1',
+        servicios: '1|3',
+      },
     });
     expect(audit.registrarEnTx).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ accion: 'cambio_tipo_cuenta' }),
     );
     expect(aplicarLimiteExclusiva).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+  });
+
+  it('convierte compartida sin equipos a exclusiva conservando el Cliente Final de la venta', async () => {
+    const { servicio, cuentaUpdate, executeRaw } = crearServicio(
+      {
+        id: 'cuenta-1',
+        proveedorCuentaId: '30000001',
+        esExclusiva: false,
+        clienteFinalExclusivoId: null,
+        servicios: '1',
+        empresaRevendedoraId: 'empresa-1',
+        dispositivos: [],
+        ventasCompartidas: [{ clienteFinalId: 'cliente-1', cuposPorCategoria: 1 }],
+      },
+      { cuentaFinal: { esExclusiva: true } },
+    );
+
+    await servicio.actualizarPropiedades('cuenta-1', { es_exclusiva: true });
+
+    expect(executeRaw).toHaveBeenCalled();
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: { id: 'cuenta-1' },
+      data: {
+        esExclusiva: true,
+        clienteFinalExclusivoId: 'cliente-1',
+        servicios: '1',
+      },
+    });
   });
 
   it('convierte exclusiva a compartida: crea la venta 1+1 para el único cliente', async () => {
@@ -502,9 +542,40 @@ describe('CuentasService — actualizarPropiedades', () => {
     });
     expect(cuentaUpdate).toHaveBeenCalledWith({
       where: { id: 'cuenta-1' },
-      data: { esExclusiva: false, servicios: '1|2|3' },
+      data: { esExclusiva: false, clienteFinalExclusivoId: null, servicios: '1|2|3' },
     });
     expect(sincronizarContadoresVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+  });
+
+  it('convierte exclusiva sin equipos a compartida usando su propietario explícito', async () => {
+    const { servicio, ventaCompartidaCreate, cuentaUpdate } = crearServicio(
+      {
+        id: 'cuenta-1',
+        proveedorCuentaId: '30000001',
+        esExclusiva: true,
+        clienteFinalExclusivoId: 'cliente-1',
+        servicios: '1',
+        empresaRevendedoraId: 'empresa-1',
+        dispositivos: [],
+        ventasCompartidas: [],
+      },
+      { cuentaFinal: { esExclusiva: false } },
+    );
+
+    await servicio.actualizarPropiedades('cuenta-1', { es_exclusiva: false });
+
+    expect(ventaCompartidaCreate).toHaveBeenCalledWith({
+      data: {
+        cuentaId: 'cuenta-1',
+        clienteFinalId: 'cliente-1',
+        empresaRevendedoraId: 'empresa-1',
+        cuposPorCategoria: 1,
+      },
+    });
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: { id: 'cuenta-1' },
+      data: { esExclusiva: false, clienteFinalExclusivoId: null, servicios: '1' },
+    });
   });
 
   it('cambia sólo los servicios de una Cuenta compartida: valida licencias y empuja a SENSA antes de guardar', async () => {

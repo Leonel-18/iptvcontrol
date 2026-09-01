@@ -36,7 +36,13 @@ describe('IncidenciasDispositivosService — resolver', () => {
     dispositivosDelClienteEnCuenta?: number;
     ocupadosCategoria?: number;
     dispositivoYaVinculado?: Record<string, unknown> | null;
+    dispositivoVinculadoDuranteBloqueo?: Record<string, unknown> | null;
+    cuenta?: Record<string, unknown>;
   }) => {
+    const incidencia = {
+      ...incidenciaPendiente,
+      cuenta: opciones?.cuenta ?? incidenciaPendiente.cuenta,
+    };
     const dispositivoCreate = jest.fn().mockResolvedValue({ id: 'dispositivo-tv-nuevo' });
     const incidenciaUpdate = jest.fn().mockResolvedValue(undefined);
     const dispositivoCount = jest.fn().mockResolvedValue(opciones?.ocupadosCategoria ?? 0);
@@ -44,20 +50,29 @@ describe('IncidenciasDispositivosService — resolver', () => {
       .fn()
       .mockResolvedValue(opciones?.dispositivoYaVinculado ?? null);
     const incidenciaUpdateDirecta = jest.fn().mockResolvedValue(undefined);
+    const cuentaUpdate = jest.fn().mockResolvedValue({ count: 1 });
+    const dispositivoFindUniqueEnTx = jest
+      .fn()
+      .mockResolvedValue(opciones?.dispositivoVinculadoDuranteBloqueo ?? null);
 
     const tx = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
-      dispositivo: { create: dispositivoCreate, count: dispositivoCount },
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      dispositivo: {
+        create: dispositivoCreate,
+        count: dispositivoCount,
+        findUnique: dispositivoFindUniqueEnTx,
+      },
       ventaCompartida: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({ cuposPorCategoria: 1 }),
       },
       incidenciaDispositivoProveedor: { update: incidenciaUpdate },
+      cuenta: { updateMany: cuentaUpdate },
     };
 
     const prisma = {
       db: {
         incidenciaDispositivoProveedor: {
-          findUnique: jest.fn().mockResolvedValue(incidenciaPendiente),
+          findUnique: jest.fn().mockResolvedValue(incidencia),
           update: incidenciaUpdateDirecta,
         },
         clienteFinal: {
@@ -114,6 +129,8 @@ describe('IncidenciasDispositivosService — resolver', () => {
       eliminarDispositivo,
       reservarCapacidadPorNuevaVenta,
       dispositivoCount,
+      cuentaUpdate,
+      executeRaw: tx.$executeRaw,
     };
   };
 
@@ -199,6 +216,44 @@ describe('IncidenciasDispositivosService — resolver', () => {
     );
   });
 
+  it('asigna el propietario de una Cuenta exclusiva vacía al vincular su primer equipo', async () => {
+    const { servicio, cuentaUpdate, executeRaw } = crearServicio({
+      cuenta: {
+        id: 'cuenta-1',
+        esExclusiva: true,
+        clienteFinalExclusivoId: null,
+        proveedorCuentaId: '30000026',
+      },
+    });
+
+    await servicio.resolver('incidencia-tv', 'vincular', 'cliente-valentin');
+
+    expect(executeRaw).toHaveBeenCalled();
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: {
+        id: 'cuenta-1',
+        OR: [{ clienteFinalExclusivoId: null }, { clienteFinalExclusivoId: 'cliente-valentin' }],
+      },
+      data: { clienteFinalExclusivoId: 'cliente-valentin' },
+    });
+  });
+
+  it('rechaza vincular a otro cliente una Cuenta exclusiva que ya tiene propietario', async () => {
+    const { servicio, dispositivoCreate } = crearServicio({
+      cuenta: {
+        id: 'cuenta-1',
+        esExclusiva: true,
+        clienteFinalExclusivoId: 'cliente-titular',
+        proveedorCuentaId: '30000026',
+      },
+    });
+
+    await expect(
+      servicio.resolver('incidencia-tv', 'vincular', 'cliente-valentin'),
+    ).rejects.toThrow('pertenece a otro Cliente Final');
+    expect(dispositivoCreate).not.toHaveBeenCalled();
+  });
+
   it('elimina el Dispositivo desconocido en el Proveedor sin pedir Cliente Final', async () => {
     const { servicio, eliminarDispositivo, incidenciaUpdate } = crearServicio();
 
@@ -256,5 +311,19 @@ describe('IncidenciasDispositivosService — resolver', () => {
       servicio.resolver('incidencia-tv', 'vincular', 'cliente-valentin'),
     ).rejects.toThrow('Corregir vinculación');
     expect(dispositivoCreate).not.toHaveBeenCalled();
+  });
+
+  it('vuelve a verificar el duplicado dentro del lock antes de crear', async () => {
+    const { servicio, dispositivoCreate } = crearServicio({
+      dispositivoVinculadoDuranteBloqueo: {
+        id: 'dispositivo-creado-en-paralelo',
+        clienteFinalId: 'cliente-valentin',
+      },
+    });
+
+    const resultado = await servicio.resolver('incidencia-tv', 'vincular', 'cliente-valentin');
+
+    expect(dispositivoCreate).not.toHaveBeenCalled();
+    expect(resultado.dispositivo_id).toBe('dispositivo-creado-en-paralelo');
   });
 });
