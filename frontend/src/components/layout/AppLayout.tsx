@@ -52,14 +52,16 @@ interface ItemMenu {
   icono: ReactNode;
   /** Visible sólo para el Operador Principal. */
   soloOperador?: boolean;
+  /** Visible sólo para una Empresa Revendedora. */
+  soloRevendedor?: boolean;
 }
 
 const ITEMS: ItemMenu[] = [
   { to: '/dashboard', label: navLabels.dashboard, icono: <LayoutDashboard /> },
   { to: '/resellers', label: navLabels.resellers, icono: <Building2 />, soloOperador: true },
-  { to: '/accounts', label: navLabels.accounts, icono: <CreditCard /> },
-  { to: '/customers', label: navLabels.customers, icono: <Users /> },
-  { to: '/devices', label: navLabels.devices, icono: <MonitorPlay /> },
+  { to: '/accounts', label: navLabels.accounts, icono: <CreditCard />, soloRevendedor: true },
+  { to: '/customers', label: navLabels.customers, icono: <Users />, soloRevendedor: true },
+  { to: '/devices', label: navLabels.devices, icono: <MonitorPlay />, soloRevendedor: true },
   { to: '/commercial-plans', label: navLabels.commercialPlans, icono: <FileBarChart /> },
   { to: '/reports', label: navLabels.reports, icono: <FileBarChart />, soloOperador: true },
   { to: '/providers', label: navLabels.providers, icono: <Radio />, soloOperador: true },
@@ -93,7 +95,9 @@ const NavItems = ({ onNavegar }: { onNavegar?: () => void }) => {
 
   return (
     <nav className="flex flex-col gap-0.5" aria-label="Secciones">
-      {ITEMS.filter((item) => !item.soloOperador || esOperador).map((item) => (
+      {ITEMS.filter(
+        (item) => (!item.soloOperador || esOperador) && (!item.soloRevendedor || !esOperador),
+      ).map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

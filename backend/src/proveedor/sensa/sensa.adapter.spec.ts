@@ -152,6 +152,53 @@ describe('SensaAdapter', () => {
   // Mapeo de capacidad hacia la API
   // ---------------------------------------------------------------------------
 
+  it('recorre todas las páginas del inventario de usuarios sin incluir hoteles', async () => {
+    const { adapter } = crearAdapter();
+    const fetchMock = jest.spyOn(global, 'fetch').mockImplementation((url) => {
+      const pagina = new URL(String(url)).searchParams.get('page');
+      return responder(
+        envelope(200, {
+          users: [
+            {
+              first_name: `Nombre ${pagina}`,
+              last_name: 'Apellido',
+              external_customer_id: null,
+              dni: `3000000${pagina}`,
+              address: 'Dirección',
+              city: 'Mendoza',
+              mobile_phone: '2615555555',
+              email: `cuenta${pagina}@isp.com`,
+              pin: '123456',
+              auto_provision_count: 3,
+              auto_provision_count_mobile: 3,
+              auto_provision_count_stationary: 3,
+              status: 'A',
+              services: '1',
+              start_date: '2026-09-01',
+              end_date: null,
+            },
+          ],
+          total_users: 2,
+          current_page: Number(pagina),
+          total_pages: 2,
+        }),
+      );
+    });
+
+    const cuentas = await adapter.listarCuentas(credenciales);
+
+    expect(cuentas).toHaveLength(2);
+    expect(cuentas[1]).toMatchObject({
+      proveedorCuentaId: '30000002',
+      nombre: 'Nombre 2',
+      ciudad: 'Mendoza',
+    });
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      'https://api.sensa.test/v4/users?page=1&per_page=100&is_hotel=false',
+      'https://api.sensa.test/v4/users?page=2&per_page=100&is_hotel=false',
+    ]);
+  });
+
   it('proyecta el límite global sobre los tres contadores técnicos', async () => {
     const { adapter } = crearAdapter();
     const fetchMock = jest

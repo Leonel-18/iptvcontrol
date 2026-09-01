@@ -40,6 +40,13 @@ export interface SensaUser {
   vod?: string | string[];
 }
 
+export interface SensaUsersResponse {
+  users: SensaUser[];
+  total_users: number;
+  current_page: number;
+  total_pages: number;
+}
+
 export interface SensaAddUserRequest {
   first_name: string;
   last_name: string;

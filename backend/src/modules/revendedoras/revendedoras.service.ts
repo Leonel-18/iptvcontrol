@@ -18,6 +18,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { TeamMembersService } from '../team-members/team-members.service';
+import { ProveedorService } from '../../proveedor/proveedor.service';
 import {
   ActualizarRevendedoraDto,
   CambiarModalidadDto,
@@ -44,6 +45,7 @@ export class RevendedorasService {
     private readonly audit: AuditService,
     private readonly contexto: RequestContextService,
     private readonly teamMembers: TeamMembersService,
+    private readonly proveedor: ProveedorService,
   ) {}
 
   async listar(query: ListarRevendedorasQueryDto) {
@@ -196,6 +198,57 @@ export class RevendedorasService {
       throw new ForbiddenException('Este endpoint corresponde al panel de la Empresa Revendedora.');
     }
     return this.obtener(empresaRevendedoraId);
+  }
+
+  /**
+   * Compara el inventario completo del Proveedor con las Cuentas locales del
+   * Operador. Sólo se usan identificadores técnicos para evitar falsos matches
+   * por nombres o correos compartidos.
+   */
+  async listarCuentasExternas() {
+    const operadorPrincipalId = this.contexto.operadorPrincipalId;
+    if (!operadorPrincipalId) {
+      throw new ForbiddenException('Este endpoint corresponde al Operador Principal.');
+    }
+
+    const [cuentasProveedor, cuentasLocales] = await Promise.all([
+      this.proveedor.listarCuentas(operadorPrincipalId),
+      this.prisma.db.cuenta.findMany({
+        where: { empresaRevendedora: { operadorPrincipalId } },
+        select: { proveedorCuentaId: true, dniAltaSensa: true },
+      }),
+    ]);
+
+    const identificadoresLocales = new Set(
+      cuentasLocales.flatMap((cuenta) =>
+        [cuenta.proveedorCuentaId, cuenta.dniAltaSensa]
+          .filter((valor): valor is string => Boolean(valor))
+          .map((valor) => valor.trim()),
+      ),
+    );
+    const externas = cuentasProveedor.filter(
+      (cuenta) =>
+        !identificadoresLocales.has(cuenta.proveedorCuentaId.trim()) &&
+        !identificadoresLocales.has(cuenta.dni.trim()),
+    );
+
+    return {
+      resumen: {
+        cuentas_proveedor: cuentasProveedor.length,
+        cuentas_iptvcontrol: cuentasLocales.length,
+        cuentas_externas: externas.length,
+      },
+      cuentas: externas.map((cuenta) => ({
+        proveedor_cuenta_id: cuenta.proveedorCuentaId,
+        dni: cuenta.dni,
+        nombre: cuenta.nombre,
+        apellido: cuenta.apellido,
+        email: cuenta.email,
+        ciudad: cuenta.ciudad,
+        referencia_externa: cuenta.referenciaExterna ?? null,
+        estado: cuenta.activa ? 'activa' : 'inactiva',
+      })),
+    };
   }
 
   async crear(dto: CrearRevendedoraDto) {
