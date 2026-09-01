@@ -6,6 +6,7 @@ import {
   EstadoClienteFinal,
   EstadoDispositivo,
   EstadoIncidenciaDispositivo,
+  EstadoSolicitudVinculacion,
   EstadoVinculacionDispositivo,
   TipoDispositivo,
 } from '@prisma/client';
@@ -265,19 +266,62 @@ export class IncidenciasDispositivosService {
           );
         }
 
-        const creado = await tx.dispositivo.create({
-          data: {
+        const pendiente = await tx.dispositivo.findFirst({
+          where: {
             cuentaId: incidencia.cuentaId,
-            empresaRevendedoraId: incidencia.empresaRevendedoraId,
             clienteFinalId,
-            proveedorDeviceId: incidencia.proveedorDeviceId,
-            mac: incidencia.mac,
-            tipo,
-            tipoProveedor: incidencia.tipoProveedor,
+            proveedorDeviceId: null,
             estado: EstadoDispositivo.activo,
-            estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+            estadoVinculacion: {
+              in: [EstadoVinculacionDispositivo.pendiente, EstadoVinculacionDispositivo.observando],
+            },
           },
+          orderBy: { creadoEn: 'asc' },
         });
+        const creado = pendiente
+          ? await tx.dispositivo.update({
+              where: { id: pendiente.id },
+              data: {
+                proveedorDeviceId: incidencia.proveedorDeviceId,
+                mac: incidencia.mac,
+                tipo,
+                tipoProveedor: incidencia.tipoProveedor,
+                estado: EstadoDispositivo.activo,
+                estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+              },
+            })
+          : await tx.dispositivo.create({
+              data: {
+                cuentaId: incidencia.cuentaId,
+                empresaRevendedoraId: incidencia.empresaRevendedoraId,
+                clienteFinalId,
+                proveedorDeviceId: incidencia.proveedorDeviceId,
+                mac: incidencia.mac,
+                tipo,
+                tipoProveedor: incidencia.tipoProveedor,
+                estado: EstadoDispositivo.activo,
+                estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+              },
+            });
+        if (pendiente) {
+          await tx.solicitudVinculacionDispositivo.updateMany({
+            where: {
+              dispositivoId: pendiente.id,
+              estado: {
+                in: [
+                  EstadoSolicitudVinculacion.pendiente,
+                  EstadoSolicitudVinculacion.observando,
+                  EstadoSolicitudVinculacion.ambiguo,
+                ],
+              },
+            },
+            data: {
+              estado: EstadoSolicitudVinculacion.vinculado,
+              proveedorDeviceIdCandidato: incidencia.proveedorDeviceId,
+              ultimoSondeoEn: new Date(),
+            },
+          });
+        }
         await tx.incidenciaDispositivoProveedor.update({
           where: { id },
           data: { estado: EstadoIncidenciaDispositivo.reconocido, resueltaEn: new Date() },

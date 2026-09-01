@@ -1,4 +1,10 @@
-import { EstadoClienteFinal, EstadoDispositivo, EstadoIncidenciaDispositivo } from '@prisma/client';
+import {
+  EstadoClienteFinal,
+  EstadoDispositivo,
+  EstadoIncidenciaDispositivo,
+  EstadoSolicitudVinculacion,
+  EstadoVinculacionDispositivo,
+} from '@prisma/client';
 import { IncidenciasDispositivosService } from './incidencias-dispositivos.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
@@ -37,6 +43,7 @@ describe('IncidenciasDispositivosService — resolver', () => {
     ocupadosCategoria?: number;
     dispositivoYaVinculado?: Record<string, unknown> | null;
     dispositivoVinculadoDuranteBloqueo?: Record<string, unknown> | null;
+    dispositivoPendiente?: Record<string, unknown> | null;
     cuenta?: Record<string, unknown>;
   }) => {
     const incidencia = {
@@ -54,6 +61,11 @@ describe('IncidenciasDispositivosService — resolver', () => {
     const dispositivoFindUniqueEnTx = jest
       .fn()
       .mockResolvedValue(opciones?.dispositivoVinculadoDuranteBloqueo ?? null);
+    const dispositivoFindFirst = jest
+      .fn()
+      .mockResolvedValue(opciones?.dispositivoPendiente ?? null);
+    const dispositivoUpdate = jest.fn().mockResolvedValue({ id: 'dispositivo-pendiente' });
+    const solicitudUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
 
     const tx = {
       $executeRaw: jest.fn().mockResolvedValue(1),
@@ -61,12 +73,15 @@ describe('IncidenciasDispositivosService — resolver', () => {
         create: dispositivoCreate,
         count: dispositivoCount,
         findUnique: dispositivoFindUniqueEnTx,
+        findFirst: dispositivoFindFirst,
+        update: dispositivoUpdate,
       },
       ventaCompartida: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({ cuposPorCategoria: 1 }),
       },
       incidenciaDispositivoProveedor: { update: incidenciaUpdate },
       cuenta: { updateMany: cuentaUpdate },
+      solicitudVinculacionDispositivo: { updateMany: solicitudUpdateMany },
     };
 
     const prisma = {
@@ -131,6 +146,8 @@ describe('IncidenciasDispositivosService — resolver', () => {
       dispositivoCount,
       cuentaUpdate,
       executeRaw: tx.$executeRaw,
+      dispositivoUpdate,
+      solicitudUpdateMany,
     };
   };
 
@@ -325,5 +342,32 @@ describe('IncidenciasDispositivosService — resolver', () => {
 
     expect(dispositivoCreate).not.toHaveBeenCalled();
     expect(resultado.dispositivo_id).toBe('dispositivo-creado-en-paralelo');
+  });
+
+  it('completa el Dispositivo pendiente del alta contextual sin crear una segunda fila', async () => {
+    const { servicio, dispositivoCreate, dispositivoUpdate, solicitudUpdateMany } = crearServicio({
+      dispositivoPendiente: {
+        id: 'dispositivo-pendiente',
+        clienteFinalId: 'cliente-valentin',
+      },
+    });
+
+    const resultado = await servicio.resolver('incidencia-tv', 'vincular', 'cliente-valentin');
+
+    expect(dispositivoCreate).not.toHaveBeenCalled();
+    expect(dispositivoUpdate).toHaveBeenCalledWith({
+      where: { id: 'dispositivo-pendiente' },
+      data: expect.objectContaining({
+        proveedorDeviceId: 'sensa-tv-1',
+        estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+      }),
+    });
+    expect(solicitudUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ dispositivoId: 'dispositivo-pendiente' }),
+        data: expect.objectContaining({ estado: EstadoSolicitudVinculacion.vinculado }),
+      }),
+    );
+    expect(resultado.dispositivo_id).toBe('dispositivo-pendiente');
   });
 });

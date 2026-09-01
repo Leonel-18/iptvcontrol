@@ -365,12 +365,12 @@ export class ClientesService {
     }
 
     let servicios: string;
-    let cuentaVaciaId: string | undefined;
+    let cuentaForzadaId: string | undefined;
 
     if (dto.cuenta_id) {
-      // Asignación manual del primer cliente a una Cuenta importada. En una
-      // exclusiva sólo fija el titular; los equipos se vinculan después desde
-      // el inventario real del Proveedor.
+      // Alta contextual desde una Cuenta existente. Una exclusiva sólo admite
+      // su primer titular; una compartida puede sumar ventas mientras tenga
+      // capacidad, validada por DispositivosService.
       if (dto.servicios !== undefined) {
         throw new BadRequestException(
           'Esta Cuenta ya tiene servicios fijados: no se pueden re-seleccionar acá.',
@@ -400,18 +400,15 @@ export class ClientesService {
           ESTADOS_QUE_OCUPAN.includes(dispositivo.estado) && dispositivo.clienteFinalId,
       );
       if (
-        cuenta.clienteFinalExclusivoId ||
-        tieneClientesActivos ||
-        cuenta.ventasCompartidas.length > 0
+        cuenta.esExclusiva &&
+        (cuenta.clienteFinalExclusivoId ||
+          tieneClientesActivos ||
+          cuenta.ventasCompartidas.length > 0)
       ) {
-        throw new BadRequestException(
-          cuenta.esExclusiva
-            ? 'Esta Cuenta exclusiva ya tiene un Cliente Final asignado.'
-            : 'Esta Cuenta ya tiene un Cliente Final activo: use el alta normal en vez de la carga manual.',
-        );
+        throw new BadRequestException('Esta Cuenta exclusiva ya tiene un Cliente Final asignado.');
       }
       servicios = cuenta.servicios;
-      cuentaVaciaId = dto.cuenta_id;
+      cuentaForzadaId = dto.cuenta_id;
     } else {
       const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
       servicios = normalizarServicios(dto.servicios ?? []);
@@ -420,8 +417,8 @@ export class ClientesService {
 
     // --- Alta normal ---------------------------------------------------------
     const cliente = await this.prisma.transaction(async (tx) => {
-      if (cuentaVaciaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaVaciaId}))`;
+      if (cuentaForzadaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaForzadaId}))`;
       }
       const numeroCliente = await this.identificadores.siguienteNumeroCliente(
         tx,
@@ -443,9 +440,9 @@ export class ClientesService {
           estado: EstadoClienteFinal.activo,
         },
       });
-      if (cuentaVaciaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+      if (cuentaForzadaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
         const asignada = await tx.cuenta.updateMany({
-          where: { id: cuentaVaciaId, clienteFinalExclusivoId: null },
+          where: { id: cuentaForzadaId, clienteFinalExclusivoId: null },
           data: { clienteFinalExclusivoId: creado.id },
         });
         if (asignada.count !== 1) {
@@ -457,7 +454,7 @@ export class ClientesService {
       return creado;
     });
 
-    if (cuentaVaciaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+    if (cuentaForzadaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
       await this.audit.registrar({
         accion: AccionAuditoria.alta_cliente,
         entidad: EntidadAuditada.ClienteFinal,
@@ -468,7 +465,7 @@ export class ClientesService {
           tipo_alta: dto.tipo_alta,
           servicios,
           cupos_por_categoria: null,
-          cuenta_id: cuentaVaciaId,
+          cuenta_id: cuentaForzadaId,
           cuenta_creada: false,
           cargado_manualmente_en_cuenta: true,
           duplicado_confirmado: Boolean(dto.confirmar_duplicado),
@@ -487,7 +484,7 @@ export class ClientesService {
         clienteFinal: cliente,
         notaDescriptiva: dto.dispositivo.nota_descriptiva,
         cuentaExclusiva: dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva,
-        cuentaIdForzada: cuentaVaciaId,
+        cuentaIdForzada: cuentaForzadaId,
         operadorPrincipalId,
         servicios,
         cuposPorCategoria: dto.cupos_por_categoria,
@@ -506,7 +503,7 @@ export class ClientesService {
           cupos_por_categoria: dto.cupos_por_categoria ?? null,
           cuenta_id: resultado.cuenta.id,
           cuenta_creada: resultado.cuentaCreada,
-          cargado_manualmente_en_cuenta: Boolean(cuentaVaciaId),
+          cargado_manualmente_en_cuenta: Boolean(cuentaForzadaId),
           duplicado_confirmado: Boolean(dto.confirmar_duplicado),
         },
       });

@@ -1,172 +1,518 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  RefreshCw,
+  Trash2,
+  UserCog,
+  UserPlus,
+} from "lucide-react";
+import { useDeferredValue, useState } from "react";
 import { Link } from "react-router-dom";
-import { UserCog } from "lucide-react";
-import { useState } from "react";
-import { formatearMac } from "@/lib/utils";
-import type { AccountDevice } from "@/lib/types";
+import { toast } from "sonner";
+import { api, ApiError, type Paginado } from "@/lib/api";
+import { formatearFecha, formatearMac } from "@/lib/utils";
+import type {
+  AccountDetail,
+  AccountProviderDevice,
+  AccountProviderInventory,
+  Customer,
+  CustomerDetail,
+} from "@/lib/types";
 import {
   CopyableId,
   DeviceStatusBadge,
   DeviceTypeBadge,
+  ProviderDeviceClassBadge,
 } from "@/components/common";
-import { Button } from "@/components/ui/primitives";
+import {
+  Alert,
+  Button,
+  Field,
+  Input,
+  Skeleton,
+} from "@/components/ui/primitives";
+import {
+  ConfirmDialog,
+  Dialog,
+  DialogContent,
+  Select,
+} from "@/components/ui/overlays";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { AddManualCustomerDialog } from "./AddManualCustomerDialog";
+import { getUnlinkedProviderDevices } from "./account-devices.utils";
 import { CorrectDeviceBindingDialog } from "./CorrectDeviceBindingDialog";
 
-interface ClienteDeLaCuenta {
-  id: string;
-  numero_cliente: number;
-  nombre: string;
-}
-
-/**
- * Dispositivos de una Cuenta.
- *
- * Se separa en su propio componente porque se usa en la vista por Cuenta y es la
- * grilla que más se mira: es donde se ve, de un vistazo, qué lugar queda libre.
- *
- * Para la Empresa Revendedora, cada Dispositivo ya vinculado ofrece la acción
- * "Corregir": SENSA no identifica de quién es cada inicio de sesión y en
- * Cuentas compartidas puede quedar vinculado al cliente equivocado (caso
- * Pepito/Marcelo). La corrección vive acá y no en /devices/:id porque se
- * resuelve mirando todos los Clientes de la Cuenta juntos.
- */
+/** Una sola grilla para los Dispositivos locales y los detectados al consultar al Proveedor. */
 export const AccountDevicesTab = ({
-  dispositivos,
+  cuenta,
   esOperador,
-  clientesFinales,
-  cuentaId,
 }: {
-  dispositivos: AccountDevice[];
+  cuenta: AccountDetail;
   esOperador: boolean;
-  /** Clientes de esta Cuenta; habilita la corrección de vinculación. */
-  clientesFinales?: ClienteDeLaCuenta[];
-  cuentaId?: string;
 }) => {
-  const [aCorregir, setACorregir] = useState<AccountDevice | null>(null);
+  const queryClient = useQueryClient();
+  const [inventario, setInventario] = useState<AccountProviderInventory | null>(
+    null,
+  );
+  const [aCorregir, setACorregir] = useState<
+    AccountDetail["dispositivos"][number] | null
+  >(null);
+  const [aEliminar, setAEliminar] = useState<AccountProviderDevice | null>(null);
+  const [aVincular, setAVincular] = useState<AccountProviderDevice | null>(null);
+  const [clienteFinalId, setClienteFinalId] = useState("");
+  const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [nuevoCliente, setNuevoCliente] = useState<CustomerDetail | null>(null);
+  const [crearClienteAbierto, setCrearClienteAbierto] = useState(false);
+  const busquedaDiferida = useDeferredValue(busquedaCliente);
+  const dispositivosProveedor = getUnlinkedProviderDevices(cuenta, inventario);
+  const clienteExclusivo = cuenta.cliente_final_exclusivo;
 
-  if (dispositivos.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm texto-suave">
-        Esta cuenta todavía no tiene dispositivos activados.
-      </p>
-    );
-  }
+  const clientes = useQuery({
+    queryKey: ["customers", "incident-link", busquedaDiferida],
+    queryFn: () =>
+      api<Paginado<Customer>>("/customers", {
+        params: { status: "activo", q: busquedaDiferida, per_page: 100 },
+      }),
+    enabled: Boolean(aVincular) && !cuenta.es_exclusiva,
+  });
 
+  const sincronizar = useMutation({
+    mutationFn: () =>
+      api<AccountProviderInventory>(`/accounts/${cuenta.id}/sync-devices`, {
+        metodo: "POST",
+      }),
+    onSuccess: (resultado) => {
+      setInventario(resultado);
+      const desconocidos = getUnlinkedProviderDevices(cuenta, resultado);
+      if (desconocidos.length > 0) {
+        toast.warning(
+          `Se ${desconocidos.length === 1 ? "detectó" : "detectaron"} ${desconocidos.length} ` +
+            `Dispositivo${desconocidos.length === 1 ? "" : "s"} sin asociar.`,
+        );
+      } else {
+        toast.success("Todos los dispositivos del proveedor ya están asociados.");
+      }
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const eliminar = useMutation({
+    mutationFn: (incidenciaId: string) =>
+      api(`/device-incidents/${incidenciaId}/resolve`, {
+        metodo: "POST",
+        body: { accion: "eliminar" },
+      }),
+    onSuccess: () => {
+      toast.success("Dispositivo eliminado del proveedor.");
+      setAEliminar(null);
+      void queryClient.invalidateQueries({ queryKey: ["account", cuenta.id] });
+      sincronizar.mutate();
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const vincular = useMutation({
+    mutationFn: ({
+      incidenciaId,
+      clienteId,
+    }: {
+      incidenciaId: string;
+      clienteId: string;
+    }) =>
+      api(`/device-incidents/${incidenciaId}/resolve`, {
+        metodo: "POST",
+        body: { accion: "vincular", cliente_final_id: clienteId },
+      }),
+    onSuccess: () => {
+      toast.success("Dispositivo agregado al Cliente Final.");
+      cerrarVinculacion();
+      void queryClient.invalidateQueries({ queryKey: ["account", cuenta.id] });
+      void queryClient.invalidateQueries({ queryKey: ["customers"] });
+      void queryClient.invalidateQueries({ queryKey: ["devices"] });
+      sincronizar.mutate();
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const cerrarVinculacion = () => {
+    setAVincular(null);
+    setClienteFinalId("");
+    setBusquedaCliente("");
+    setNuevoCliente(null);
+  };
+
+  const abrirVinculacion = (dispositivo: AccountProviderDevice) => {
+    setAVincular(dispositivo);
+    setClienteFinalId(clienteExclusivo?.id ?? "");
+  };
+
+  const seleccionarClienteCreado = (cliente: CustomerDetail) => {
+    setNuevoCliente(cliente);
+    setClienteFinalId(cliente.id);
+    setBusquedaCliente(cliente.nombre_completo);
+    setCrearClienteAbierto(false);
+  };
+
+  const clientesDisponibles = clientes.data?.data ?? [];
+  const opcionesClientes = [
+    ...(nuevoCliente &&
+    !clientesDisponibles.some((cliente) => cliente.id === nuevoCliente.id)
+      ? [nuevoCliente]
+      : []),
+    ...clientesDisponibles,
+  ];
   const puedeCorregir =
     !esOperador &&
-    Boolean(cuentaId) &&
-    dispositivos.some(
+    cuenta.dispositivos.some(
       (dispositivo) =>
         dispositivo.estado === "activo" &&
         dispositivo.estado_vinculacion === "vinculado" &&
         dispositivo.cliente_final,
     );
+  const mostrarAcciones =
+    !esOperador && (puedeCorregir || dispositivosProveedor.length > 0);
+  const sinDispositivos =
+    cuenta.dispositivos.length === 0 && dispositivosProveedor.length === 0;
 
   return (
-    <>
-      <Table>
-        <THead>
-          <TR>
-            <TH>ID en proveedor</TH>
-            <TH>Tipo</TH>
-            <TH>Estado</TH>
-            {!esOperador ? <TH>Cliente</TH> : null}
-            {!esOperador ? <TH>Equipo / nota</TH> : null}
-            {puedeCorregir ? <TH align="right">Acción</TH> : null}
-          </TR>
-        </THead>
-        <TBody>
-          {dispositivos.map((dispositivo) => (
-            <TR key={dispositivo.id}>
-              <TD>
-                <div className="flex flex-col gap-0.5">
-                  <Link
-                    to={`/devices/${dispositivo.id}`}
-                    className="id-tecnico text-azure-600 hover:underline dark:text-azure-400"
-                  >
-                    {dispositivo.proveedor_device_id ?? "Pendiente"}
-                  </Link>
-                  {!dispositivo.proveedor_device_id &&
-                  dispositivo.estado === "activo" ? (
-                    <span className="text-2xs text-warn">
-                      Esperando primer inicio de sesión
-                    </span>
-                  ) : null}
-                </div>
-              </TD>
-              <TD>
-                <DeviceTypeBadge tipo={dispositivo.tipo} />
-              </TD>
-              <TD>
-                <DeviceStatusBadge
-                  estado={dispositivo.estado}
-                  vinculacion={dispositivo.estado_vinculacion}
-                />
-              </TD>
-              {!esOperador ? (
-                <TD>
-                  {dispositivo.cliente_final ? (
-                    <Link
-                      to={`/customers/${dispositivo.cliente_final.id}`}
-                      className="text-sm text-azure-600 hover:underline dark:text-azure-400"
-                    >
-                      {dispositivo.cliente_final.nombre}
-                    </Link>
-                  ) : (
-                    <span className="text-sm texto-suave">Sin cliente</span>
-                  )}
-                </TD>
-              ) : null}
-              {!esOperador ? (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm texto-suave">
+          Administre los dispositivos asociados y consulte los equipos que el
+          proveedor detectó para esta Cuenta.
+        </p>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => sincronizar.mutate()}
+          disabled={sincronizar.isPending}
+        >
+          <RefreshCw />
+          {sincronizar.isPending
+            ? "Consultando…"
+            : "Consultar dispositivos en el proveedor"}
+        </Button>
+      </div>
+
+      {sincronizar.isError ? (
+        <Alert tone="danger" titulo="No se pudo consultar al proveedor">
+          {(sincronizar.error as Error).message}
+        </Alert>
+      ) : null}
+
+      {inventario ? (
+        <p className="text-2xs texto-suave">
+          Inventario consultado {formatearFecha(inventario.sincronizado_en)}. Los
+          equipos sin asociar se muestran en esta misma tabla.
+        </p>
+      ) : null}
+
+      {sinDispositivos ? (
+        <p className="py-6 text-center text-sm texto-suave">
+          {inventario
+            ? "El proveedor todavía no reporta dispositivos para esta Cuenta."
+            : "Esta Cuenta todavía no tiene dispositivos activados. Consulte al proveedor para buscar equipos sin asociar."}
+        </p>
+      ) : (
+        <Table>
+          <THead>
+            <TR>
+              <TH>ID en proveedor</TH>
+              <TH>Tipo</TH>
+              <TH>Estado</TH>
+              {!esOperador ? <TH>Cliente</TH> : null}
+              {!esOperador ? <TH>Equipo / nota</TH> : null}
+              {mostrarAcciones ? <TH align="right">Acción</TH> : null}
+            </TR>
+          </THead>
+          <TBody>
+            {cuenta.dispositivos.map((dispositivo) => (
+              <TR key={`local:${dispositivo.id}`}>
                 <TD>
                   <div className="flex flex-col gap-0.5">
-                    {dispositivo.mac ? (
-                      <CopyableId
-                        valor={formatearMac(dispositivo.mac)}
-                        etiqueta="MAC"
-                      />
-                    ) : null}
-                    {dispositivo.nota_descriptiva ? (
-                      <span className="text-xs texto-suave">
-                        {dispositivo.nota_descriptiva}
+                    <Link
+                      to={`/devices/${dispositivo.id}`}
+                      className="id-tecnico text-azure-600 hover:underline dark:text-azure-400"
+                    >
+                      {dispositivo.proveedor_device_id ?? "Pendiente"}
+                    </Link>
+                    {!dispositivo.proveedor_device_id &&
+                    dispositivo.estado === "activo" ? (
+                      <span className="text-2xs text-warn">
+                        Esperando primer inicio de sesión
                       </span>
-                    ) : null}
-                    {!dispositivo.mac && !dispositivo.nota_descriptiva ? (
-                      <span className="text-sm texto-suave">—</span>
                     ) : null}
                   </div>
                 </TD>
-              ) : null}
-              {puedeCorregir ? (
-                <TD align="right">
-                  {dispositivo.estado === "activo" &&
-                  dispositivo.estado_vinculacion === "vinculado" &&
-                  dispositivo.cliente_final ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setACorregir(dispositivo)}
-                    >
-                      <UserCog />
-                      Corregir
-                    </Button>
+                <TD>
+                  <DeviceTypeBadge tipo={dispositivo.tipo} />
+                </TD>
+                <TD>
+                  <DeviceStatusBadge
+                    estado={dispositivo.estado}
+                    vinculacion={dispositivo.estado_vinculacion}
+                  />
+                </TD>
+                {!esOperador ? (
+                  <TD>
+                    {dispositivo.cliente_final ? (
+                      <Link
+                        to={`/customers/${dispositivo.cliente_final.id}`}
+                        className="text-sm text-azure-600 hover:underline dark:text-azure-400"
+                      >
+                        {dispositivo.cliente_final.nombre}
+                      </Link>
+                    ) : (
+                      <span className="text-sm texto-suave">Sin cliente</span>
+                    )}
+                  </TD>
+                ) : null}
+                {!esOperador ? (
+                  <TD>
+                    <div className="flex flex-col gap-0.5">
+                      {dispositivo.mac ? (
+                        <CopyableId
+                          valor={formatearMac(dispositivo.mac)}
+                          etiqueta="MAC"
+                        />
+                      ) : null}
+                      {dispositivo.nota_descriptiva ? (
+                        <span className="text-xs texto-suave">
+                          {dispositivo.nota_descriptiva}
+                        </span>
+                      ) : null}
+                      {!dispositivo.mac && !dispositivo.nota_descriptiva ? (
+                        <span className="text-sm texto-suave">—</span>
+                      ) : null}
+                    </div>
+                  </TD>
+                ) : null}
+                {mostrarAcciones ? (
+                  <TD align="right">
+                    {dispositivo.estado === "activo" &&
+                    dispositivo.estado_vinculacion === "vinculado" &&
+                    dispositivo.cliente_final ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setACorregir(dispositivo)}
+                      >
+                        <UserCog />
+                        Corregir
+                      </Button>
+                    ) : null}
+                  </TD>
+                ) : null}
+              </TR>
+            ))}
+
+            {dispositivosProveedor.map((dispositivo) => (
+              <TR key={`provider:${dispositivo.proveedor_device_id}`}>
+                <TD>
+                  <span className="id-tecnico">
+                    {dispositivo.proveedor_device_id}
+                  </span>
+                </TD>
+                <TD>
+                  <span className="text-sm texto-suave">
+                    {dispositivo.tipo_proveedor ?? "—"}
+                  </span>
+                </TD>
+                <TD>
+                  <ProviderDeviceClassBadge
+                    clasificacion={dispositivo.clasificacion}
+                  />
+                  {dispositivo.ventana_activa ? (
+                    <span className="mt-1 block text-2xs text-warn">
+                      Hay una vinculación en curso: puede ser el equipo legítimo.
+                    </span>
                   ) : null}
                 </TD>
-              ) : null}
-            </TR>
-          ))}
-        </TBody>
-      </Table>
+                {!esOperador ? (
+                  <TD>
+                    <span className="text-sm texto-suave">Sin asignar</span>
+                  </TD>
+                ) : null}
+                {!esOperador ? (
+                  <TD>
+                    <div className="flex flex-col gap-0.5">
+                      {dispositivo.mac ? (
+                        <CopyableId
+                          valor={formatearMac(dispositivo.mac)}
+                          etiqueta="MAC"
+                        />
+                      ) : (
+                        <span className="text-sm texto-suave">—</span>
+                      )}
+                      {dispositivo.ultimo_inicio ? (
+                        <span className="text-2xs texto-suave">
+                          Último inicio: {formatearFecha(dispositivo.ultimo_inicio)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </TD>
+                ) : null}
+                {mostrarAcciones ? (
+                  <TD align="right">
+                    {!esOperador && dispositivo.incidencia_id ? (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => abrirVinculacion(dispositivo)}
+                        >
+                          <UserPlus />
+                          Agregar a
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => setAEliminar(dispositivo)}
+                        >
+                          <Trash2 />
+                          Eliminar
+                        </Button>
+                      </div>
+                    ) : null}
+                  </TD>
+                ) : null}
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      )}
 
-      {aCorregir && cuentaId ? (
+      {aCorregir ? (
         <CorrectDeviceBindingDialog
           dispositivo={aCorregir}
-          clientesFinales={clientesFinales ?? []}
-          cuentaId={cuentaId}
+          clientesFinales={cuenta.clientes_finales ?? []}
+          cuentaId={cuenta.id}
           abierto={Boolean(aCorregir)}
           onCambio={(abierto) => !abierto && setACorregir(null)}
         />
       ) : null}
-    </>
+
+      <ConfirmDialog
+        abierto={Boolean(aEliminar)}
+        onCambio={(abierto) => !abierto && setAEliminar(null)}
+        titulo="Eliminar Dispositivo no autorizado"
+        descripcion="Se elimina del Proveedor. No es un Dispositivo asociado a un Cliente Final."
+        etiquetaConfirmar="Eliminar"
+        tono="danger"
+        cargando={eliminar.isPending}
+        onConfirmar={() =>
+          aEliminar?.incidencia_id && eliminar.mutate(aEliminar.incidencia_id)
+        }
+      >
+        <Alert tone="warning">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>
+              Verifique antes de eliminar: si hay una vinculación en curso, este
+              equipo podría ser el legítimo de la venta.
+            </span>
+          </div>
+        </Alert>
+      </ConfirmDialog>
+
+      <Dialog
+        open={Boolean(aVincular)}
+        onOpenChange={(abierto) => !abierto && cerrarVinculacion()}
+      >
+        <DialogContent
+          titulo="Agregar Dispositivo a un cliente"
+          descripcion="La vinculación se valida contra el tenant, el tipo de Cuenta y los cupos disponibles."
+        >
+          <div className="space-y-4">
+            {clienteExclusivo ? (
+              <Alert tone="info">
+                Esta Cuenta exclusiva pertenece a {clienteExclusivo.nombre} (cliente
+                N° {clienteExclusivo.numero_cliente}).
+              </Alert>
+            ) : (
+              <Field
+                label="Buscar Cliente Final"
+                htmlFor="buscar-cliente-incidencia"
+              >
+                <Input
+                  id="buscar-cliente-incidencia"
+                  value={busquedaCliente}
+                  onChange={(evento) => setBusquedaCliente(evento.target.value)}
+                  placeholder="Nombre, teléfono o ID de gestión"
+                />
+              </Field>
+            )}
+
+            {!clienteExclusivo && clientes.isPending ? (
+              <Skeleton className="h-9" />
+            ) : !clienteExclusivo && clientes.isError ? (
+              <Alert tone="danger">No se pudo cargar el listado de clientes.</Alert>
+            ) : !clienteExclusivo ? (
+              <Field
+                label="Cliente Final"
+                htmlFor="cliente-incidencia"
+                required
+              >
+                <Select
+                  id="cliente-incidencia"
+                  value={clienteFinalId || undefined}
+                  onChange={setClienteFinalId}
+                  opciones={opcionesClientes.map((cliente) => ({
+                    value: cliente.id,
+                    label: cliente.nombre_completo,
+                    help: `Cliente N° ${cliente.numero_cliente}`,
+                  }))}
+                  placeholder="Seleccione un cliente activo"
+                />
+              </Field>
+            ) : null}
+
+            {!cuenta.es_exclusiva ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCrearClienteAbierto(true)}
+                disabled={vincular.isPending}
+              >
+                <UserPlus />
+                Agregar cliente nuevo
+              </Button>
+            ) : null}
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={cerrarVinculacion}
+                disabled={vincular.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                disabled={!clienteFinalId || vincular.isPending}
+                onClick={() =>
+                  aVincular?.incidencia_id &&
+                  vincular.mutate({
+                    incidenciaId: aVincular.incidencia_id,
+                    clienteId: clienteFinalId,
+                  })
+                }
+              >
+                {vincular.isPending ? "Agregando…" : "Agregar Dispositivo"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {!cuenta.es_exclusiva ? (
+        <AddManualCustomerDialog
+          cuenta={cuenta}
+          abierto={crearClienteAbierto}
+          onCambio={setCrearClienteAbierto}
+          onCreated={seleccionarClienteCreado}
+        />
+      ) : null}
+    </div>
   );
 };

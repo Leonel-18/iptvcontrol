@@ -22,19 +22,20 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/overlays";
 
 /**
- * Carga manual del primer Cliente Final de una Cuenta ya existente y vacía
- * (ej. importada de SENSA, que no informa esa relación). Reusa el
- * endpoint normal de alta (`POST /customers`) forzando `cuenta_id`: usa la
- * firma de servicios que la Cuenta ya tiene fijada, no una elegida acá.
+ * Alta contextual de un Cliente Final dentro de una Cuenta existente. Reusa el
+ * endpoint normal (`POST /customers`) forzando `cuenta_id` y conserva la firma
+ * de servicios que la Cuenta ya tiene fijada.
  */
 export const AddManualCustomerDialog = ({
   cuenta,
   abierto,
   onCambio,
+  onCreated,
 }: {
   cuenta: AccountDetailData;
   abierto: boolean;
   onCambio: (abierto: boolean) => void;
+  onCreated?: (customer: CustomerDetail) => void;
 }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -90,7 +91,20 @@ export const AddManualCustomerDialog = ({
       onCambio(false);
       void queryClient.invalidateQueries({ queryKey: ["account", cuenta.id] });
       void queryClient.invalidateQueries({ queryKey: ["customers"] });
-      navigate(`/customers/${resultado.cliente.id}`);
+      if (onCreated) {
+        onCreated(resultado.cliente);
+      } else {
+        navigate(`/customers/${resultado.cliente.id}`);
+      }
+      setNombre("");
+      setApellido("");
+      setDni("");
+      setTelefono("");
+      setEmail("");
+      setDireccion("");
+      setCuposPorCategoria(1);
+      setDuracion(0);
+      setError("");
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -115,7 +129,7 @@ export const AddManualCustomerDialog = ({
         descripcion={
           cuenta.es_exclusiva
             ? "Asigna el titular de esta Cuenta exclusiva. Los Dispositivos se agregan después desde el inventario del Proveedor."
-            : "Para Cuentas compartidas vacías donde el Proveedor no informó sus clientes."
+            : "Crea una nueva venta dentro de esta Cuenta compartida usando sus servicios actuales."
         }
       >
         <div className="space-y-4">

@@ -245,12 +245,11 @@ describe('ClientesService — ciclo de vida de una venta compartida', () => {
 
 /**
  * =============================================================================
- * ClientesService — crear() con `cuenta_id` (carga manual en Cuenta vacía)
+ * ClientesService — crear() con `cuenta_id` (alta contextual en una Cuenta)
  * =============================================================================
- * Cuentas importadas de SENSA pueden llegar sin Clientes Finales, porque la API
- * no informa esa relación. Este flujo permite cargar manualmente el primer
- * Cliente Final de una Cuenta compartida vacía, usando la firma de servicios
- * que la Cuenta ya tiene fijada (no una elegida en el wizard).
+ * Este flujo permite cargar Clientes Finales desde una Cuenta, usando la firma
+ * de servicios que ya tiene fijada (no una elegida en el wizard). Una exclusiva
+ * sólo admite su primer titular; una compartida admite nuevas ventas con lugar.
  * =============================================================================
  */
 describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', () => {
@@ -377,33 +376,25 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
     ).rejects.toThrow('ya tiene un Cliente Final asignado');
   });
 
-  it('rechaza una Cuenta que ya tiene un Cliente Final activo', async () => {
-    const { servicio } = crearServicio({
+  it('permite sumar otro Cliente Final a una Cuenta compartida con clientes', async () => {
+    const { servicio, alta } = crearServicio({
       id: 'cuenta-vacia',
       esExclusiva: false,
       estado: EstadoCuenta.activa,
+      clienteFinalExclusivoId: null,
       proveedorCuentaId: 'proveedor-cuenta-1',
+      servicios: '1|3',
       dispositivos: [{ estado: EstadoDispositivo.activo, clienteFinalId: 'cliente-otro' }],
-      ventasCompartidas: [],
+      ventasCompartidas: [{ id: 'venta-existente' }],
     });
 
-    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
-      'ya tiene un Cliente Final activo',
-    );
-  });
+    await servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' });
 
-  it('rechaza una Cuenta que ya tiene una venta compartida reservada', async () => {
-    const { servicio } = crearServicio({
-      id: 'cuenta-vacia',
-      esExclusiva: false,
-      estado: EstadoCuenta.activa,
-      proveedorCuentaId: 'proveedor-cuenta-1',
-      dispositivos: [],
-      ventasCompartidas: [{ id: 'venta-1' }],
-    });
-
-    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
-      'ya tiene un Cliente Final activo',
+    expect(alta).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cuentaIdForzada: 'cuenta-vacia',
+        servicios: '1|3',
+      }),
     );
   });
 
