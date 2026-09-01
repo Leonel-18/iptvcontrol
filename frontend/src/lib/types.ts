@@ -260,6 +260,26 @@ export interface Reseller {
   creado_en: string;
 }
 
+export interface ExternalProviderAccount {
+  proveedor_cuenta_id: string;
+  dni: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  ciudad: string;
+  referencia_externa: string | null;
+  estado: "activa" | "inactiva";
+}
+
+export interface ExternalProviderAccountsReport {
+  resumen: {
+    cuentas_proveedor: number;
+    cuentas_iptvcontrol: number;
+    cuentas_externas: number;
+  };
+  cuentas: ExternalProviderAccount[];
+}
+
 export interface ResellerDetail {
   id: string;
   razon_social: string;

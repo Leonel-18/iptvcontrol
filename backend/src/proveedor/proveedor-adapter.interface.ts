@@ -63,6 +63,18 @@ export interface CuentaProveedor {
   activa: boolean;
 }
 
+/** Cuenta incluida en el inventario general del Proveedor. */
+export interface CuentaInventarioProveedor {
+  proveedorCuentaId: string;
+  dni: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  ciudad: string;
+  referenciaExterna?: string;
+  activa: boolean;
+}
+
 export interface ActualizarCapacidadParams {
   proveedorCuentaId: string;
   limiteDispositivos?: number;
@@ -141,6 +153,9 @@ export interface ProveedorAdapter {
     credenciales: CredencialesProveedor,
     params: CrearCuentaParams,
   ): Promise<CuentaProveedor>;
+
+  /** Lista el inventario completo de Cuentas administradas por el Proveedor. */
+  listarCuentas(credenciales: CredencialesProveedor): Promise<CuentaInventarioProveedor[]>;
 
   /** Actualiza la cantidad de dispositivos habilitados de una Cuenta. */
   actualizarCapacidadDispositivos(

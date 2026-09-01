@@ -6,6 +6,7 @@ import {
   ActualizarServiciosParams,
   CredencialesProveedor,
   CrearCuentaParams,
+  CuentaInventarioProveedor,
   CuentaProveedor,
   DispositivoProveedor,
   LicenciasProveedor,
@@ -79,6 +80,11 @@ export class ProveedorService {
   ): Promise<CuentaProveedor> {
     const { adapter, configuracion } = await this.resolver(operadorPrincipalId);
     return adapter.crearCuenta(configuracion.credenciales, params);
+  }
+
+  async listarCuentas(operadorPrincipalId: string): Promise<CuentaInventarioProveedor[]> {
+    const { adapter, configuracion } = await this.resolver(operadorPrincipalId);
+    return adapter.listarCuentas(configuracion.credenciales);
   }
 
   async actualizarCapacidadDispositivos(

@@ -13,6 +13,7 @@ import {
   ResellerStatusBadge,
 } from '@/components/common';
 import { ResellerForm } from './ResellerForm';
+import { ExternalProviderAccountsCard } from './ExternalProviderAccountsCard';
 import { Button, Card, EmptyState, Input } from '@/components/ui/primitives';
 import { Select } from '@/components/ui/overlays';
 import { Paginacion, Table, TableSkeleton, TBody, TD, TH, THead, TR } from '@/components/ui/table';
@@ -176,6 +177,8 @@ export const ResellerList = () => {
           />
         ) : null}
       </Card>
+
+      <ExternalProviderAccountsCard />
 
       {alta ? <ResellerForm abierto={alta} onCambio={setAlta} /> : null}
     </>

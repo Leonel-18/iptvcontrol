@@ -9,6 +9,7 @@ import {
   CredencialesProveedor,
   CrearCuentaParams,
   CuentaProveedor,
+  CuentaInventarioProveedor,
   DispositivoProveedor,
   LicenciasProveedor,
   ProveedorAdapter,
@@ -39,6 +40,7 @@ import {
   SensaEnvelope,
   SensaLicensesResponse,
   SensaUser,
+  SensaUsersResponse,
   SensaUserServicesResponse,
 } from './sensa.types';
 
@@ -133,6 +135,28 @@ export class SensaAdapter implements ProveedorAdapter {
   // ---------------------------------------------------------------------------
   // Cuentas (usuarios de SENSA)
   // ---------------------------------------------------------------------------
+
+  async listarCuentas(credenciales: CredencialesProveedor): Promise<CuentaInventarioProveedor[]> {
+    const cuentas: CuentaInventarioProveedor[] = [];
+    let pagina = 1;
+    let totalPaginas = 1;
+
+    do {
+      const envelope = await this.llamar<SensaUsersResponse>(credenciales, {
+        operacion: 'get_users',
+        metodo: 'GET',
+        ruta: `/v4/users?page=${pagina}&per_page=100&is_hotel=false`,
+      });
+      const respuesta = envelope.response;
+      const usuarios = respuesta?.users ?? [];
+
+      cuentas.push(...usuarios.map((usuario) => this.mapearCuentaInventario(usuario)));
+      totalPaginas = Math.max(1, Number(respuesta?.total_pages) || 1);
+      pagina += 1;
+    } while (pagina <= totalPaginas);
+
+    return cuentas;
+  }
 
   async crearCuenta(
     credenciales: CredencialesProveedor,
@@ -577,6 +601,20 @@ export class SensaAdapter implements ProveedorAdapter {
       dispositivosMoviles: Number(
         user?.auto_provision_count_mobile ?? params?.dispositivosMoviles ?? 0,
       ),
+      activa: estado !== 'I',
+    };
+  }
+
+  private mapearCuentaInventario(user: SensaUser): CuentaInventarioProveedor {
+    const estado = Array.isArray(user.status) ? user.status[0] : user.status;
+    return {
+      proveedorCuentaId: String(user.dni),
+      dni: String(user.dni),
+      nombre: user.first_name,
+      apellido: user.last_name,
+      email: user.email,
+      ciudad: user.city,
+      referenciaExterna: user.external_customer_id ?? undefined,
       activa: estado !== 'I',
     };
   }

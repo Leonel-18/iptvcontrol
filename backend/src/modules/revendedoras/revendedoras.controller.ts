@@ -69,6 +69,15 @@ export class RevendedorasController {
     return this.revendedoras.miPerfil();
   }
 
+  @Get('external-accounts')
+  @SoloOperador()
+  @ApiOperation({
+    summary: 'Detecta Cuentas que existen en el Proveedor pero no en IPTVControl.',
+  })
+  async listarCuentasExternas() {
+    return this.revendedoras.listarCuentasExternas();
+  }
+
   @Get(':id')
   @SoloOperador()
   @ApiOperation({
