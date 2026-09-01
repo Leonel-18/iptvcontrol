@@ -2,11 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ExternalLink,
-  Link2,
   PauseCircle,
   PlayCircle,
-  Plus,
-  Trash2,
   UserX,
 } from "lucide-react";
 import { useState } from "react";
@@ -18,7 +15,6 @@ import { formatearFecha, formatearMac } from "@/lib/utils";
 import type {
   AccountDevice,
   CustomerDetail as CustomerDetailData,
-  DeviceIncident,
 } from "@/lib/types";
 import { customerIntakeLabels, traducir } from "@/i18n/entityLabels";
 import {
@@ -32,7 +28,6 @@ import {
   VinculacionEnCursoAlert,
   WhatsappTemplateButton,
 } from "@/components/common";
-import { AddDeviceDialog } from "../devices/AddDeviceDialog";
 import {
   Alert,
   Badge,
@@ -65,7 +60,6 @@ export const CustomerDetail = () => {
   const [accion, setAccion] = useState<
     "suspend" | "reactivate" | "terminate" | null
   >(null);
-  const [agregarDispositivo, setAgregarDispositivo] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["customer", id],
@@ -79,38 +73,6 @@ export const CustomerDetail = () => {
       const ventanaAbierta = dispositivos?.some((dispositivo) => dispositivo.ventana_vinculacion);
       return ventanaAbierta ? 15_000 : false;
     },
-  });
-
-  const incidencias = useQuery({
-    queryKey: ["device-incidents"],
-    queryFn: () => api<DeviceIncident[]>("/device-incidents"),
-    enabled: !esOperador,
-  });
-
-  const resolverIncidencia = useMutation({
-    mutationFn: ({
-      incidenteId,
-      accion,
-    }: {
-      incidenteId: string;
-      accion: "vincular" | "eliminar";
-    }) =>
-      api(`/device-incidents/${incidenteId}/resolve`, {
-        metodo: "POST",
-        // "Vincular éste" siempre lo asigna al Cliente Final que se está viendo:
-        // es el contexto desde el que se abre esta lista de incidencias.
-        body: accion === "vincular" ? { accion, cliente_final_id: id } : { accion },
-      }),
-    onSuccess: (_resultado, variables) => {
-      toast.success(
-        variables.accion === "vincular"
-          ? "Dispositivo vinculado a este cliente."
-          : "Dispositivo desconocido eliminado.",
-      );
-      void queryClient.invalidateQueries({ queryKey: ["device-incidents"] });
-      void queryClient.invalidateQueries({ queryKey: ["customer", id] });
-    },
-    onError: (causa: ApiError) => toast.error(causa.message),
   });
 
   const transicion = useMutation({
@@ -147,9 +109,6 @@ export const CustomerDetail = () => {
   const activo = data.estado === "activo";
   const suspendido = data.estado === "suspendido";
   const dadoDeBaja = data.estado === "dado_de_baja";
-  const incidenciasCuenta = (incidencias.data ?? []).filter(
-    (incidencia) => incidencia.cuenta_id === data.cuenta?.id,
-  );
   const dispositivoEnVentana = data.dispositivos.find(
     (dispositivo) => dispositivo.ventana_vinculacion,
   );
@@ -172,14 +131,6 @@ export const CustomerDetail = () => {
             <CustomerStatusBadge estado={data.estado} />
             {!esOperador && activo ? (
               <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setAgregarDispositivo(true)}
-                >
-                  <Plus />
-                  Agregar dispositivo
-                </Button>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -245,82 +196,9 @@ export const CustomerDetail = () => {
             />
           ) : null}
 
-          {!esOperador && incidenciasCuenta.length > 0 ? (
-            <Card className="border-warn/50">
-              <CardHeader>
-                <CardTitle>Dispositivos sin asignar</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Alert tone="warning">
-                  El Proveedor reporta estos equipos en la Cuenta de este cliente, pero todavía no
-                  están vinculados a nadie (pueden exceder el cupo de esta venta). Si alguno es en
-                  realidad de este cliente, vincúlelo; si no, elimínelo.
-                </Alert>
-                {incidenciasCuenta.map((incidencia) => (
-                  <div
-                    key={incidencia.id}
-                    className="superficie flex flex-wrap items-center justify-between gap-3 rounded border p-3"
-                  >
-                    <div>
-                      <p className="id-tecnico">
-                        ID {incidencia.proveedor_device_id}
-                      </p>
-                      <p className="mt-1 text-xs texto-suave">
-                        {incidencia.tipo_proveedor || "Tipo sin informar"}
-                        {incidencia.mac
-                          ? ` · ${formatearMac(incidencia.mac)}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        disabled={resolverIncidencia.isPending}
-                        onClick={() =>
-                          resolverIncidencia.mutate({
-                            incidenteId: incidencia.id,
-                            accion: "vincular",
-                          })
-                        }
-                      >
-                        <Link2 />
-                        Vincular éste
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        disabled={resolverIncidencia.isPending}
-                        onClick={() =>
-                          resolverIncidencia.mutate({
-                            incidenteId: incidencia.id,
-                            accion: "eliminar",
-                          })
-                        }
-                      >
-                        <Trash2 />
-                        Eliminar
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ) : null}
-
           <Card>
-            <CardHeader className="flex-row items-center justify-between gap-2">
+            <CardHeader>
               <CardTitle>Dispositivos</CardTitle>
-              {!esOperador && activo ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAgregarDispositivo(true)}
-                >
-                  <Plus />
-                  Agregar
-                </Button>
-              ) : null}
             </CardHeader>
             <CardContent>
               {data.dispositivos.length === 0 ? (
@@ -588,14 +466,6 @@ export const CustomerDetail = () => {
         </Alert>
       </ConfirmDialog>
 
-      {agregarDispositivo ? (
-        <AddDeviceDialog
-          clienteId={data.id}
-          clienteNombre={data.nombre_completo}
-          abierto={agregarDispositivo}
-          onCambio={setAgregarDispositivo}
-        />
-      ) : null}
     </>
   );
 };

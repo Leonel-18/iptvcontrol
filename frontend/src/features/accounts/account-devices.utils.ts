@@ -9,7 +9,7 @@ export const getUnlinkedProviderDevices = (
   cuenta: AccountDetail,
   inventario: AccountProviderInventory | null,
 ): AccountProviderDevice[] => {
-  if (!inventario) return [];
+  if (!inventario || inventario.cuenta_id !== cuenta.id) return [];
   const vinculados = new Set(
     cuenta.dispositivos
       .map((dispositivo) => dispositivo.proveedor_device_id)

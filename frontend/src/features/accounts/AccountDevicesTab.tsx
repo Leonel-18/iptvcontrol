@@ -16,7 +16,6 @@ import type {
   AccountProviderDevice,
   AccountProviderInventory,
   Customer,
-  CustomerDetail,
 } from "@/lib/types";
 import {
   CopyableId,
@@ -61,7 +60,6 @@ export const AccountDevicesTab = ({
   const [aVincular, setAVincular] = useState<AccountProviderDevice | null>(null);
   const [clienteFinalId, setClienteFinalId] = useState("");
   const [busquedaCliente, setBusquedaCliente] = useState("");
-  const [nuevoCliente, setNuevoCliente] = useState<CustomerDetail | null>(null);
   const [crearClienteAbierto, setCrearClienteAbierto] = useState(false);
   const busquedaDiferida = useDeferredValue(busquedaCliente);
   const dispositivosProveedor = getUnlinkedProviderDevices(cuenta, inventario);
@@ -138,7 +136,6 @@ export const AccountDevicesTab = ({
     setAVincular(null);
     setClienteFinalId("");
     setBusquedaCliente("");
-    setNuevoCliente(null);
   };
 
   const abrirVinculacion = (dispositivo: AccountProviderDevice) => {
@@ -146,21 +143,7 @@ export const AccountDevicesTab = ({
     setClienteFinalId(clienteExclusivo?.id ?? "");
   };
 
-  const seleccionarClienteCreado = (cliente: CustomerDetail) => {
-    setNuevoCliente(cliente);
-    setClienteFinalId(cliente.id);
-    setBusquedaCliente(cliente.nombre_completo);
-    setCrearClienteAbierto(false);
-  };
-
   const clientesDisponibles = clientes.data?.data ?? [];
-  const opcionesClientes = [
-    ...(nuevoCliente &&
-    !clientesDisponibles.some((cliente) => cliente.id === nuevoCliente.id)
-      ? [nuevoCliente]
-      : []),
-    ...clientesDisponibles,
-  ];
   const puedeCorregir =
     !esOperador &&
     cuenta.dispositivos.some(
@@ -181,17 +164,30 @@ export const AccountDevicesTab = ({
           Administre los dispositivos asociados y consulte los equipos que el
           proveedor detectó para esta Cuenta.
         </p>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => sincronizar.mutate()}
-          disabled={sincronizar.isPending}
-        >
-          <RefreshCw />
-          {sincronizar.isPending
-            ? "Consultando…"
-            : "Consultar dispositivos en el proveedor"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {!esOperador &&
+          (!cuenta.es_exclusiva || !cuenta.cliente_final_exclusivo) ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setCrearClienteAbierto(true)}
+            >
+              <UserPlus />
+              Agregar cliente
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => sincronizar.mutate()}
+            disabled={sincronizar.isPending}
+          >
+            <RefreshCw />
+            {sincronizar.isPending
+              ? "Consultando…"
+              : "Consultar dispositivos en el proveedor"}
+          </Button>
+        </div>
       </div>
 
       {sincronizar.isError ? (
@@ -457,7 +453,7 @@ export const AccountDevicesTab = ({
                   id="cliente-incidencia"
                   value={clienteFinalId || undefined}
                   onChange={setClienteFinalId}
-                  opciones={opcionesClientes.map((cliente) => ({
+                  opciones={clientesDisponibles.map((cliente) => ({
                     value: cliente.id,
                     label: cliente.nombre_completo,
                     help: `Cliente N° ${cliente.numero_cliente}`,
@@ -465,18 +461,6 @@ export const AccountDevicesTab = ({
                   placeholder="Seleccione un cliente activo"
                 />
               </Field>
-            ) : null}
-
-            {!cuenta.es_exclusiva ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCrearClienteAbierto(true)}
-                disabled={vincular.isPending}
-              >
-                <UserPlus />
-                Agregar cliente nuevo
-              </Button>
             ) : null}
 
             <div className="flex justify-end gap-2">
@@ -510,7 +494,6 @@ export const AccountDevicesTab = ({
           cuenta={cuenta}
           abierto={crearClienteAbierto}
           onCambio={setCrearClienteAbierto}
-          onCreated={seleccionarClienteCreado}
         />
       ) : null}
     </div>

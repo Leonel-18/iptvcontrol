@@ -209,7 +209,7 @@ describe('InventarioProveedorService — sincronizar', () => {
     );
   });
 
-  it('con una ventana de vinculación abierta, informa el desconocido pero NO crea incidencia', async () => {
+  it('con una ventana de vinculación abierta, registra la incidencia para permitir resolverla', async () => {
     const { servicio, createIncidencia } = crearServicio(false, {
       cuenta: { ...cuentaBase, solicitudesVinculacion: [{ id: 'solicitud-1' }] },
     });
@@ -219,9 +219,9 @@ describe('InventarioProveedorService — sincronizar', () => {
       (d) => d.proveedor_device_id === 'sensa-desconocido',
     );
 
-    expect(createIncidencia).not.toHaveBeenCalled();
+    expect(createIncidencia).toHaveBeenCalledTimes(1);
     expect(desconocido?.clasificacion).toBe('desconocido');
-    expect(desconocido?.incidencia_id).toBeNull();
+    expect(desconocido?.incidencia_id).toBe('incidencia-nueva');
     expect(desconocido?.ventana_activa).toBe(true);
   });
 

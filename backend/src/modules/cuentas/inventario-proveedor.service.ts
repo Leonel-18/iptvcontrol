@@ -156,14 +156,14 @@ export class InventarioProveedorService {
     }
 
     for (const item of desconocidos) {
-      // Con una ventana de vinculación abierta, un "desconocido" todavía puede
-      // ser el candidato legítimo de esa venta — el sondeo normal lo va a
-      // reclamar en los próximos segundos. Registrar la incidencia ACÁ sería
-      // la misma carrera que causó el caso Martín Palermo: se informa igual
-      // (con `ventana_activa: true`), pero sin crearla todavía.
-      const incidencia = ventanaAbierta
-        ? null
-        : await this.registrarIncidencia(cuenta.id, cuenta.empresaRevendedoraId, item);
+      // Se registra aun con una vinculación abierta. El resolver vuelve a
+      // comprobar bajo lock si el sondeo ya reclamó el equipo y reutiliza la
+      // fila pendiente, por lo que la carrera no genera duplicados.
+      const incidencia = await this.registrarIncidencia(
+        cuenta.id,
+        cuenta.empresaRevendedoraId,
+        item,
+      );
       dispositivos.push({
         proveedor_device_id: item.proveedorDeviceId,
         mac: esOperador ? undefined : item.mac,
@@ -181,7 +181,7 @@ export class InventarioProveedorService {
       });
     }
 
-    if (desconocidos.length > 0 && !ventanaAbierta) {
+    if (desconocidos.length > 0) {
       this.logger.warn(
         `Sincronización de la Cuenta ${cuenta.id}: ${desconocidos.length} Dispositivo(s) ` +
           'no autorizados detectados en el Proveedor.',
