@@ -48,6 +48,8 @@ export class CuentaOperadorDto {
   proveedor_cuenta_id!: string | null;
   @ApiProperty({ enum: EstadoCuenta }) estado!: EstadoCuenta;
   @ApiProperty() es_exclusiva!: boolean;
+  @ApiProperty({ description: 'La Cuenta importada todavía no tiene contraseña local válida.' })
+  password_pendiente!: boolean;
   @ApiProperty() empresa_revendedora_id!: string;
   @ApiPropertyOptional({ description: 'Nombre del Proveedor de contenido (hoy siempre SENSA).' })
   proveedor?: string | null;
@@ -109,6 +111,7 @@ export const mapCuentaParaOperador = (
   proveedor_cuenta_id: cuenta.proveedorCuentaId,
   estado: cuenta.estado,
   es_exclusiva: cuenta.esExclusiva,
+  password_pendiente: !cuenta.passwordCifrado,
   empresa_revendedora_id: cuenta.empresaRevendedoraId,
   proveedor: proveedorNombre ?? null,
   fijos: armarOcupacion(capacidad.fijo, capacidad.cercaDelTope),

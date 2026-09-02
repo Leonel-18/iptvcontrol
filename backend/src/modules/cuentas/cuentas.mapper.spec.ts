@@ -97,6 +97,12 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
       expect(Object.keys(vista)).not.toContain('servicios');
     });
 
+    it('informa sin revelar secretos cuando una Cuenta importada tiene contraseña pendiente', () => {
+      expect(
+        mapCuentaParaOperador({ ...cuenta, passwordCifrado: null }, capacidad).password_pendiente,
+      ).toBe(true);
+    });
+
     it('en Dispositivos NO expone la nota descriptiva ni el cliente', () => {
       const vistaDispositivo = mapDispositivoParaOperador(dispositivo);
 

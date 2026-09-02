@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -19,6 +20,10 @@ import { RequestContextService } from '../../common/context/request-context.serv
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { TeamMembersService } from '../team-members/team-members.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
+import { CryptoService } from '../../common/crypto/crypto.service';
+import { InventarioProveedorService } from '../cuentas/inventario-proveedor.service';
+import { normalizarServicios } from '../../proveedor/servicios.util';
+import { ImportarCuentasExternasDto } from './dto/cuenta-externa.dto';
 import {
   ActualizarRevendedoraDto,
   CambiarModalidadDto,
@@ -46,6 +51,8 @@ export class RevendedorasService {
     private readonly contexto: RequestContextService,
     private readonly teamMembers: TeamMembersService,
     private readonly proveedor: ProveedorService,
+    private readonly crypto: CryptoService,
+    private readonly inventario: InventarioProveedorService,
   ) {}
 
   async listar(query: ListarRevendedorasQueryDto) {
@@ -219,17 +226,16 @@ export class RevendedorasService {
       }),
     ]);
 
-    const identificadoresLocales = new Set(
-      cuentasLocales.flatMap((cuenta) =>
-        [cuenta.proveedorCuentaId, cuenta.dniAltaSensa]
-          .filter((valor): valor is string => Boolean(valor))
-          .map((valor) => valor.trim()),
-      ),
+    const idsProveedorLocales = new Set(
+      cuentasLocales
+        .map((cuenta) => cuenta.proveedorCuentaId?.trim())
+        .filter((valor): valor is string => Boolean(valor)),
     );
+    const dnisLocales = new Set(cuentasLocales.map((cuenta) => cuenta.dniAltaSensa.trim()));
     const externas = cuentasProveedor.filter(
       (cuenta) =>
-        !identificadoresLocales.has(cuenta.proveedorCuentaId.trim()) &&
-        !identificadoresLocales.has(cuenta.dni.trim()),
+        !idsProveedorLocales.has(cuenta.proveedorCuentaId.trim()) &&
+        !dnisLocales.has(cuenta.dni.trim()),
     );
 
     return {
@@ -246,9 +252,201 @@ export class RevendedorasService {
         email: cuenta.email,
         ciudad: cuenta.ciudad,
         referencia_externa: cuenta.referenciaExterna ?? null,
+        fecha_alta: cuenta.fechaAlta ?? null,
         estado: cuenta.activa ? 'activa' : 'inactiva',
       })),
     };
+  }
+
+  async importarCuentasExternas(dto: ImportarCuentasExternasDto) {
+    const operadorPrincipalId = this.requerirOperador();
+    const empresa = await this.prisma.db.empresaRevendedora.findFirst({
+      where: {
+        id: dto.empresa_revendedora_id,
+        operadorPrincipalId,
+        estado: EstadoEmpresaRevendedora.activa,
+      },
+      select: { id: true },
+    });
+    if (!empresa) {
+      throw new BadRequestException(
+        'La Empresa Revendedora no existe, está suspendida o no pertenece al Operador.',
+      );
+    }
+
+    const [cuentasProveedor, { configuracion }] = await Promise.all([
+      this.proveedor.listarCuentas(operadorPrincipalId),
+      this.proveedor.resolver(operadorPrincipalId),
+    ]);
+    const porId = new Map(
+      cuentasProveedor.flatMap((cuenta) => [
+        [cuenta.proveedorCuentaId.trim(), cuenta] as const,
+        [cuenta.dni.trim(), cuenta] as const,
+      ]),
+    );
+    const resultados: Array<{
+      proveedor_cuenta_id: string;
+      estado: 'importada' | 'ya_importada' | 'fallida';
+      cuenta_id?: string;
+      mensaje?: string;
+    }> = [];
+
+    for (const idSolicitado of dto.proveedor_cuenta_ids) {
+      const proveedorCuentaId = idSolicitado.trim();
+      const remota = porId.get(proveedorCuentaId);
+      if (!remota) {
+        resultados.push({
+          proveedor_cuenta_id: proveedorCuentaId,
+          estado: 'fallida',
+          mensaje: 'La Cuenta ya no existe en el Proveedor.',
+        });
+        continue;
+      }
+      if (!remota.dni.trim() || !remota.email.trim() || !remota.pin) {
+        resultados.push({
+          proveedor_cuenta_id: proveedorCuentaId,
+          estado: 'fallida',
+          mensaje: 'El Proveedor no informó DNI, correo o PIN suficientes para importarla.',
+        });
+        continue;
+      }
+      const pin = remota.pin;
+
+      try {
+        const resultado = await this.prisma.transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${operadorPrincipalId}:${proveedorCuentaId}`}))`;
+          const existente = await tx.cuenta.findFirst({
+            where: {
+              empresaRevendedora: { operadorPrincipalId },
+              OR: [{ proveedorCuentaId: remota.proveedorCuentaId }, { dniAltaSensa: remota.dni }],
+            },
+            select: { id: true },
+          });
+          if (existente) return { estado: 'ya_importada' as const, id: existente.id };
+
+          const creada = await tx.cuenta.create({
+            data: {
+              empresaRevendedoraId: empresa.id,
+              proveedorId: configuracion.proveedorId,
+              proveedorCuentaId: remota.proveedorCuentaId,
+              dniAltaSensa: remota.dni.trim(),
+              usuario: remota.proveedorCuentaId,
+              passwordCifrado: null,
+              pinCifrado: this.crypto.encrypt(pin),
+              emailContacto: remota.email.trim().toLowerCase(),
+              esExclusiva: true,
+              servicios: normalizarServicios((remota.servicios || '1').split('|')),
+              limiteDispositivos: 3,
+              dispositivosFijosHabilitados: Math.max(0, Math.min(3, remota.dispositivosFijos)),
+              dispositivosMovilesHabilitados: Math.max(0, Math.min(3, remota.dispositivosMoviles)),
+              estado: remota.activa ? EstadoCuenta.activa : EstadoCuenta.cerrada,
+            },
+          });
+          await this.audit.registrarEnTx(tx, {
+            accion: AccionAuditoria.alta_cuenta,
+            entidad: EntidadAuditada.Cuenta,
+            entidadId: creada.id,
+            empresaRevendedoraId: empresa.id,
+            operadorPrincipalId,
+            detalle: {
+              origen: 'importacion_proveedor',
+              proveedor_cuenta_id: remota.proveedorCuentaId,
+              es_exclusiva: true,
+              password_pendiente: true,
+            },
+          });
+          return { estado: 'importada' as const, id: creada.id };
+        });
+
+        let mensaje: string | undefined;
+        if (resultado.estado === 'importada' && remota.activa) {
+          try {
+            await this.inventario.sincronizar(resultado.id);
+          } catch {
+            mensaje =
+              'La Cuenta se importó, pero el inventario de Dispositivos quedó pendiente de consulta.';
+          }
+        }
+        resultados.push({
+          proveedor_cuenta_id: proveedorCuentaId,
+          estado: resultado.estado,
+          cuenta_id: resultado.id,
+          mensaje,
+        });
+      } catch (error) {
+        const duplicada =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+        resultados.push({
+          proveedor_cuenta_id: proveedorCuentaId,
+          estado: duplicada ? 'ya_importada' : 'fallida',
+          mensaje: duplicada
+            ? 'La Cuenta fue importada por otro proceso.'
+            : error instanceof Error
+              ? error.message
+              : 'No se pudo importar la Cuenta.',
+        });
+      }
+    }
+
+    return {
+      resumen: {
+        solicitadas: resultados.length,
+        importadas: resultados.filter((item) => item.estado === 'importada').length,
+        ya_importadas: resultados.filter((item) => item.estado === 'ya_importada').length,
+        fallidas: resultados.filter((item) => item.estado === 'fallida').length,
+      },
+      resultados,
+    };
+  }
+
+  async cerrarCuentaExterna(proveedorCuentaIdSinNormalizar: string) {
+    const operadorPrincipalId = this.requerirOperador();
+    const proveedorCuentaId = proveedorCuentaIdSinNormalizar.trim();
+    if (!proveedorCuentaId || proveedorCuentaId.length > 60) {
+      throw new BadRequestException('El identificador de la Cuenta no es válido.');
+    }
+
+    return this.prisma.transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${operadorPrincipalId}:${proveedorCuentaId}`}))`;
+        const local = await tx.cuenta.findFirst({
+          where: {
+            empresaRevendedora: { operadorPrincipalId },
+            OR: [{ proveedorCuentaId }, { dniAltaSensa: proveedorCuentaId }],
+          },
+          select: { id: true },
+        });
+        if (local) {
+          throw new ConflictException(
+            'La Cuenta ya está registrada en IPTVControl y debe administrarse desde su Empresa Revendedora.',
+          );
+        }
+
+        const remota = await this.proveedor.consultarCuenta(operadorPrincipalId, proveedorCuentaId);
+        if (!remota) return { proveedor_cuenta_id: proveedorCuentaId, estado: 'ya_no_existe' };
+
+        const dispositivos = await this.proveedor.listarDispositivos(
+          operadorPrincipalId,
+          proveedorCuentaId,
+        );
+        if (dispositivos.length > 0) {
+          throw new BadRequestException(
+            `No se puede eliminar: SENSA informa ${dispositivos.length} Dispositivo(s) en esta Cuenta.`,
+          );
+        }
+
+        await this.proveedor.cerrarCuenta(operadorPrincipalId, proveedorCuentaId);
+        await this.audit.registrarEnTx(tx, {
+          accion: AccionAuditoria.cierre_cuenta,
+          entidad: EntidadAuditada.Cuenta,
+          entidadId: proveedorCuentaId,
+          operadorPrincipalId,
+          detalle: { origen: 'cuenta_externa', proveedor_cuenta_id: proveedorCuentaId },
+        });
+        return { proveedor_cuenta_id: proveedorCuentaId, estado: 'eliminada' };
+      },
+      { timeoutMs: 60_000 },
+    );
   }
 
   async crear(dto: CrearRevendedoraDto) {
@@ -444,5 +642,13 @@ export class RevendedorasService {
       throw new BadRequestException('La modalidad comercial indicada no existe.');
     }
     return modalidad;
+  }
+
+  private requerirOperador(): string {
+    const operadorPrincipalId = this.contexto.operadorPrincipalId;
+    if (!operadorPrincipalId) {
+      throw new ForbiddenException('Este endpoint corresponde al Operador Principal.');
+    }
+    return operadorPrincipalId;
   }
 }

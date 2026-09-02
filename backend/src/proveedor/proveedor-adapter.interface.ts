@@ -72,6 +72,12 @@ export interface CuentaInventarioProveedor {
   email: string;
   ciudad: string;
   referenciaExterna?: string;
+  pin?: string;
+  servicios: string;
+  dispositivosFijos: number;
+  dispositivosMoviles: number;
+  fechaAlta?: string;
+  fechaBaja?: string;
   activa: boolean;
 }
 

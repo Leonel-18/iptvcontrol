@@ -166,6 +166,7 @@ export const AccountDevicesTab = ({
         </p>
         <div className="flex flex-wrap gap-2">
           {!esOperador &&
+          !cuenta.password_pendiente &&
           (!cuenta.es_exclusiva || !cuenta.cliente_final_exclusivo) ? (
             <Button
               variant="primary"

@@ -404,7 +404,9 @@ model Cuenta {
 
   usuario         String @db.VarChar(120)
   /// Credenciales de la Cuenta en el Proveedor, cifradas con AES-256-GCM.
-  passwordCifrado String @map("password_cifrado")
+  /// Puede quedar pendiente al importar una Cuenta preexistente del Proveedor,
+  /// porque SENSA no permite recuperar su contraseña actual.
+  passwordCifrado String? @map("password_cifrado")
   pinCifrado      String @map("pin_cifrado")
 
   /// Correo derivado del email de la Empresa Revendedora + número creciente.
