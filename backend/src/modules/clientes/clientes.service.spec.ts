@@ -262,6 +262,7 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
   };
 
   const crearServicio = (cuenta: Record<string, unknown> | null) => {
+    const cuentaPersistida = cuenta ? { passwordCifrado: 'password-cifrado', ...cuenta } : null;
     const clienteCreado = {
       id: 'cliente-nuevo',
       empresaRevendedoraId: 'empresa-1',
@@ -275,7 +276,7 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
     };
     const prisma = {
       db: {
-        cuenta: { findUnique: jest.fn().mockResolvedValue(cuenta) },
+        cuenta: { findUnique: jest.fn().mockResolvedValue(cuentaPersistida) },
         clienteFinal: { delete: jest.fn().mockResolvedValue(undefined) },
       },
       transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
@@ -354,6 +355,29 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
     await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
       'no existe o no está disponible',
     );
+  });
+
+  it('rechaza una Cuenta importada hasta que se configure su contraseña', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-vacia',
+      esExclusiva: true,
+      clienteFinalExclusivoId: null,
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: 'proveedor-cuenta-1',
+      passwordCifrado: null,
+      servicios: '1',
+      dispositivos: [],
+      ventasCompartidas: [],
+    });
+
+    await expect(
+      servicio.crear({
+        ...dtoBase,
+        tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
+        cupos_por_categoria: undefined,
+        cuenta_id: 'cuenta-vacia',
+      }),
+    ).rejects.toThrow('Configure la contraseña de la Cuenta importada');
   });
 
   it('rechaza una Cuenta exclusiva que ya tiene propietario', async () => {

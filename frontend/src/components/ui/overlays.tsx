@@ -80,6 +80,7 @@ export const ConfirmDialog = ({
   etiquetaConfirmar,
   tono = 'primary',
   cargando,
+  confirmarDeshabilitado,
   onConfirmar,
   children,
 }: {
@@ -90,6 +91,7 @@ export const ConfirmDialog = ({
   etiquetaConfirmar: string;
   tono?: 'primary' | 'danger';
   cargando?: boolean;
+  confirmarDeshabilitado?: boolean;
   onConfirmar: () => void;
   children?: ReactNode;
 }) => (
@@ -100,7 +102,11 @@ export const ConfirmDialog = ({
         <Button variant="secondary" onClick={() => onCambio(false)} disabled={cargando}>
           Cancelar
         </Button>
-        <Button variant={tono} onClick={onConfirmar} disabled={cargando}>
+        <Button
+          variant={tono}
+          onClick={onConfirmar}
+          disabled={cargando || confirmarDeshabilitado}
+        >
           {cargando ? 'Procesando…' : etiquetaConfirmar}
         </Button>
       </div>

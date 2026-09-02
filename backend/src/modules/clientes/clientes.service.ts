@@ -395,6 +395,11 @@ export class ClientesService {
           'Esta Cuenta todavía no está activa y confirmada por el Proveedor.',
         );
       }
+      if (!cuenta.passwordCifrado) {
+        throw new BadRequestException(
+          'Configure la contraseña de la Cuenta importada antes de agregar Clientes Finales.',
+        );
+      }
       const tieneClientesActivos = cuenta.dispositivos.some(
         (dispositivo) =>
           ESTADOS_QUE_OCUPAN.includes(dispositivo.estado) && dispositivo.clienteFinalId,

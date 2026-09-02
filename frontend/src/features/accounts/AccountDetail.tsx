@@ -325,6 +325,13 @@ export const AccountDetail = () => {
         />
       ) : null}
 
+      {!esOperador && data.estado === "activa" && data.password_pendiente ? (
+        <Alert tone="warning" titulo="Cuenta importada: contraseña pendiente">
+          Defina una contraseña desde esta pantalla antes de agregar Clientes Finales. El cambio se
+          aplicará también en el proveedor.
+        </Alert>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {!esOperador && !data.es_exclusiva ? (

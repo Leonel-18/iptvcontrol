@@ -43,6 +43,7 @@ export interface Account {
   proveedor_cuenta_id: string | null;
   estado: "activa" | "cerrada";
   es_exclusiva: boolean;
+  password_pendiente: boolean;
   empresa_revendedora_id: string;
   proveedor?: string | null;
   capacidad: AccountCapacity;
@@ -268,7 +269,23 @@ export interface ExternalProviderAccount {
   email: string;
   ciudad: string;
   referencia_externa: string | null;
+  fecha_alta: string | null;
   estado: "activa" | "inactiva";
+}
+
+export interface ExternalAccountImportResult {
+  resumen: {
+    solicitadas: number;
+    importadas: number;
+    ya_importadas: number;
+    fallidas: number;
+  };
+  resultados: {
+    proveedor_cuenta_id: string;
+    estado: "importada" | "ya_importada" | "fallida";
+    cuenta_id?: string;
+    mensaje?: string;
+  }[];
 }
 
 export interface ExternalProviderAccountsReport {

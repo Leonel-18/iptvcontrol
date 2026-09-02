@@ -192,6 +192,10 @@ describe('SensaAdapter', () => {
       proveedorCuentaId: '30000002',
       nombre: 'Nombre 2',
       ciudad: 'Mendoza',
+      pin: '123456',
+      servicios: '1',
+      dispositivosFijos: 3,
+      dispositivosMoviles: 3,
     });
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       'https://api.sensa.test/v4/users?page=1&per_page=100&is_hotel=false',

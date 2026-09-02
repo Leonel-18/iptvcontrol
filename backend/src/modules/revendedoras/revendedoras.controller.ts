@@ -10,6 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { RolTeamMember } from '@prisma/client';
 import { Response } from 'express';
 import { RevendedorasService } from './revendedoras.service';
 import {
@@ -18,8 +19,9 @@ import {
   CrearRevendedoraDto,
   ListarRevendedorasQueryDto,
 } from './dto/revendedora.dto';
-import { SoloOperador } from '../../common/auth/decorators';
+import { Roles, SoloOperador } from '../../common/auth/decorators';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
+import { ImportarCuentasExternasDto } from './dto/cuenta-externa.dto';
 
 /**
  * Empresas Revendedoras — `/resellers` en el frontend.
@@ -76,6 +78,20 @@ export class RevendedorasController {
   })
   async listarCuentasExternas() {
     return this.revendedoras.listarCuentasExternas();
+  }
+
+  @Post('external-accounts/import')
+  @Roles(RolTeamMember.operator_admin)
+  @ApiOperation({ summary: 'Importa una o varias Cuentas externas a una Empresa Revendedora.' })
+  async importarCuentasExternas(@Body() dto: ImportarCuentasExternasDto) {
+    return this.revendedoras.importarCuentasExternas(dto);
+  }
+
+  @Post('external-accounts/:proveedorCuentaId/close')
+  @Roles(RolTeamMember.operator_admin)
+  @ApiOperation({ summary: 'Elimina definitivamente una Cuenta externa del Proveedor.' })
+  async cerrarCuentaExterna(@Param('proveedorCuentaId') proveedorCuentaId: string) {
+    return this.revendedoras.cerrarCuentaExterna(proveedorCuentaId);
   }
 
   @Get(':id')

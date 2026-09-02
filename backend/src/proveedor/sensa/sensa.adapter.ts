@@ -615,6 +615,12 @@ export class SensaAdapter implements ProveedorAdapter {
       email: user.email,
       ciudad: user.city,
       referenciaExterna: user.external_customer_id ?? undefined,
+      pin: user.pin === undefined || user.pin === null ? undefined : String(user.pin),
+      servicios: user.services ?? '1',
+      dispositivosFijos: Number(user.auto_provision_count_stationary ?? 0),
+      dispositivosMoviles: Number(user.auto_provision_count_mobile ?? 0),
+      fechaAlta: user.start_date || undefined,
+      fechaBaja: user.end_date || undefined,
       activa: estado !== 'I',
     };
   }
