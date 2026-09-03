@@ -429,22 +429,35 @@ describe('CuentasService — actualizarPropiedades', () => {
     ).rejects.toThrow('más de un Cliente Final activo');
   });
 
-  it('rechaza pasar a compartida si excede 2 Dispositivos por categoría', async () => {
+  it('rechaza pasar una Cuenta exclusiva a compartida', async () => {
     const { servicio } = crearServicio({
       id: 'cuenta-1',
       proveedorCuentaId: '30000001',
       esExclusiva: true,
       empresaRevendedoraId: 'empresa-1',
-      dispositivos: [
-        dispositivo('cliente-1', 'fijo'),
-        dispositivo('cliente-1', 'fijo'),
-        dispositivo('cliente-1', 'fijo'),
-      ],
+      dispositivos: [dispositivo('cliente-1', 'fijo')],
     });
 
     await expect(
       servicio.actualizarPropiedades('cuenta-1', { es_exclusiva: false }),
-    ).rejects.toThrow('no entra en una venta compartida');
+    ).rejects.toThrow('Una Cuenta exclusiva no puede convertirse en compartida');
+  });
+
+  it('rechaza pasar a compartida aun sin equipos (el tipo se fija al crearla)', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-1',
+      proveedorCuentaId: '30000001',
+      esExclusiva: true,
+      clienteFinalExclusivoId: 'cliente-1',
+      servicios: '1',
+      empresaRevendedoraId: 'empresa-1',
+      dispositivos: [],
+      ventasCompartidas: [],
+    });
+
+    await expect(
+      servicio.actualizarPropiedades('cuenta-1', { es_exclusiva: false }),
+    ).rejects.toThrow('Una Cuenta exclusiva no puede convertirse en compartida');
   });
 
   it('convierte compartida a exclusiva: borra la venta, cierra la ventana y aplica 3/3', async () => {
@@ -516,39 +529,8 @@ describe('CuentasService — actualizarPropiedades', () => {
     });
   });
 
-  it('convierte exclusiva a compartida: crea la venta 1+1 para el único cliente', async () => {
-    const { servicio, ventaCompartidaCreate, cuentaUpdate, sincronizarContadoresVenta } =
-      crearServicio(
-        {
-          id: 'cuenta-1',
-          proveedorCuentaId: '30000001',
-          esExclusiva: true,
-          servicios: '1|2|3',
-          empresaRevendedoraId: 'empresa-1',
-          dispositivos: [dispositivo('cliente-1', 'fijo')],
-        },
-        { cuentaFinal: { esExclusiva: false } },
-      );
-
-    await servicio.actualizarPropiedades('cuenta-1', { es_exclusiva: false });
-
-    expect(ventaCompartidaCreate).toHaveBeenCalledWith({
-      data: {
-        cuentaId: 'cuenta-1',
-        clienteFinalId: 'cliente-1',
-        empresaRevendedoraId: 'empresa-1',
-        cuposPorCategoria: 1,
-      },
-    });
-    expect(cuentaUpdate).toHaveBeenCalledWith({
-      where: { id: 'cuenta-1' },
-      data: { esExclusiva: false, clienteFinalExclusivoId: null, servicios: '1|2|3' },
-    });
-    expect(sincronizarContadoresVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
-  });
-
-  it('convierte exclusiva sin equipos a compartida usando su propietario explícito', async () => {
-    const { servicio, ventaCompartidaCreate, cuentaUpdate } = crearServicio(
+  it('rechaza pasar una Cuenta exclusiva a compartida (con su propietario explícito)', async () => {
+    const { servicio } = crearServicio(
       {
         id: 'cuenta-1',
         proveedorCuentaId: '30000001',
@@ -562,20 +544,9 @@ describe('CuentasService — actualizarPropiedades', () => {
       { cuentaFinal: { esExclusiva: false } },
     );
 
-    await servicio.actualizarPropiedades('cuenta-1', { es_exclusiva: false });
-
-    expect(ventaCompartidaCreate).toHaveBeenCalledWith({
-      data: {
-        cuentaId: 'cuenta-1',
-        clienteFinalId: 'cliente-1',
-        empresaRevendedoraId: 'empresa-1',
-        cuposPorCategoria: 1,
-      },
-    });
-    expect(cuentaUpdate).toHaveBeenCalledWith({
-      where: { id: 'cuenta-1' },
-      data: { esExclusiva: false, clienteFinalExclusivoId: null, servicios: '1' },
-    });
+    await expect(
+      servicio.actualizarPropiedades('cuenta-1', { es_exclusiva: false }),
+    ).rejects.toThrow('Una Cuenta exclusiva no puede convertirse en compartida');
   });
 
   it('cambia sólo los servicios de una Cuenta compartida: valida licencias y empuja a SENSA antes de guardar', async () => {

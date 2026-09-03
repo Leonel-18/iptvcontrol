@@ -5,10 +5,9 @@ import {
   Lock,
   Pencil,
   RefreshCw,
-  XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { useSesion } from "@/lib/session";
@@ -67,9 +66,7 @@ export const AccountDetail = () => {
   const { id = "" } = useParams();
   const { esOperador } = useSesion();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [credencialesVisibles, setCredencialesVisibles] = useState(false);
-  const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [confirmarLiberacion, setConfirmarLiberacion] = useState(false);
   const [cambiarPasswordAbierto, setCambiarPasswordAbierto] = useState(false);
   const [editarAbierto, setEditarAbierto] = useState(false);
@@ -126,22 +123,11 @@ export const AccountDetail = () => {
     onError: (causa: Error) => toast.error(causa.message),
   });
 
-  const cerrarCuenta = useMutation({
-    mutationFn: () => api(`/accounts/${id}/close`, { metodo: "POST" }),
-    onSuccess: () => {
-      toast.success("Cuenta cerrada.");
-      setConfirmarCierre(false);
-      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      navigate("/accounts");
-    },
-    onError: (causa: ApiError) => toast.error(causa.message),
-  });
-
   const liberarVentanaCuriosidad = useMutation({
     mutationFn: () =>
       api(`/accounts/${id}/curiosity-window/release`, { metodo: "POST" }),
     onSuccess: () => {
-      toast.success("Ventana de curiosidad levantada.");
+      toast.success("Ventana de Alta levantada.");
       setConfirmarLiberacion(false);
       void queryClient.invalidateQueries({ queryKey: ["account", id] });
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
@@ -209,50 +195,22 @@ export const AccountDetail = () => {
                   : "Sincronizar contenido"}
               </Button>
             ) : null}
-            {!esOperador &&
-            data.estado !== "cerrada" &&
-            data.capacidad.ocupados === 0 ? (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setConfirmarCierre(true)}
-              >
-                <XCircle />
-                Cerrar cuenta
-              </Button>
-            ) : null}
           </>
         }
       />
 
       <ConfirmDialog
-        abierto={confirmarCierre}
-        onCambio={setConfirmarCierre}
-        titulo="Cerrar esta Cuenta"
-        descripcion="Se cierra en el proveedor y ya no va a poder usarse. Sólo se puede cerrar una Cuenta sin Dispositivos activos ni bloqueados."
-        etiquetaConfirmar="Cerrar cuenta"
-        tono="danger"
-        cargando={cerrarCuenta.isPending}
-        onConfirmar={() => cerrarCuenta.mutate()}
-      >
-        <Alert tone="warning">
-          Esta acción no se puede deshacer. Úsela sólo para Cuentas creadas por
-          error o abandonadas.
-        </Alert>
-      </ConfirmDialog>
-
-      <ConfirmDialog
         abierto={confirmarLiberacion}
         onCambio={setConfirmarLiberacion}
-        titulo="Levantar ventana de curiosidad"
-        descripcion="La Cuenta compartida volverá a estar disponible de inmediato para otra venta compatible."
+        titulo="Levantar la Ventana de Alta"
+        descripcion="La Cuenta compartida volverá a quedar disponible de inmediato para otro cliente nuevo compatible."
         etiquetaConfirmar="Levantar ventana"
         cargando={liberarVentanaCuriosidad.isPending}
         onConfirmar={() => liberarVentanaCuriosidad.mutate()}
       >
         <Alert tone="warning">
-          Confirme sólo si ya no necesita mantener esta Cuenta reservada durante
-          el plazo indicado.
+          Confirme sólo si ya no necesita mantener esta Cuenta bloqueada para
+          clientes nuevos durante el plazo indicado.
         </Alert>
       </ConfirmDialog>
 

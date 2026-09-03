@@ -39,6 +39,10 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   apertura_ventana_curiosidad: 'Apertura de Ventana de curiosidad',
   levantamiento_ventana_curiosidad: 'Levantamiento de Ventana de curiosidad',
   cambio_configuracion_ventana_curiosidad: 'Cambio de duración de Ventana de curiosidad',
+  actualizacion_empresa_revendedora: 'Actualización de datos de Empresa Revendedora',
+  suspension_empresa_revendedora: 'Suspensión de Empresa Revendedora',
+  reactivacion_empresa_revendedora: 'Reactivación de Empresa Revendedora',
+  cambio_slots_cuenta: 'Cambio de cupos (slots) de una Cuenta',
 };
 
 /**

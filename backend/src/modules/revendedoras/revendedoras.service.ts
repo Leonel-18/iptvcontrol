@@ -12,6 +12,7 @@ import {
   EstadoCuenta,
   EstadoDispositivo,
   EstadoEmpresaRevendedora,
+  ModalidadComercial,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -24,6 +25,7 @@ import { CryptoService } from '../../common/crypto/crypto.service';
 import { InventarioProveedorService } from '../cuentas/inventario-proveedor.service';
 import { normalizarServicios } from '../../proveedor/servicios.util';
 import { ImportarCuentasExternasDto } from './dto/cuenta-externa.dto';
+import { inicioMesArgentina, finMesArgentina } from '../../common/time/calendario-comercial';
 import {
   ActualizarRevendedoraDto,
   CambiarModalidadDto,
@@ -67,7 +69,7 @@ export class RevendedorasService {
         : undefined,
     };
 
-    const [total, empresas] = await Promise.all([
+    const [total, empresas, conteos] = await Promise.all([
       this.prisma.db.empresaRevendedora.count({ where }),
       this.prisma.db.empresaRevendedora.findMany({
         where,
@@ -79,31 +81,105 @@ export class RevendedorasService {
         skip: query.esCsv ? undefined : query.skip,
         take: query.esCsv ? undefined : query.take,
       }),
+      this.conteosComerciales(query),
     ]);
 
-    const data = empresas.map((empresa) => ({
-      id: empresa.id,
-      razon_social: empresa.razonSocial,
-      cuit: empresa.cuit,
-      email_contacto: empresa.emailContacto,
-      telefono_contacto: empresa.telefonoContacto,
-      contacto: `${empresa.nombreContacto} ${empresa.apellidoContacto}`.trim(),
-      sitio_web: empresa.sitioWeb,
-      estado: empresa.estado,
-      modalidad_comercial: empresa.modalidadComercial
-        ? {
-            id: empresa.modalidadComercial.id,
-            tipo: empresa.modalidadComercial.tipo,
-            escala: empresa.modalidadComercial.escala,
-            precio_por_cuenta: Number(empresa.modalidadComercial.precioPorCuenta),
-          }
-        : null,
-      cantidad_cuentas: empresa._count.cuentas,
-      cantidad_clientes: empresa._count.clientesFinales,
-      creado_en: empresa.creadoEn,
-    }));
+    const data = empresas.map((empresa) => {
+      const conteo = conteos.get(empresa.id);
+      const totalCuentas = conteo?.totalCuentas ?? empresa._count.cuentas;
+      const creadasMes = conteo?.creadasMesSistema ?? 0;
+      const cuentasActivas = conteo?.cuentasActivas ?? 0;
+
+      return {
+        id: empresa.id,
+        razon_social: empresa.razonSocial,
+        cuit: empresa.cuit,
+        email_contacto: empresa.emailContacto,
+        telefono_contacto: empresa.telefonoContacto,
+        contacto: `${empresa.nombreContacto} ${empresa.apellidoContacto}`.trim(),
+        sitio_web: empresa.sitioWeb,
+        estado: empresa.estado,
+        modalidad_comercial: empresa.modalidadComercial
+          ? {
+              id: empresa.modalidadComercial.id,
+              tipo: empresa.modalidadComercial.tipo,
+              escala: empresa.modalidadComercial.escala,
+              precio_por_cuenta: Number(empresa.modalidadComercial.precioPorCuenta),
+            }
+          : null,
+        cantidad_cuentas: totalCuentas,
+        cantidad_clientes: empresa._count.clientesFinales,
+        cuentas_max_crear_mensual: empresa.cuentasMaxCrearMensual,
+        dispositivos_activos: conteo?.dispositivosActivos ?? 0,
+        comerciales: {
+          cuentas_a_cobrar: this.calcularCuentasACobrar({
+            modalidad: empresa.modalidadComercial,
+            asignadaEn: empresa.modalidadAsignadaEn ?? empresa.creadoEn,
+            creadasEnMes: creadasMes,
+            cuentasActivas,
+          }),
+          cuentas_maximas: this.calcularMaximoComercial({
+            totalCuentas: totalCuentas,
+            creadasEnMes: creadasMes,
+            cuentasMaxCrearMensual: empresa.cuentasMaxCrearMensual,
+          }),
+          creadas_mes: creadasMes,
+        },
+        creado_en: empresa.creadoEn,
+      };
+    });
 
     return PaginatedResponse.build(data, total, query.page ?? 1, query.per_page ?? 25);
+  }
+
+  /**
+   * Conteos por Empresa Revendedora para el listado, en un solo query batch.
+   */
+  private async conteosComerciales(query: ListarRevendedorasQueryDto) {
+    const ahora = new Date();
+    const inicioMes = inicioMesArgentina(ahora);
+    const finMes = finMesArgentina(ahora);
+
+    const filtroBase = query.status ? Prisma.sql`AND er."estado" = ${query.status}` : Prisma.empty;
+    const filtroBusqueda = query.q
+      ? Prisma.sql`AND (er."razon_social" ILIKE ${`%${query.q}%`} OR er."cuit" LIKE ${`%${query.q}%`} OR er."email_contacto" ILIKE ${`%${query.q}%`})`
+      : Prisma.empty;
+
+    const filas = await this.prisma.db.$queryRaw<
+      Array<{
+        empresa_revendedora_id: string;
+        total_cuentas: bigint;
+        creadas_mes_sistema: bigint;
+        cuentas_activas: bigint;
+        dispositivos_activos: bigint;
+      }>
+    >`
+      SELECT
+        er."id" AS empresa_revendedora_id,
+        (SELECT COUNT(*)::bigint FROM "cuenta" c WHERE c."empresa_revendedora_id" = er."id") AS total_cuentas,
+        (SELECT COUNT(*)::bigint FROM "cuenta" c
+          WHERE c."empresa_revendedora_id" = er."id"
+            AND c."procedencia" = 'creada_en_sistema'
+            AND c."creado_en" >= ${inicioMes} AND c."creado_en" < ${finMes}) AS creadas_mes_sistema,
+        (SELECT COUNT(*)::bigint FROM "cuenta" c
+          WHERE c."empresa_revendedora_id" = er."id" AND c."estado" = 'activa') AS cuentas_activas,
+        (SELECT COUNT(*)::bigint FROM "dispositivo" d
+          WHERE d."empresa_revendedora_id" = er."id" AND d."estado" = 'activo') AS dispositivos_activos
+      FROM "empresa_revendedora" er
+      WHERE 1=1 ${filtroBase} ${filtroBusqueda}
+    `;
+
+    return new Map(
+      filas.map((fila) => [
+        fila.empresa_revendedora_id,
+        {
+          totalCuentas: Number(fila.total_cuentas),
+          creadasMesSistema: Number(fila.creadas_mes_sistema),
+          cuentasActivas: Number(fila.cuentas_activas),
+          dispositivosActivos: Number(fila.dispositivos_activos),
+        },
+      ]),
+    );
   }
 
   /**
@@ -160,6 +236,8 @@ export class RevendedorasService {
       email_contacto: empresa.emailContacto,
       sitio_web: empresa.sitioWeb,
       estado: empresa.estado,
+      cuentas_max_crear_mensual: empresa.cuentasMaxCrearMensual,
+      modalidad_asignada_en: empresa.modalidadAsignadaEn ?? null,
       modalidad_comercial: empresa.modalidadComercial
         ? {
             id: empresa.modalidadComercial.id,
@@ -274,6 +352,13 @@ export class RevendedorasService {
       );
     }
 
+    // Las Cuentas importadas se tratan como compartidas por defecto. Una Cuenta
+    // compartida sin ventas asignadas no participa de la búsqueda de "Cuenta con
+    // lugar": su primera venta se carga de forma contextual desde /accounts/:id
+    // (POST /customers con cuenta_id), que reserva 1+1 o 2+2. Como excepción el
+    // Operador puede marcarlas exclusivas.
+    const esExclusiva = dto.es_exclusiva === true;
+
     const [cuentasProveedor, { configuracion }] = await Promise.all([
       this.proveedor.listarCuentas(operadorPrincipalId),
       this.proveedor.resolver(operadorPrincipalId),
@@ -334,11 +419,12 @@ export class RevendedorasService {
               passwordCifrado: null,
               pinCifrado: this.crypto.encrypt(pin),
               emailContacto: remota.email.trim().toLowerCase(),
-              esExclusiva: true,
+              esExclusiva,
               servicios: normalizarServicios((remota.servicios || '1').split('|')),
               limiteDispositivos: 3,
               dispositivosFijosHabilitados: Math.max(0, Math.min(3, remota.dispositivosFijos)),
               dispositivosMovilesHabilitados: Math.max(0, Math.min(3, remota.dispositivosMoviles)),
+              procedencia: 'importada_proveedor',
               estado: remota.activa ? EstadoCuenta.activa : EstadoCuenta.cerrada,
             },
           });
@@ -351,8 +437,9 @@ export class RevendedorasService {
             detalle: {
               origen: 'importacion_proveedor',
               proveedor_cuenta_id: remota.proveedorCuentaId,
-              es_exclusiva: true,
+              es_exclusiva: esExclusiva,
               password_pendiente: true,
+              inventario_pendiente: true,
             },
           });
           return { estado: 'importada' as const, id: creada.id };
@@ -362,6 +449,14 @@ export class RevendedorasService {
         if (resultado.estado === 'importada' && remota.activa) {
           try {
             await this.inventario.sincronizar(resultado.id);
+            // La conciliación inicial quedó hecha. La Cuenta igual queda sin
+            // vender hasta que la Empresa Revendedora (a) resuelva las
+            // incidencias de Dispositivos desconocidos y (b) cargue la
+            // contraseña real por el flujo de cambio manual.
+            await this.prisma.db.cuenta.update({
+              where: { id: resultado.id },
+              data: { inventarioConciliadoEn: new Date() },
+            });
           } catch {
             mensaje =
               'La Cuenta se importó, pero el inventario de Dispositivos quedó pendiente de consulta.';
@@ -484,6 +579,8 @@ export class RevendedorasService {
           emailContacto: dto.email_contacto.trim().toLowerCase(),
           sitioWeb: dto.sitio_web?.trim() || null,
           modalidadComercialId: dto.modalidad_comercial_id ?? null,
+          // El "mes 1" de una obligación mensual arranca al asignar la modalidad.
+          modalidadAsignadaEn: dto.modalidad_comercial_id ? new Date() : null,
           estado: EstadoEmpresaRevendedora.activa,
         },
       });
@@ -529,11 +626,12 @@ export class RevendedorasService {
     const esOperador = this.contexto.esOperador;
 
     // La Empresa Revendedora puede mantener sus datos de contacto, pero no su
-    // estado (activa/suspendida): eso lo decide el Operador Principal.
+    // estado (activa/suspendida), ni su CUIT ni su límite mensual: eso lo
+    // administra el Operador Principal.
     if (!esOperador) {
-      if (dto.estado) {
+      if (dto.estado || dto.cuit || dto.cuentas_max_crear_mensual !== undefined) {
         throw new ForbiddenException(
-          'El estado de la Empresa Revendedora lo administra el Operador Principal.',
+          'Solo el Operador Principal puede cambiar estado, CUIT o límite mensual.',
         );
       }
       if (this.contexto.empresaRevendedoraId !== id) {
@@ -544,17 +642,32 @@ export class RevendedorasService {
     const anterior = await this.prisma.db.empresaRevendedora.findUnique({ where: { id } });
     if (!anterior) throw new NotFoundException('La Empresa Revendedora no existe.');
 
+    // Validación de unicidad del CUIT si cambió (a nombre de otra empresa).
+    if (dto.cuit && dto.cuit !== anterior.cuit) {
+      const duplicada = await this.prisma.db.empresaRevendedora.findFirst({
+        where: { cuit: dto.cuit, id: { not: id } },
+        select: { id: true, razonSocial: true },
+      });
+      if (duplicada) {
+        throw new BadRequestException(
+          `Ya existe otra Empresa Revendedora con el CUIT ${dto.cuit} (${duplicada.razonSocial}).`,
+        );
+      }
+    }
+
     const actualizada = await this.prisma.transaction(async (tx) => {
       const resultado = await tx.empresaRevendedora.update({
         where: { id },
         data: {
           razonSocial: dto.razon_social?.trim(),
+          cuit: dto.cuit,
           direccion: dto.direccion?.trim(),
           nombreContacto: dto.nombre_contacto?.trim(),
           apellidoContacto: dto.apellido_contacto?.trim(),
           telefonoContacto: dto.telefono_contacto?.trim(),
           emailContacto: dto.email_contacto?.trim().toLowerCase(),
           sitioWeb: dto.sitio_web?.trim(),
+          cuentasMaxCrearMensual: dto.cuentas_max_crear_mensual,
           estado: dto.estado,
         },
       });
@@ -563,13 +676,28 @@ export class RevendedorasService {
         await this.audit.registrarEnTx(tx, {
           accion:
             dto.estado === EstadoEmpresaRevendedora.suspendida
-              ? AccionAuditoria.baja_empresa_revendedora
-              : AccionAuditoria.alta_empresa_revendedora,
+              ? AccionAuditoria.suspension_empresa_revendedora
+              : AccionAuditoria.reactivacion_empresa_revendedora,
           entidad: EntidadAuditada.EmpresaRevendedora,
           entidadId: id,
-          empresaRevendedoraId: null,
+          empresaRevendedoraId: id,
           operadorPrincipalId: operadorPrincipalId ?? anterior.operadorPrincipalId,
           detalle: { estado_anterior: anterior.estado, estado_nuevo: dto.estado },
+        });
+      }
+
+      // Cambios de datos administrativos o del límite mensual: se registran con
+      // quién (team_member_id vía contexto), cuándo y sobre qué empresa, sin
+      // incluir datos sensibles. `null` marca el campo como sin cambios.
+      const cambios = this.calcularCambiosParaAuditoria(anterior, dto);
+      if (Object.keys(cambios).length > 0) {
+        await this.audit.registrarEnTx(tx, {
+          accion: AccionAuditoria.actualizacion_empresa_revendedora,
+          entidad: EntidadAuditada.EmpresaRevendedora,
+          entidadId: id,
+          empresaRevendedoraId: id,
+          operadorPrincipalId: operadorPrincipalId ?? anterior.operadorPrincipalId,
+          detalle: { cambios },
         });
       }
 
@@ -577,6 +705,72 @@ export class RevendedorasService {
     });
 
     return this.obtener(actualizada.id);
+  }
+
+  /** Reduce los cambios a `campo → { anterior, nuevo }` (tipos JSON seguros). */
+  private calcularCambiosParaAuditoria(
+    anterior: {
+      razonSocial: string;
+      cuit: string;
+      direccion: string;
+      nombreContacto: string;
+      apellidoContacto: string;
+      telefonoContacto: string;
+      emailContacto: string;
+      sitioWeb: string | null;
+      cuentasMaxCrearMensual: number;
+    },
+    dto: ActualizarRevendedoraDto,
+  ): Record<string, { anterior: string | number | null; nuevo: string | number | null }> {
+    const mapeo: Array<{
+      campo: string;
+      previo: string | number | null;
+      nuevo: string | number | null | undefined;
+    }> = [
+      { campo: 'razon_social', nuevo: dto.razon_social?.trim(), previo: anterior.razonSocial },
+      { campo: 'cuit', nuevo: dto.cuit, previo: anterior.cuit },
+      { campo: 'direccion', nuevo: dto.direccion?.trim(), previo: anterior.direccion },
+      {
+        campo: 'nombre_contacto',
+        nuevo: dto.nombre_contacto?.trim(),
+        previo: anterior.nombreContacto,
+      },
+      {
+        campo: 'apellido_contacto',
+        nuevo: dto.apellido_contacto?.trim(),
+        previo: anterior.apellidoContacto,
+      },
+      {
+        campo: 'telefono_contacto',
+        nuevo: dto.telefono_contacto?.trim(),
+        previo: anterior.telefonoContacto,
+      },
+      {
+        campo: 'email_contacto',
+        nuevo: dto.email_contacto?.trim().toLowerCase(),
+        previo: anterior.emailContacto,
+      },
+      {
+        campo: 'cuentas_max_crear_mensual',
+        nuevo: dto.cuentas_max_crear_mensual,
+        previo: anterior.cuentasMaxCrearMensual,
+      },
+    ];
+
+    const cambios: Record<
+      string,
+      { anterior: string | number | null; nuevo: string | number | null }
+    > = {};
+    for (const item of mapeo) {
+      if (item.nuevo !== undefined && item.nuevo !== item.previo) {
+        cambios[item.campo] = { anterior: item.previo, nuevo: item.nuevo ?? null };
+      }
+    }
+    const sitioNuevo = dto.sitio_web === undefined ? undefined : dto.sitio_web.trim() || null;
+    if (sitioNuevo !== undefined && sitioNuevo !== anterior.sitioWeb) {
+      cambios['sitio_web'] = { anterior: anterior.sitioWeb, nuevo: sitioNuevo };
+    }
+    return cambios;
   }
 
   /**
@@ -602,7 +796,13 @@ export class RevendedorasService {
     await this.prisma.transaction(async (tx) => {
       await tx.empresaRevendedora.update({
         where: { id },
-        data: { modalidadComercialId: nueva.id },
+        data: {
+          modalidadComercialId: nueva.id,
+          // Reinicia el "mes 1" del compromiso al cambiar de escala/plan; el
+          // Operador puede ajustar la fecha manualmente si el acuerdo arranca
+          // antes o después.
+          modalidadAsignadaEn: new Date(),
+        },
       });
 
       await this.audit.registrarEnTx(tx, {
@@ -642,6 +842,60 @@ export class RevendedorasService {
       throw new BadRequestException('La modalidad comercial indicada no existe.');
     }
     return modalidad;
+  }
+
+  /** Mes comercial transcurrido (diferencia en meses calendario AR). */
+  private cuentasDelMesComercial(asignadaEn: Date, referencia: Date = new Date()): number {
+    const desde = inicioMesArgentina(asignadaEn);
+    const ahoraInicioMes = inicioMesArgentina(referencia);
+    const diffMeses =
+      (ahoraInicioMes.getUTCFullYear() - desde.getUTCFullYear()) * 12 +
+      (ahoraInicioMes.getUTCMonth() - desde.getUTCMonth());
+    return Math.max(0, diffMeses);
+  }
+
+  /**
+   * "Cuentas a cobrar" del mes calendario AR, según la modalidad:
+   *
+   * - obligación mensual (X5/X10): el compromiso del mes en curso (ritmo x mes
+   *   comercial). El "mes 1" arranca cuando se asignó la modalidad a la empresa
+   *   (`modalidadAsignadaEn`); el Operador la ajusta manualmente al cambiar de
+   *   escala.
+   * - menudeo: todas las Cuentas activas/creadas de la empresa en el mes (no se
+   *   descuentan cierres: el cierre no libera el cobro del período).
+   */
+  calcularCuentasACobrar(params: {
+    modalidad?: Pick<ModalidadComercial, 'tipo' | 'ritmoIncremento'> | null;
+    asignadaEn: Date;
+    creadasEnMes: number;
+    cuentasActivas: number;
+  }): number {
+    const { modalidad, asignadaEn, creadasEnMes, cuentasActivas } = params;
+    if (modalidad?.tipo === 'obligacion_mensual') {
+      const mes = this.cuentasDelMesComercial(asignadaEn) + 1;
+      const ritmo = modalidad.ritmoIncremento ?? 0;
+      return Math.max(0, ritmo * mes);
+    }
+    return Math.max(creadasEnMes, cuentasActivas);
+  }
+
+  /**
+   * "Cuentas máximas" del mes: máximo de Cuentas creadas que la Empresa
+   * Revendedora puede tener en total. Fórmula confirmada por Bruno:
+   *
+   *   TOTAL de Cuentas creadas (históricas + las del mes)
+   *   - Cuentas creadas en el mes
+   *   + "Cuentas max. a crear mensualmente" (parametrizable por empresa)
+   *
+   * Ejemplo: 23 totales - 3 del mes + 10 = 30. Las importadas cuentan en TOTAL
+   * (ocupan capacidad) pero no en "creadas en el mes".
+   */
+  calcularMaximoComercial(params: {
+    totalCuentas: number;
+    creadasEnMes: number;
+    cuentasMaxCrearMensual: number;
+  }): number {
+    return Math.max(0, params.totalCuentas - params.creadasEnMes + params.cuentasMaxCrearMensual);
   }
 
   private requerirOperador(): string {

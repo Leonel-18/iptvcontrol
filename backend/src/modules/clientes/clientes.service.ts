@@ -400,6 +400,22 @@ export class ClientesService {
           'Configure la contraseña de la Cuenta importada antes de agregar Clientes Finales.',
         );
       }
+      if (cuenta.procedencia === 'importada_proveedor') {
+        const tieneIncidenciasPendientes =
+          await this.prisma.db.incidenciaDispositivoProveedor.count({
+            where: {
+              cuentaId: cuenta.id,
+              estado: { in: ['pendiente', 'reconocido'] },
+            },
+          });
+        if (!cuenta.inventarioConciliadoEn || tieneIncidenciasPendientes > 0) {
+          throw new BadRequestException(
+            'La Cuenta importada todavía tiene Dispositivos del Proveedor sin conciliar. ' +
+              'Revise su inventario, resuelva las incidencias pendientes y recién entonces podrá ' +
+              'cargar Clientes Finales.',
+          );
+        }
+      }
       const tieneClientesActivos = cuenta.dispositivos.some(
         (dispositivo) =>
           ESTADOS_QUE_OCUPAN.includes(dispositivo.estado) && dispositivo.clienteFinalId,

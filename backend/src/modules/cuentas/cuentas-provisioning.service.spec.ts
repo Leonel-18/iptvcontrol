@@ -28,6 +28,7 @@ describe('CuentasProvisioningService — crearCuenta', () => {
     razonSocial: 'ISP de prueba',
     nombreContacto: 'Bruno',
     apellidoContacto: 'Contacto',
+    cuentasMaxCrearMensual: 10,
     direccion: 'Echeverría 1776',
     telefonoContacto: '2615550000',
   } as any;
@@ -58,9 +59,11 @@ describe('CuentasProvisioningService — crearCuenta', () => {
     });
 
     const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
       cuenta: {
         create: jest.fn().mockResolvedValue(cuentaReservada),
         update: jest.fn().mockResolvedValue(cuentaReservada),
+        count: jest.fn().mockResolvedValue(0),
       },
     };
 

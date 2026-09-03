@@ -7,7 +7,6 @@ import { formatearImporte } from '@/lib/utils';
 import type { Reseller } from '@/lib/types';
 import { commercialPlanTypeLabels, resellerStatusLabels, traducir } from '@/i18n/entityLabels';
 import {
-  CopyableId,
   ExportCsvButton,
   PageHeader,
   ResellerStatusBadge,
@@ -94,35 +93,37 @@ export const ResellerList = () => {
         <Table>
           <THead>
             <TR>
-              <TH>Razón social</TH>
-              <TH>CUIT</TH>
+              <TH>Empresa</TH>
               <TH>Modalidad</TH>
               <TH>Precio por cuenta</TH>
-              <TH>Estado</TH>
+              <TH align="right">Cuenta máxima</TH>
+              <TH align="right">Cuentas a cobrar</TH>
+              <TH align="right">Max. crear / mes</TH>
               <TH align="right">Cuentas</TH>
               <TH align="right">Clientes</TH>
+              <TH align="right">Dispositivos</TH>
             </TR>
           </THead>
 
           {isLoading ? (
-            <TableSkeleton columnas={7} />
+            <TableSkeleton columnas={9} />
           ) : (
             <TBody>
               {data?.data.map((empresa) => (
                 <TR key={empresa.id}>
                   <TD>
                     <div className="flex flex-col gap-0.5">
-                      <Link
-                        to={`/resellers/${empresa.id}`}
-                        className="font-medium text-azure-600 hover:underline dark:text-azure-400"
-                      >
-                        {empresa.razon_social}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/resellers/${empresa.id}`}
+                          className="font-medium text-azure-600 hover:underline dark:text-azure-400"
+                        >
+                          {empresa.razon_social}
+                        </Link>
+                        <ResellerStatusBadge estado={empresa.estado} />
+                      </div>
                       <span className="text-xs texto-suave">{empresa.email_contacto}</span>
                     </div>
-                  </TD>
-                  <TD>
-                    <CopyableId valor={empresa.cuit} etiqueta="CUIT" />
                   </TD>
                   <TD>
                     <span className="text-sm">
@@ -136,8 +137,14 @@ export const ResellerList = () => {
                       {formatearImporte(empresa.modalidad_comercial?.precio_por_cuenta)}
                     </span>
                   </TD>
-                  <TD>
-                    <ResellerStatusBadge estado={empresa.estado} />
+                  <TD align="right">
+                    <span className="tabular-nums">{empresa.comerciales.cuentas_maximas}</span>
+                  </TD>
+                  <TD align="right">
+                    <span className="tabular-nums">{empresa.comerciales.cuentas_a_cobrar}</span>
+                  </TD>
+                  <TD align="right">
+                    <span className="tabular-nums">{empresa.cuentas_max_crear_mensual}</span>
                   </TD>
                   <TD align="right">
                     <span className="tabular-nums">{empresa.cantidad_cuentas}</span>
@@ -145,12 +152,15 @@ export const ResellerList = () => {
                   <TD align="right">
                     <span className="tabular-nums">{empresa.cantidad_clientes}</span>
                   </TD>
+                  <TD align="right">
+                    <span className="tabular-nums">{empresa.dispositivos_activos}</span>
+                  </TD>
                 </TR>
               ))}
 
               {data && data.data.length === 0 ? (
                 <TR>
-                  <TD colSpan={7}>
+                  <TD colSpan={9}>
                     <EmptyState
                       icono={<Building2 className="size-8" />}
                       titulo="Todavía no hay empresas revendedoras"

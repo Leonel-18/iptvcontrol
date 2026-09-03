@@ -3,13 +3,16 @@ import { EstadoEmpresaRevendedora } from '@prisma/client';
 import {
   IsEmail,
   IsEnum,
+  IsInt,
   IsNumberString,
   IsOptional,
   IsString,
   IsUUID,
   IsUrl,
   Length,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
@@ -81,12 +84,25 @@ export class CrearRevendedoraDto {
 
 export class ActualizarRevendedoraDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(2, 160) razon_social?: string;
+  @ApiPropertyOptional({
+    description: 'CUIT de 11 dígitos, sin guiones ni espacios. Debe ser único.',
+  })
+  @IsOptional()
+  @IsNumberString({ no_symbols: true }, { message: 'El CUIT debe contener sólo dígitos.' })
+  @Length(11, 11, { message: 'El CUIT debe tener 11 dígitos, sin guiones ni espacios.' })
+  cuit?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(3, 200) direccion?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(2, 80) nombre_contacto?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(2, 80) apellido_contacto?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @Length(6, 30) telefono_contacto?: string;
   @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(160) email_contacto?: string;
   @ApiPropertyOptional() @IsOptional() @IsUrl({ require_protocol: false }) sitio_web?: string;
+  @ApiPropertyOptional({ description: 'Cuentas máximas a crear mensualmente (default 10).' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  cuentas_max_crear_mensual?: number;
 
   @ApiPropertyOptional({ enum: EstadoEmpresaRevendedora })
   @IsOptional()

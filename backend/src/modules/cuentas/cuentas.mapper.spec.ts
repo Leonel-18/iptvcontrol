@@ -42,6 +42,8 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
     dispositivosFijosHabilitados: 2,
     dispositivosMovilesHabilitados: 1,
     estado: EstadoCuenta.activa,
+    procedencia: 'creada_en_sistema',
+    inventarioConciliadoEn: null,
     creadoEn: new Date('2026-08-01T10:00:00Z'),
     actualizadoEn: new Date('2026-08-01T10:00:00Z'),
   };

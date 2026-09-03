@@ -62,17 +62,20 @@ export const CuriosityWindowPanel = ({
       <CardHeader className="flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Clock3 className="size-4 texto-suave" />
-          <CardTitle>Ventana de curiosidad</CardTitle>
+          <CardTitle>Ventana de Alta</CardTitle>
         </div>
-        <Badge tone={active ? 'warning' : 'success'}>{active ? 'Activa' : 'Disponible'}</Badge>
+        <Badge tone={active ? 'warning' : 'success'}>
+          {active ? 'Bloqueada para clientes nuevos' : 'Disponible para nuevas ventas'}
+        </Badge>
       </CardHeader>
       <CardContent className="space-y-5">
         {active && currentWindow ? (
           <div className="space-y-3">
             <div className="rounded-lg border border-warn/40 bg-[#FDF5E4] px-4 py-3 dark:bg-warn/10">
-              <p className="eyebrow">Próxima disponibilidad</p>
+              <p className="eyebrow">Nueva venta</p>
               <p className="mt-1 font-display text-lg font-semibold tabular-nums">
-                Disponible el {formatCuriosityAvailability(currentWindow.fin_previsto_en)}
+                Habilitada para otro cliente el{' '}
+                {formatCuriosityAvailability(currentWindow.fin_previsto_en)}
               </p>
             </div>
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
@@ -96,9 +99,9 @@ export const CuriosityWindowPanel = ({
           </div>
         ) : (
           <div>
-            <p className="font-medium">La Cuenta está disponible ahora.</p>
+            <p className="font-medium">La Cuenta puede recibir una venta nueva.</p>
             <p className="mt-1 text-sm texto-suave">
-              No hay una ventana de curiosidad activa que impida una nueva venta compatible.
+              No hay una Ventana de Alta activa que la bloquee para otro cliente nuevo.
             </p>
           </div>
         )}

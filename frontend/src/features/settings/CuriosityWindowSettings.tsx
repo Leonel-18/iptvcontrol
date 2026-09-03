@@ -51,8 +51,8 @@ export const CuriosityWindowSettings = () => {
     <>
       <PageHeader
         eyebrow="Configuración"
-        titulo="Ventana de curiosidad"
-        descripcion="Defina cuánto tiempo queda reservada una Cuenta compartida antes de volver a estar disponible para otra venta."
+        titulo="Ventana de Alta"
+        descripcion="Defina cuánto tiempo queda bloqueada una Cuenta compartida para clientes nuevos después de una venta, antes de poder recibir otra."
       />
 
       <Card className="max-w-2xl">
@@ -62,7 +62,8 @@ export const CuriosityWindowSettings = () => {
         <CardContent className="space-y-5">
           <Alert tone="info">
             Este valor se propone en cada alta compartida. Puede reducirlo para una venta puntual,
-            incluso a cero, sin cambiar la configuración general.
+            incluso a cero, sin cambiar la configuración general. El cliente que abrió la venta
+            sigue vinculando sus propios dispositivos sin restricción.
           </Alert>
 
           <CuriosityDurationInput value={duration} onChange={setDuration} />

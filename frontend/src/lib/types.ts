@@ -258,6 +258,13 @@ export interface Reseller {
   } | null;
   cantidad_cuentas: number;
   cantidad_clientes: number;
+  cuentas_max_crear_mensual: number;
+  dispositivos_activos: number;
+  comerciales: {
+    cuentas_a_cobrar: number;
+    cuentas_maximas: number;
+    creadas_mes: number;
+  };
   creado_en: string;
 }
 
@@ -308,6 +315,8 @@ export interface ResellerDetail {
   email_contacto: string;
   sitio_web: string | null;
   estado: "activa" | "suspendida";
+  cuentas_max_crear_mensual: number;
+  modalidad_asignada_en: string | null;
   modalidad_comercial: {
     id: string;
     tipo: string;
