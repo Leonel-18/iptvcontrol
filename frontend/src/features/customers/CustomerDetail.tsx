@@ -372,8 +372,7 @@ export const CustomerDetail = () => {
                 <WhatsappTemplateButton
                   usuario={data.cuenta.usuario}
                   password={data.cuenta.password}
-                  pin={data.cuenta.pin}
-                  esExclusiva={data.cuenta.es_exclusiva}
+                  servicios={data.cuenta.servicios_nombres?.join(", ") || undefined}
                 />
 
                 {!data.cuenta.es_exclusiva ? (

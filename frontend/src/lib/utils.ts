@@ -78,38 +78,16 @@ export const formatearMac = (mac?: string | null): string => {
 };
 
 /**
- * Arma el texto listo para pegar en WhatsApp con las credenciales del cliente
- * y un mini instructivo de acceso. El PIN sólo se incluye en una Cuenta
- * exclusiva: en una Cuenta compartida, varios clientes usan el mismo PIN de
- * control parental de la Cuenta, y no tiene sentido de negocio entregárselo a
- * cada uno como si fuera propio.
+ * Reemplaza los tokens `{{nombre}}` de la plantilla de WhatsApp por sus
+ * valores. Los tokens sin valor se dejan tal cual (así el texto nunca queda
+ * incompleto en silencio). Tokens soportados: usuario, password, servicios,
+ * empresa.
  */
-export const construirPlantillaWhatsApp = (params: {
-  usuario: string;
-  password: string;
-  pin?: string | null;
-  esExclusiva: boolean;
-}): string => {
-  const { usuario, password, pin, esExclusiva } = params;
-  const lineas = [
-    "¡Hola! 👋 Ya podés empezar a disfrutar tu servicio de IPTV.",
-    "",
-    "📺 *Datos de acceso*",
-    `Usuario: ${usuario}`,
-    `Contraseña: ${password}`,
-  ];
-  if (esExclusiva && pin) {
-    lineas.push(`PIN de control parental: ${pin}`);
-  }
-  lineas.push(
-    "",
-    "📲 *Cómo ingresar*",
-    "1. Si vas a mirar desde el celular, tablet o PC, entrá a player.sensa.com.ar desde el navegador.",
-    "2. Si tenés un decodificador/TV, encendelo: ya viene configurado con este mismo usuario.",
-    "3. Ingresá el Usuario y la Contraseña de arriba.",
-    "4. ¡Listo! Ya podés elegir qué mirar.",
-    "",
-    "Ante cualquier duda, escribinos por acá.",
-  );
-  return lineas.join("\n");
-};
+export const renderizarTokens = (
+  contenido: string,
+  valores: Record<string, string | null | undefined>,
+): string =>
+  contenido.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (original, token: string) => {
+    const valor = valores[token];
+    return valor === undefined || valor === null || valor === "" ? original : String(valor);
+  });

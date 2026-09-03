@@ -3,11 +3,11 @@ import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { CuriosityDurationInput } from '@/components/CuriosityDurationInput';
-import { PageHeader } from '@/components/common';
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@/components/ui/primitives';
 import { api, ApiError } from '@/lib/api';
 import type { CuriosityWindowSettings as CuriosityWindowSettingsData } from '@/lib/types';
 
+/** Configuración de la Ventana de Alta (tarjeta para la sección Configuración). */
 export const CuriosityWindowSettings = () => {
   const queryClient = useQueryClient();
   const [duration, setDuration] = useState(0);
@@ -37,7 +37,7 @@ export const CuriosityWindowSettings = () => {
     onError: (cause: ApiError) => toast.error(cause.message),
   });
 
-  if (settings.isLoading) return <Skeleton className="h-64" />;
+  if (settings.isLoading) return <Skeleton className="h-56" />;
 
   if (settings.error) {
     return (
@@ -48,34 +48,27 @@ export const CuriosityWindowSettings = () => {
   }
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Configuración"
-        titulo="Ventana de Alta"
-        descripcion="Defina cuánto tiempo queda bloqueada una Cuenta compartida para clientes nuevos después de una venta, antes de poder recibir otra."
-      />
+    <Card>
+      <CardHeader>
+        <CardTitle>Ventana de Alta</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <Alert tone="info">
+          Después de una venta compartida, la Cuenta queda bloqueada para clientes nuevos durante
+          esta duración. Puede reducirla para una venta puntual, incluso a cero, sin cambiar la
+          configuración general. El cliente que abrió la venta sigue vinculando sus propios
+          dispositivos sin restricción.
+        </Alert>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Duración predeterminada</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <Alert tone="info">
-            Este valor se propone en cada alta compartida. Puede reducirlo para una venta puntual,
-            incluso a cero, sin cambiar la configuración general. El cliente que abrió la venta
-            sigue vinculando sus propios dispositivos sin restricción.
-          </Alert>
+        <CuriosityDurationInput value={duration} onChange={setDuration} />
 
-          <CuriosityDurationInput value={duration} onChange={setDuration} />
-
-          <div className="flex justify-end">
-            <Button variant="primary" onClick={() => save.mutate()} disabled={save.isPending}>
-              <Save />
-              {save.isPending ? 'Guardando…' : 'Guardar cambios'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </>
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={() => save.mutate()} disabled={save.isPending}>
+            <Save />
+            {save.isPending ? 'Guardando…' : 'Guardar cambios'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

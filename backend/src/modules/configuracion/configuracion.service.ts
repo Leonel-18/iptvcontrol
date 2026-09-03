@@ -8,10 +8,16 @@ import { ProveedorService } from '../../proveedor/proveedor.service';
 import { CONECTOR_SENSA } from '../../proveedor/sensa/sensa.constants';
 import {
   ActualizarConexionProveedorDto,
+  ActualizarPlantillaWhatsAppDto,
   ActualizarVentanaCuriosidadDto,
   ConfiguracionProveedorRespuestaDto,
   ProbarConexionDto,
 } from './dto/configuracion.dto';
+import {
+  PLANTILLA_DEFAULT_WHATSAPP,
+  TOKENS_PLANTILLA_WHATSAPP,
+  validarPlantilla,
+} from './plantilla-whatsapp.util';
 
 /**
  * =============================================================================
@@ -256,6 +262,66 @@ export class ConfiguracionService {
     };
   }
 
+  async obtenerPlantillaWhatsApp() {
+    const empresaRevendedoraId = this.exigirRevendedor();
+    const plantilla = await this.prisma.db.plantillaWhatsApp.findUnique({
+      where: { empresaRevendedoraId },
+      select: { contenido: true, version: true, actualizadoEn: true },
+    });
+    return {
+      contenido: plantilla?.contenido ?? PLANTILLA_DEFAULT_WHATSAPP,
+      version: plantilla?.version ?? 0,
+      personalizada: Boolean(plantilla),
+      actualizada_en: plantilla?.actualizadoEn.toISOString() ?? null,
+      tokens: TOKENS_PLANTILLA_WHATSAPP,
+    };
+  }
+
+  async actualizarPlantillaWhatsApp(dto: ActualizarPlantillaWhatsAppDto) {
+    const empresaRevendedoraId = this.exigirRevendedor();
+    const contenido = dto.contenido.trim();
+    validarPlantilla(contenido);
+
+    const teamMemberId = this.contexto.teamMemberId ?? null;
+    await this.prisma.transaction(async (tx) => {
+      const existente = await tx.plantillaWhatsApp.findUnique({
+        where: { empresaRevendedoraId },
+        select: { id: true, version: true, contenido: true },
+      });
+      if (existente) {
+        await tx.plantillaWhatsApp.update({
+          where: { id: existente.id },
+          data: {
+            contenido,
+            version: { increment: 1 },
+            actualizadoPorTeamMemberId: teamMemberId,
+          },
+        });
+      } else {
+        await tx.plantillaWhatsApp.create({
+          data: {
+            empresaRevendedoraId,
+            contenido,
+            version: 1,
+            actualizadoPorTeamMemberId: teamMemberId,
+          },
+        });
+      }
+      // Se audita el cambio (quién/cuándo y tokens usados), nunca el contenido.
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.cambio_plantilla_whatsapp,
+        entidad: EntidadAuditada.EmpresaRevendedora,
+        entidadId: empresaRevendedoraId,
+        detalle: {
+          version_anterior: existente?.version ?? 0,
+          version_nueva: (existente?.version ?? 0) + 1,
+          tokens_usados: validarPlantilla(contenido),
+        },
+      });
+    });
+    return this.obtenerPlantillaWhatsApp();
+  }
+
   private exigirOperador(): string {
     const operadorPrincipalId = this.contexto.operadorPrincipalId;
     if (!this.contexto.esOperador || !operadorPrincipalId) {
@@ -270,7 +336,7 @@ export class ConfiguracionService {
     const empresaRevendedoraId = this.contexto.empresaRevendedoraId;
     if (this.contexto.esOperador || !empresaRevendedoraId) {
       throw new ForbiddenException(
-        'La Ventana de curiosidad se parametriza desde cada Empresa Revendedora.',
+        'Esta configuración se administra desde el panel de cada Empresa Revendedora.',
       );
     }
     return empresaRevendedoraId;

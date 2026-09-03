@@ -5,10 +5,16 @@ import { ConfiguracionService } from './configuracion.service';
 import { ProveedoresController } from './proveedores.controller';
 import { ProveedoresService } from './proveedores.service';
 import { ConfiguracionRevendedorController } from './configuracion-revendedor.controller';
+import { ConfiguracionPlantillaController } from './configuracion-plantilla.controller';
 
 @Module({
   imports: [ProveedorModule],
-  controllers: [ConfiguracionController, ConfiguracionRevendedorController, ProveedoresController],
+  controllers: [
+    ConfiguracionController,
+    ConfiguracionRevendedorController,
+    ConfiguracionPlantillaController,
+    ProveedoresController,
+  ],
   providers: [ConfiguracionService, ProveedoresService],
   exports: [ConfiguracionService],
 })

@@ -16,6 +16,21 @@ export class ActualizarVentanaCuriosidadDto {
 }
 
 /**
+ * Plantilla de WhatsApp de la Empresa Revendedora. El texto se guarda con
+ * tokens `{{nombre}}`; el backend valida que sólo se usen tokens conocidos.
+ */
+export class ActualizarPlantillaWhatsAppDto {
+  @ApiProperty({
+    description:
+      'Texto de la plantilla con tokens {{usuario}}, {{password}}, {{servicios}} y {{empresa}}.',
+    example: 'Hola {{empresa}} ... Usuario: {{usuario}}',
+  })
+  @IsString()
+  @Length(1, 4000)
+  contenido!: string;
+}
+
+/**
  * Conexión con el Proveedor (docs/04_Esqueleto_Tecnico_Inicial.md, sección 9.1).
  *
  * `server` y `port` arman la URL base: `https://<server>:<port>/v4/`.

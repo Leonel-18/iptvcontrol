@@ -162,6 +162,7 @@ enum AccionAuditoria {
   suspension_empresa_revendedora
   reactivacion_empresa_revendedora
   cambio_slots_cuenta
+  cambio_plantilla_whatsapp
 }
 
 enum EntidadAuditada {
@@ -341,9 +342,35 @@ model EmpresaRevendedora {
   teamMembers            TeamMember[]
   auditLogs              AuditLog[]
   ventanasCuriosidad     VentanaCuriosidad[]
+  plantillaWhatsApp      PlantillaWhatsApp?
 
   @@index([operadorPrincipalId])
   @@map("empresa_revendedora")
+}
+
+/// Plantilla de WhatsApp de cada Empresa Revendedora (una por tenant).
+/// La Revendedora arma su propio texto de credenciales con tokens; el sistema
+/// lo guarda y lo reutiliza al copiar el mensaje para un Cliente Final.
+model PlantillaWhatsApp {
+  id String @id @default(uuid()) @db.Uuid
+
+  empresaRevendedoraId String             @unique @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  /// Texto con tokens `{{nombre}}`. No se registra el contenido en el Audit
+  /// Log (puede contener datos comerciales propios de la empresa).
+  contenido String @db.Text
+
+  /// Control optimista: cada guardado incrementa la versión.
+  version Int @default(1)
+
+  actualizadoPorTeamMemberId String?     @map("actualizado_por_team_member_id") @db.Uuid
+  actualizadoPorTeamMember   TeamMember? @relation("PlantillaWhatsAppActualizadaPor", fields: [actualizadoPorTeamMemberId], references: [id], onDelete: SetNull)
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("plantilla_whatsapp")
 }
 
 /// Usuario que consume el servicio IPTV. No tiene acceso propio al sistema.
@@ -689,6 +716,7 @@ model TeamMember {
   auditLogs                     AuditLog[]
   ventanasCuriosidadIniciadas   VentanaCuriosidad[] @relation("VentanaCuriosidadIniciadaPor")
   ventanasCuriosidadFinalizadas VentanaCuriosidad[] @relation("VentanaCuriosidadFinalizadaPor")
+  plantillasWhatsAppActualizadas PlantillaWhatsApp[]  @relation("PlantillaWhatsAppActualizadaPor")
 
   @@index([empresaRevendedoraId])
   @@index([operadorPrincipalId])

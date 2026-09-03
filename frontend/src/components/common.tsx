@@ -1,6 +1,9 @@
 import { Check, Copy, Eye, EyeOff, MessageCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useSesion } from "@/lib/session";
 import {
   accountStatusLabels,
   customerStatusLabels,
@@ -16,7 +19,8 @@ import {
   teamMemberStatusLabels,
   traducir,
 } from "@/i18n/entityLabels";
-import { cn, construirPlantillaWhatsApp, copiarAlPortapapeles } from "@/lib/utils";
+import { cn, copiarAlPortapapeles, renderizarTokens } from "@/lib/utils";
+import type { WhatsappTemplateData } from "@/lib/types";
 import { Alert, Badge, Button, type BadgeProps } from "./ui/primitives";
 import { Tooltip } from "./ui/overlays";
 
@@ -165,25 +169,43 @@ export const SecretValue = ({
 };
 
 /**
- * "Copiar plantilla": arma el usuario/contraseña (+ PIN si corresponde) junto
- * con un mini instructivo de acceso, listo para pegar en WhatsApp y mandarle
- * al Cliente Final. No envía nada por sí solo — sólo copia el texto.
+ * "Copiar plantilla": arma el mensaje con la plantilla de WhatsApp de la
+ * Empresa Revendedora (parametrizable desde `/settings`) y las credenciales del
+ * Cliente Final, listo para pegar en WhatsApp. No envía nada por sí solo.
+ * Los tokens sin dato (ej. servicios) quedan como texto para no inventar datos.
  */
 export const WhatsappTemplateButton = ({
   usuario,
   password,
-  pin,
-  esExclusiva,
+  servicios,
 }: {
   usuario?: string | null;
   password?: string | null;
-  pin?: string | null;
-  esExclusiva: boolean;
+  servicios?: string;
 }) => {
+  const { sesion } = useSesion();
+
+  const plantilla = useQuery({
+    queryKey: ["settings-whatsapp-template"],
+    queryFn: () => api<WhatsappTemplateData>("/settings/whatsapp-template"),
+    enabled: Boolean(usuario && password),
+    staleTime: 60_000,
+  });
+
   if (!usuario || !password) return null;
 
   const copiar = async () => {
-    const texto = construirPlantillaWhatsApp({ usuario, password, pin, esExclusiva });
+    const contenido = plantilla.data?.contenido;
+    if (!contenido) {
+      toast.error("Todavía no hay una plantilla configurada. Revise su Configuración.");
+      return;
+    }
+    const texto = renderizarTokens(contenido, {
+      usuario,
+      password,
+      servicios: servicios || undefined,
+      empresa: sesion?.empresa_revendedora?.razon_social || undefined,
+    });
     const ok = await copiarAlPortapapeles(texto);
     if (!ok) {
       toast.error("No se pudo copiar. Seleccione el texto y copie a mano.");
