@@ -25,6 +25,8 @@ import {
   LIMITE_POR_CATEGORIA_EXCLUSIVA,
 } from './capacidad.util';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
+import { inicioMesArgentina, finMesArgentina } from '../../common/time/calendario-comercial';
+import { TransactionClient } from '../../common/prisma/prisma.service';
 
 /** Señal interna: esta Cuenta no puede alojar la venta/Dispositivo pedido. */
 export class SinCapacidadEnCuentaError extends Error {
@@ -42,6 +44,17 @@ export class SincronizacionContadoresPendienteError extends Error {
   ) {
     super(`La sincronización de contadores de la Cuenta ${cuentaId} requiere un reintento.`);
     this.name = 'SincronizacionContadoresPendienteError';
+  }
+}
+
+/** La Empresa Revendedora superó su límite mensual de creación de Cuentas. */
+export class LimiteCreacionMensualError extends Error {
+  constructor(
+    readonly empresaRevendedoraId: string,
+    readonly limite: number,
+  ) {
+    super(`Esta Empresa Revendedora alcanzó su máximo de ${limite} Cuenta(s) nuevas en el mes.`);
+    this.name = 'LimiteCreacionMensualError';
   }
 }
 
@@ -126,6 +139,8 @@ export class CuentasProvisioningService {
 
     // --- Paso 1: reserva local ------------------------------------------------
     const reserva = await this.prisma.transaction(async (tx) => {
+      await this.validarCupoCreacionMensual(tx, empresaRevendedora);
+
       const dni = await this.identificadores.siguienteDni(tx, operadorPrincipalId);
       const { email } = await this.identificadores.siguienteEmailCuenta(tx, empresaRevendedora.id);
 
@@ -520,6 +535,23 @@ export class CuentasProvisioningService {
         esExclusiva: false,
         servicios,
         id: excluirCuentaIds.length ? { notIn: excluirCuentaIds } : undefined,
+        // Las Cuentas importadas no participan de la búsqueda automática hasta
+        // quedar preparadas: contraseña real cargada, inventario conciliado y
+        // sin incidencias de Dispositivos sin resolver. Su primera venta se
+        // carga de forma contextual desde la vista de Cuenta.
+        AND: [
+          {
+            OR: [
+              { procedencia: { not: 'importada_proveedor' } },
+              {
+                procedencia: 'importada_proveedor',
+                passwordCifrado: { not: null },
+                inventarioConciliadoEn: { not: null },
+                incidenciasDispositivo: { none: { estado: { in: ['pendiente', 'reconocido'] } } },
+              },
+            ],
+          },
+        ],
         ventanasCuriosidad: {
           none: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
         },
@@ -556,5 +588,36 @@ export class CuentasProvisioningService {
 
   private sumarCupos(ventas: { cuposPorCategoria: number }[]): number {
     return ventas.reduce((total, venta) => total + venta.cuposPorCategoria, 0);
+  }
+
+  /**
+   * Valida el límite mensual de creación de Cuentas de la Empresa Revendedora
+   * (`cuentas_max_crear_mensual`, default 10). Se evalúa por mes calendario AR
+   * y sólo cuentan las Cuentas creadas por IPTVControl (`procedencia =
+   * 'creada_en_sistema'`); las importadas del Proveedor no consumen cupo.
+   *
+   * Corre dentro de la misma transacción que crea la Cuenta, serializada con un
+   * advisory lock por Empresa + mes, para que dos altas simultáneas no crucen
+   * el último cupo.
+   */
+  private async validarCupoCreacionMensual(
+    tx: TransactionClient,
+    empresa: EmpresaRevendedora,
+  ): Promise<void> {
+    const ahora = new Date();
+    const limite = empresa.cuentasMaxCrearMensual ?? 10;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`mes:${empresa.id}:${ahora.getFullYear()}-${ahora.getMonth() + 1}`}))`;
+
+    const creadasEnMes = await tx.cuenta.count({
+      where: {
+        empresaRevendedoraId: empresa.id,
+        procedencia: 'creada_en_sistema',
+        creadoEn: { gte: inicioMesArgentina(ahora), lt: finMesArgentina(ahora) },
+      },
+    });
+
+    if (creadasEnMes >= limite) {
+      throw new LimiteCreacionMensualError(empresa.id, limite);
+    }
   }
 }

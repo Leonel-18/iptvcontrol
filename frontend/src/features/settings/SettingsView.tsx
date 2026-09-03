@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, PlugZap, Save, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import type { ConnectionTest, ProviderSettings } from '@/lib/types';
@@ -16,26 +17,69 @@ import {
   Input,
   Skeleton,
 } from '@/components/ui/primitives';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/overlays';
+import { ProviderSection } from './ProviderSection';
 
 /**
  * =============================================================================
  * Configuración — `/settings`
  * =============================================================================
- * Menú de Parametrización de la conexión con el proveedor
- * (docs/04_Esqueleto_Tecnico_Inicial.md, sección 9). Nace de un pedido concreto:
- * poder cambiar servidor, usuario y token sin depender de un despliegue.
+ * Menú de Parametrización del Operador Principal (docs/04, sección 9). Agrupa
+ * dos secciones que tratan lo mismo —la integración con el Proveedor— para
+ * evitar redundancia de pantallas y de datos:
  *
- * Dos cosas que esta pantalla respeta de forma no negociable:
- *  - El token se envía, nunca se recibe. Si ya está cargado, sólo se ve una
- *    pista de los últimos caracteres.
- *  - "Probar conexión" lo ejecuta el backend. Si la prueba saliera del navegador,
- *    el token viajaría al cliente.
+ *   1. "Conexión": credenciales de la API del Proveedor y parámetros de la
+ *      integración (DNI inicial, reintentos, umbral, servicios, ciudad).
+ *   2. "Proveedores": registros, paquetes y licencias (antes `/providers`).
  *
- * Reemplaza al prototipo de referencia `sensa_settings_menu.jsx`, que tenía el
- * guardado y el test simulados: acá están conectados a los endpoints reales.
+ * La sección activa viaja en el query string (`?section=`), de modo que
+ * `/providers` puede redirigir a `/settings?section=providers` sin romper
+ * enlaces guardados.
+ *
+ * Cosas no negociables que esta pantalla respeta:
+ *  - El token se envía, nunca se recibe.
+ *  - "Probar conexión" lo ejecuta el backend, nunca el navegador.
  * =============================================================================
  */
 export const SettingsView = () => {
+  const [params, setParams] = useSearchParams();
+  const seccion = params.get('section') === 'providers' ? 'providers' : 'conexion';
+
+  const cambiarSeccion = (siguiente: string) => {
+    const nuevos = new URLSearchParams(params);
+    if (siguiente === 'conexion') nuevos.delete('section');
+    else nuevos.set('section', siguiente);
+    setParams(nuevos, { replace: true });
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Parametrización"
+        titulo="Configuración"
+        descripcion="Conexión con el proveedor de contenido, registros, paquetes y licencias."
+      />
+
+      <Tabs value={seccion} onValueChange={cambiarSeccion}>
+        <TabsList>
+          <TabsTrigger value="conexion">Conexión</TabsTrigger>
+          <TabsTrigger value="providers">Proveedores</TabsTrigger>
+        </TabsList>
+        <TabsContent value="conexion">
+          <ConnectionSection />
+        </TabsContent>
+        <TabsContent value="providers">
+          <ProviderSection />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+};
+
+/**
+ * Conexión con la API del Proveedor y parámetros de integración.
+ */
+const ConnectionSection = () => {
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
@@ -151,18 +195,11 @@ export const SettingsView = () => {
   }
 
   return (
-    <>
-      <PageHeader
-        eyebrow="Parametrización"
-        titulo="Conexión con el proveedor"
-        descripcion="Datos de conexión a la API del proveedor de contenido y parámetros de la integración."
-      />
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Credenciales de la API</CardTitle>
-          </CardHeader>
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Credenciales de la API</CardTitle>
+        </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <Field
@@ -372,6 +409,5 @@ export const SettingsView = () => {
           </Card>
         </div>
       </div>
-    </>
   );
 };

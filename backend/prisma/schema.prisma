@@ -117,6 +117,13 @@ enum MotivoFinVentanaCuriosidad {
   cancelacion_venta
 }
 
+/// Origen de una Cuenta. Distingue las creadas por IPTVControl (consumen cupo
+/// mensual de creación) de las importadas desde el Proveedor (no lo consumen).
+enum CuentaProcedencia {
+  creada_en_sistema
+  importada_proveedor
+}
+
 /// Acciones trazadas en el Audit Log (reglas de negocio, sección 11).
 enum AccionAuditoria {
   alta_cliente
@@ -151,6 +158,10 @@ enum AccionAuditoria {
   apertura_ventana_curiosidad
   levantamiento_ventana_curiosidad
   cambio_configuracion_ventana_curiosidad
+  actualizacion_empresa_revendedora
+  suspension_empresa_revendedora
+  reactivacion_empresa_revendedora
+  cambio_slots_cuenta
 }
 
 enum EntidadAuditada {
@@ -296,6 +307,16 @@ model EmpresaRevendedora {
   modalidadComercialId String?             @map("modalidad_comercial_id") @db.Uuid
   modalidadComercial   ModalidadComercial? @relation(fields: [modalidadComercialId], references: [id], onDelete: SetNull)
 
+  /// Momento en que se le asignó la modalidad vigente. Es el inicio del "mes 1"
+  /// para las modalidades con obligación mensual (X5/X10). El Operador Principal
+  /// puede ajustarlo manualmente al cambiar de escala (docs/04, sección 1).
+  modalidadAsignadaEn DateTime? @map("modalidad_asignada_en")
+
+  /// Cuentas máximas que puede crear (o importar) la Empresa Revendedora en un
+  /// mes calendario. Parametrizable por empresa; default 10. Se valida al crear
+  /// una Cuenta nueva (las importadas no consumen cupo: docs/03, sección 2.4).
+  cuentasMaxCrearMensual Int @default(10) @map("cuentas_max_crear_mensual")
+
   estado EstadoEmpresaRevendedora @default(activa)
 
   /// Correlativo interno para `numero_cliente` de Clientes Finales.
@@ -432,6 +453,16 @@ model Cuenta {
   dispositivosMovilesHabilitados Int @default(1) @map("dispositivos_moviles_habilitados")
 
   estado EstadoCuenta @default(activa)
+
+  /// Origen de la Cuenta en IPTVControl. Las importadas no consumen el cupo de
+  /// creación mensual de la Empresa Revendedora y arrancan como compartidas,
+  /// con inventario pendiente de conciliación antes de aceptar ventas nuevas.
+  procedencia CuentaProcedencia @default(creada_en_sistema) @map("procedencia")
+
+  /// Para Cuentas importadas del Proveedor: estado de la conciliación inicial
+  /// de Dispositivos. Mientras sea `false` la Cuenta no se ofrece para ventas
+  /// nuevas ni se ajustan sus contadores (docs/05, sección 4).
+  inventarioConciliadoEn DateTime? @map("inventario_conciliado_en")
 
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")

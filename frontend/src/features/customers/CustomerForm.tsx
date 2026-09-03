@@ -776,7 +776,7 @@ export const CustomerForm = () => {
                 ) : null}
                 {decisionDuplicado?.tipo !== 'agrupar' &&
                 valores.metodoAlta === 'dispositivo_compartido' ? (
-                  <Resumen etiqueta="Ventana de curiosidad">
+                  <Resumen etiqueta="Ventana de Alta">
                     {formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos)}
                   </Resumen>
                 ) : null}
@@ -815,8 +815,8 @@ export const CustomerForm = () => {
                     cliente, en una Cuenta compartida sólo con otras ventas de exactamente la misma
                     selección de servicios y con cupos suficientes.{' '}
                     {valores.duracionVentanaCuriosidadMinutos > 0
-                      ? `La ventana de curiosidad durará ${formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}.`
-                      : 'No se aplicará una ventana de curiosidad.'}
+                      ? `La Ventana de Alta durará ${formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}.`
+                      : 'No se aplicará una Ventana de Alta.'}
                   </p>
                 )}
               </Alert>

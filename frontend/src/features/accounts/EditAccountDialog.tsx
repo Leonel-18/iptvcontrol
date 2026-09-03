@@ -8,10 +8,12 @@ import { Alert, Button, Skeleton } from "@/components/ui/primitives";
 import { Dialog, DialogContent } from "@/components/ui/overlays";
 
 /**
- * Edición de propiedades de una Cuenta ya creada: tipo (exclusiva ↔
- * compartida) y/o servicios. El backend valida las reglas de negocio (a lo
- * sumo un Cliente Final activo para cambiar de tipo, máximo 2 Dispositivos
- * por categoría al pasar a compartida); acá sólo se arma el pedido.
+ * Edición de propiedades de una Cuenta ya creada: tipo y/o servicios.
+ *
+ * Regla de negocio (confirmada): el tipo se fija al crear la Cuenta y la única
+ * conversión permitida es compartida → exclusiva, y sólo con a lo sumo un
+ * Cliente Final activo. Una Cuenta exclusiva no ofrece la opción de pasar a
+ * compartida. El backend valida igualmente la regla; acá sólo se arma el pedido.
  */
 export const EditAccountDialog = ({
   cuenta,
@@ -30,6 +32,7 @@ export const EditAccountDialog = ({
 
   const [esExclusiva, setEsExclusiva] = useState(cuenta.es_exclusiva);
   const [servicios, setServicios] = useState<string[]>(serviciosActuales);
+  const puedeConvertirseAExclusiva = !cuenta.es_exclusiva;
 
   useEffect(() => {
     if (!abierto) return;
@@ -80,29 +83,37 @@ export const EditAccountDialog = ({
         <div className="space-y-4">
           <fieldset>
             <legend className="mb-2 text-sm font-medium">Tipo de Cuenta</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(
-                [
-                  { valor: true, titulo: "Exclusiva", nota: "Hasta 3 fijos + 3 móviles, un único cliente." },
-                  { valor: false, titulo: "Compartida", nota: "3 cupos por categoría, ventas 1+1 o 2+2." },
-                ] as const
-              ).map((opcion) => (
-                <button
-                  key={String(opcion.valor)}
-                  type="button"
-                  onClick={() => setEsExclusiva(opcion.valor)}
-                  className={cn(
-                    "rounded-lg border px-4 py-3 text-left transition-colors",
-                    esExclusiva === opcion.valor
-                      ? "border-azure-500 bg-azure-50 dark:bg-azure-900/30"
-                      : "hover:bg-navy-50 dark:hover:bg-navy-800",
-                  )}
-                >
-                  <span className="block font-medium">{opcion.titulo}</span>
-                  <span className="mt-0.5 block text-xs texto-suave">{opcion.nota}</span>
-                </button>
-              ))}
-            </div>
+            {cuenta.es_exclusiva ? (
+              <Alert tone="info" titulo="Cuenta exclusiva">
+                El tipo se fija al crear la Cuenta: una exclusiva no puede convertirse en compartida.
+              </Alert>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(
+                  [
+                    { valor: false, titulo: "Compartida", nota: "3 cupos por categoría, ventas 1+1 o 2+2.", disabled: false },
+                    { valor: true, titulo: "Exclusiva", nota: "Sólo con un Cliente Final activo. No se puede volver a compartida.", disabled: !puedeConvertirseAExclusiva },
+                  ] as const
+                ).map((opcion) => (
+                  <button
+                    key={String(opcion.valor)}
+                    type="button"
+                    disabled={opcion.disabled}
+                    onClick={() => setEsExclusiva(opcion.valor)}
+                    className={cn(
+                      "rounded-lg border px-4 py-3 text-left transition-colors",
+                      esExclusiva === opcion.valor
+                        ? "border-azure-500 bg-azure-50 dark:bg-azure-900/30"
+                        : "hover:bg-navy-50 dark:hover:bg-navy-800",
+                      opcion.disabled && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <span className="block font-medium">{opcion.titulo}</span>
+                    <span className="mt-0.5 block text-xs texto-suave">{opcion.nota}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </fieldset>
 
           {catalogo.isPending ? (

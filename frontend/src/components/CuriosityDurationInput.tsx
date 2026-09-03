@@ -19,7 +19,7 @@ export const CuriosityDurationInput = ({
   onChange,
   maxMinutes,
   disabled = false,
-  label = 'Duración de la ventana de curiosidad',
+  label = 'Duración de la Ventana de Alta',
   help,
 }: {
   value: number;

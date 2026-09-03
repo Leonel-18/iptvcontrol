@@ -138,7 +138,9 @@ describe('RevendedorasService', () => {
         dniAltaSensa: '30000003',
         passwordCifrado: null,
         pinCifrado: 'cifrado:123456',
-        esExclusiva: true,
+        // Las Cuentas importadas son compartidas por defecto.
+        esExclusiva: false,
+        procedencia: 'importada_proveedor',
         servicios: '1|3',
       }),
     });

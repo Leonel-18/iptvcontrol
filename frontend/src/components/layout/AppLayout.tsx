@@ -9,7 +9,6 @@ import {
   Menu,
   MonitorPlay,
   Moon,
-  Radio,
   Sun,
   Users,
   UsersRound,
@@ -64,7 +63,6 @@ const ITEMS: ItemMenu[] = [
   { to: '/devices', label: navLabels.devices, icono: <MonitorPlay />, soloRevendedor: true },
   { to: '/commercial-plans', label: navLabels.commercialPlans, icono: <FileBarChart /> },
   { to: '/reports', label: navLabels.reports, icono: <FileBarChart />, soloOperador: true },
-  { to: '/providers', label: navLabels.providers, icono: <Radio />, soloOperador: true },
   { to: '/audit-log', label: navLabels.auditLog, icono: <ClipboardList /> },
   { to: '/team-members', label: navLabels.teamMembers, icono: <UsersRound /> },
   { to: '/settings', label: navLabels.settings, icono: <Cog /> },
@@ -75,15 +73,15 @@ const Logo = ({ compacto = false }: { compacto?: boolean }) => (
     <img
       src="/logo_iptvcontrol.png"
       alt="IPTVControl"
-      className="size-9 shrink-0 object-contain"
-      width={36}
-      height={36}
+      className="size-8 shrink-0 object-contain"
+      width={32}
+      height={32}
     />
     {!compacto ? (
       <div className="leading-none">
         <p className="font-display text-sm font-bold tracking-tight">IPTVControl</p>
-        <p className="mt-0.5 font-mono text-[0.5625rem] uppercase tracking-[0.18em] texto-suave">
-          Monitoreo · Gestión · Control
+        <p className="mt-0.5 font-mono text-[0.5rem] uppercase tracking-[0.16em] texto-suave">
+          Gestión · Control
         </p>
       </div>
     ) : null}
@@ -104,7 +102,7 @@ const NavItems = ({ onNavegar }: { onNavegar?: () => void }) => {
           onClick={onNavegar}
           className={({ isActive }) =>
             cn(
-              'group relative flex items-center gap-2.5 rounded px-2.5 py-2 text-sm font-medium transition-colors',
+              'group relative flex items-center gap-2 rounded-md px-2 py-[7px] text-[0.8125rem] font-medium transition-colors',
               '[&_svg]:size-4 [&_svg]:shrink-0',
               isActive
                 ? 'bg-azure-50 text-azure-700 dark:bg-azure-900/40 dark:text-azure-200'
@@ -192,22 +190,19 @@ export const AppLayout = () => {
   return (
     <div className="flex min-h-full">
       {/* Menú lateral fijo en desktop */}
-      <aside className="superficie hidden w-60 shrink-0 flex-col border-r lg:flex">
-        <div className="px-4 py-4">
+      <aside className="superficie hidden w-56 shrink-0 flex-col border-r lg:flex">
+        <div className="px-4 py-3">
           <Logo />
         </div>
         <Separator />
-        <div className="flex-1 overflow-y-auto px-2 py-3">
+        <div className="flex-1 overflow-y-auto px-2 py-2">
           <NavItems />
         </div>
-        <div className="px-4 py-3">
-          <p className="font-mono text-2xs uppercase tracking-[0.1em] texto-suave">
-            {esOperador ? 'Panel del operador' : 'Panel de la empresa'}
-          </p>
-          <p className="mt-0.5 truncate text-xs texto-suave">
+        <div className="border-t px-4 py-2.5">
+          <p className="truncate text-xs font-medium">
             {esOperador
-              ? (sesion?.operador_principal?.nombre ?? '—')
-              : (sesion?.empresa_revendedora?.razon_social ?? '—')}
+              ? (sesion?.operador_principal?.nombre ?? 'Operador Principal')
+              : (sesion?.empresa_revendedora?.razon_social ?? 'Empresa Revendedora')}
           </p>
         </div>
       </aside>

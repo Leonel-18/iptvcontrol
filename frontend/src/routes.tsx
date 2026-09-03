@@ -13,7 +13,6 @@ import { DeviceList } from './features/devices/DeviceList';
 import { DeviceDetail } from './features/devices/DeviceDetail';
 import { CommercialPlanList } from './features/commercial-plans/CommercialPlanList';
 import { CommercialPlanDetail } from './features/commercial-plans/CommercialPlanDetail';
-import { ProviderSettings } from './features/providers/ProviderSettings';
 import { TeamMemberList } from './features/team-members/TeamMemberList';
 import { AuditLogList } from './features/audit-log/AuditLogList';
 import { ReportsView } from './features/reports/ReportsView';
@@ -104,11 +103,12 @@ export const AppRoutes = () => (
           </SoloOperador>
         }
       />
+      {/* Compatibilidad: Proveedores ahora vive dentro de Configuración. */}
       <Route
         path="/providers"
         element={
           <SoloOperador>
-            <ProviderSettings />
+            <Navigate to="/settings?section=providers" replace />
           </SoloOperador>
         }
       />

@@ -11,7 +11,6 @@ import {
   EstadoCuenta,
   MotivoFinVentanaCuriosidad,
   Prisma,
-  TipoDispositivo,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
@@ -352,27 +351,20 @@ export class CuentasService {
       clientesRelacionados.add(cuenta.clienteFinalExclusivoId);
     }
 
-    let cuposParaVentaNueva: 1 | 2 | undefined;
     if (cambiaTipo) {
-      if (clientesRelacionados.size > 1) {
+      // Regla de negocio confirmada: la Cuenta exclusiva NO puede pasar a
+      // compartida. La única conversión permitida es compartida → exclusiva,
+      // y sólo cuando la Cuenta tiene a lo sumo un Cliente Final activo (el
+      // resto de los cupos reservados quedan liberados).
+      if (!esExclusivaFinal) {
         throw new BadRequestException(
-          'La Cuenta tiene más de un Cliente Final activo: no se puede cambiar su tipo.',
+          'Una Cuenta exclusiva no puede convertirse en compartida: el tipo se fija al crearla.',
         );
       }
-      if (!esExclusivaFinal) {
-        const ocupadosFijo = cuenta.dispositivos.filter(
-          (d) => ESTADOS_QUE_OCUPAN.includes(d.estado) && d.tipo === TipoDispositivo.fijo,
-        ).length;
-        const ocupadosMovil = cuenta.dispositivos.filter(
-          (d) => ESTADOS_QUE_OCUPAN.includes(d.estado) && d.tipo === TipoDispositivo.movil,
-        ).length;
-        if (ocupadosFijo > 2 || ocupadosMovil > 2) {
-          throw new BadRequestException(
-            'La Cuenta tiene más de 2 Dispositivos fijos o móviles: no entra en una venta ' +
-              'compartida (máximo 2+2).',
-          );
-        }
-        cuposParaVentaNueva = ocupadosFijo > 1 || ocupadosMovil > 1 ? 2 : 1;
+      if (clientesRelacionados.size > 1) {
+        throw new BadRequestException(
+          'La Cuenta compartida tiene más de un Cliente Final activo: no puede pasar a exclusiva.',
+        );
       }
     }
 
@@ -402,16 +394,6 @@ export class CuentasService {
         await tx.ventanaCuriosidad.updateMany({
           where: { cuentaId: id, finRealEn: null },
           data: { finRealEn: ahora, motivoFin: MotivoFinVentanaCuriosidad.cancelacion_venta },
-        });
-      } else if (cambiaTipo && clientesRelacionados.size === 1 && cuposParaVentaNueva) {
-        const [clienteFinalId] = clientesRelacionados;
-        await tx.ventaCompartida.create({
-          data: {
-            cuentaId: id,
-            clienteFinalId,
-            empresaRevendedoraId: cuenta.empresaRevendedoraId,
-            cuposPorCategoria: cuposParaVentaNueva,
-          },
         });
       }
 
@@ -452,11 +434,7 @@ export class CuentasService {
 
     if (cambiaTipo) {
       try {
-        if (esExclusivaFinal) {
-          await this.provisioning.aplicarLimiteExclusiva(id, operadorPrincipalId);
-        } else {
-          await this.provisioning.sincronizarContadoresVenta(id, operadorPrincipalId);
-        }
+        await this.provisioning.aplicarLimiteExclusiva(id, operadorPrincipalId);
       } catch (error) {
         this.logger.warn(
           `No se pudieron sincronizar los contadores tras cambiar el tipo de la Cuenta ${id}: ` +

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Mail, PauseCircle, PlayCircle } from 'lucide-react';
+import { ArrowLeft, Mail, PauseCircle, PlayCircle, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/primitives';
 import { ConfirmDialog, Dialog, DialogContent, Select } from '@/components/ui/overlays';
 import { ResellerAccountsCard } from './ResellerAccountsCard';
+import { ResellerEditDialog } from './ResellerEditDialog';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
 /**
@@ -48,6 +49,7 @@ export const ResellerDetail = () => {
   const queryClient = useQueryClient();
   const [cambiarPlan, setCambiarPlan] = useState(false);
   const [confirmarEstado, setConfirmarEstado] = useState(false);
+  const [editarDatos, setEditarDatos] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['reseller', id],
@@ -102,6 +104,10 @@ export const ResellerDetail = () => {
         acciones={
           <>
             <ResellerStatusBadge estado={data.estado} />
+            <Button variant="secondary" size="sm" onClick={() => setEditarDatos(true)}>
+              <Pencil />
+              Editar datos
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => setCambiarPlan(true)}>
               Cambiar modalidad
             </Button>
@@ -306,6 +312,25 @@ export const ResellerDetail = () => {
           actualId={data.modalidad_comercial?.id}
           abierto={cambiarPlan}
           onCambio={setCambiarPlan}
+        />
+      ) : null}
+
+      {editarDatos ? (
+        <ResellerEditDialog
+          empresaId={data.id}
+          valoresIniciales={{
+            razon_social: data.razon_social,
+            cuit: data.cuit,
+            direccion: data.direccion,
+            nombre_contacto: data.nombre_contacto,
+            apellido_contacto: data.apellido_contacto,
+            telefono_contacto: data.telefono_contacto,
+            email_contacto: data.email_contacto,
+            sitio_web: data.sitio_web,
+            cuentas_max_crear_mensual: data.cuentas_max_crear_mensual,
+          }}
+          abierto
+          onCambio={setEditarDatos}
         />
       ) : null}
     </>
