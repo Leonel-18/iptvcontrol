@@ -4,6 +4,7 @@ import { CuentasController } from './cuentas.controller';
 import { CuentasService } from './cuentas.service';
 import { CuentasProvisioningService } from './cuentas-provisioning.service';
 import { IdentificadoresService } from './identificadores.service';
+import { IdentidadCuentasService } from './identidad-cuentas.service';
 import { InventarioProveedorService } from './inventario-proveedor.service';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
@@ -14,6 +15,7 @@ import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
     CuentasService,
     CuentasProvisioningService,
     IdentificadoresService,
+    IdentidadCuentasService,
     InventarioProveedorService,
     VentanasCuriosidadService,
   ],
@@ -23,6 +25,7 @@ import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
     CuentasService,
     CuentasProvisioningService,
     IdentificadoresService,
+    IdentidadCuentasService,
     InventarioProveedorService,
     VentanasCuriosidadService,
   ],
