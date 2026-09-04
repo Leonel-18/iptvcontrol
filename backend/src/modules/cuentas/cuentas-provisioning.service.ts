@@ -8,7 +8,6 @@ import {
   EstadoCuenta,
   EstadoDispositivo,
 } from '@prisma/client';
-import { randomInt } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -157,7 +156,10 @@ export class CuentasProvisioningService {
           apellido: clienteFinal?.apellido?.trim() || 'Sin apellido',
         }
       : { nombre: '', apellido: '' };
-    let emailGenerado = false;
+    // En exclusiva, el correo puede venir del formulario o generarse con el
+    // mismo criterio que una Cuenta compartida (correo autoincremental de la
+    // Empresa Revendedora) cuando el Cliente Final no cargó uno.
+    const emailDelFormulario = esExclusiva && Boolean(clienteFinal?.email?.trim());
 
     const reserva = await this.prisma.transaction(async (tx) => {
       await this.validarCupoCreacionMensual(tx, empresaRevendedora);
@@ -171,22 +173,15 @@ export class CuentasProvisioningService {
           );
         }
         dni = clienteFinal.dni.trim();
-        if (clienteFinal.email?.trim()) {
-          email = clienteFinal.email.trim().toLowerCase();
-        } else {
-          email = this.generarEmailCliente(identidadNombres, empresaRevendedora);
-          emailGenerado = true;
-        }
+        email = emailDelFormulario
+          ? clienteFinal!.email!.trim().toLowerCase()
+          : (await this.identificadores.siguienteEmailCuenta(tx, empresaRevendedora.id)).email;
       } else {
         const ident = await this.identidad.elegirIdentidad();
         identidadNombres.nombre = ident.nombre;
         identidadNombres.apellido = ident.apellido;
         dni = this.identidad.dniAleatorio();
-        const { email: emailSecuencial } = await this.identificadores.siguienteEmailCuenta(
-          tx,
-          empresaRevendedora.id,
-        );
-        email = emailSecuencial;
+        email = (await this.identificadores.siguienteEmailCuenta(tx, empresaRevendedora.id)).email;
       }
 
       const cuenta = await tx.cuenta.create({
@@ -321,26 +316,16 @@ export class CuentasProvisioningService {
 
         // El email ya existía en el Proveedor.
         if (error instanceof EmailRepetidoError) {
-          if (esExclusiva && !emailGenerado) {
-            // Es el correo del formulario: no se puede inventar otro.
+          if (emailDelFormulario) {
+            // Es el correo del formulario (exclusiva): no se puede inventar otro.
             await this.eliminarReserva(cuentaActual.id);
             throw new BadRequestException(
               `El correo ${cuentaActual.emailContacto} ya está registrado en el proveedor. ` +
                 'Verifique el correo del cliente antes de volver a intentar.',
             );
           }
-          if (esExclusiva && emailGenerado) {
-            // Correo generado: se regenera con otros números y se reintenta.
-            cuentaActual = await this.prisma.transaction(async (tx) => {
-              const nuevoEmail = this.generarEmailCliente(identidadNombres, empresaRevendedora);
-              return tx.cuenta.update({
-                where: { id: cuentaActual.id },
-                data: { emailContacto: nuevoEmail },
-              });
-            });
-            continue;
-          }
-          // Compartida: se avanza el correo derivado de la Empresa Revendedora.
+          // Compartida (o exclusiva sin correo del formulario): se avanza el
+          // correo derivado de la Empresa Revendedora.
           cuentaActual = await this.prisma.transaction(async (tx) => {
             const { email } = await this.identificadores.siguienteEmailCuenta(
               tx,
@@ -637,28 +622,6 @@ export class CuentasProvisioningService {
   }
 
   /** Compensación: borra una reserva local que el Proveedor nunca confirmó. */
-  /**
-   * Genera un correo técnico para una Cuenta exclusiva cuyo Cliente Final no
-   * cargó correo: `nombre.apellidoNN@dominio-empresa` en minúsculas y sin
-   * tildes/ñ. Sirve únicamente como dato de la Cuenta en SENSA.
-   */
-  private generarEmailCliente(
-    identidad: { nombre: string; apellido: string },
-    empresa: EmpresaRevendedora,
-  ): string {
-    const limpiar = (texto: string) =>
-      texto
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/ñ/g, 'n')
-        .replace(/[^a-z0-9]/g, '');
-    const base = `${limpiar(identidad.nombre)}${limpiar(identidad.apellido)}` || 'cliente';
-    const dominio = (empresa.emailContacto ?? '').split('@')[1];
-    const sufijo = String(randomInt(100)).padStart(2, '0');
-    return `${base.slice(0, 40)}${sufijo}@${dominio || 'iptvcontrol.local'}`;
-  }
-
   private async eliminarReserva(cuentaId: string): Promise<void> {
     try {
       await this.prisma.db.cuenta.delete({ where: { id: cuentaId } });

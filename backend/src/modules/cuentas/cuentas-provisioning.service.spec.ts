@@ -254,6 +254,30 @@ describe('CuentasProvisioningService — crearCuenta', () => {
     ).rejects.toThrow('ya está registrado en el proveedor');
     expect(crearCuentaProveedor).toHaveBeenCalledTimes(1);
   });
+
+  it('una Cuenta exclusiva sin correo del cliente usa el correo autoincremental de la empresa', async () => {
+    const { servicio, crearCuentaProveedor } = crearServicio();
+
+    await servicio.crearCuenta({
+      empresaRevendedora,
+      operadorPrincipalId: 'operador-1',
+      esExclusiva: true,
+      clienteFinal: {
+        id: 'cliente-1',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        telefono: null,
+        direccion: null,
+        dni: '30111222',
+        email: null,
+      },
+    });
+
+    const [, params] = crearCuentaProveedor.mock.calls[0];
+    expect(params.dni).toBe('30111222');
+    // Mismo criterio que una Cuenta compartida: correo derivado de la empresa.
+    expect(params.email).toBe('contacto1@isp.com');
+  });
 });
 
 describe('CuentasProvisioningService — contadores de venta', () => {
