@@ -9,7 +9,6 @@ import {
   EstadoSolicitudVinculacion,
   EstadoVinculacionDispositivo,
   TipoDispositivo,
-  MotivoFinVentanaCuriosidad,
 } from '@prisma/client';
 import { Job } from 'bullmq';
 import { AuditService } from '../common/audit/audit.service';
@@ -221,55 +220,30 @@ export class ColaProveedorProcessor extends WorkerHost {
             },
           });
         } else {
-          // Cuenta compartida: esta fila nunca tuvo MAC ni proveedor_device_id
-          // y no le pertenece a nadie (el cupo ya se libera solo al no contar
-          // como venta activa) — dejarla como "disponible" vacía para siempre
-          // sólo ensucia el listado de Dispositivos y la lista de "liberados
-          // para reasignar" sin aportar nada real. Se borra directo (la
-          // Solicitud cae con ella por `onDelete: Cascade`).
-          if (solicitud.creaVentaCompartida && solicitud.dispositivo.clienteFinalId) {
-            const otrosDispositivos = await tx.dispositivo.count({
-              where: {
-                cuentaId: solicitud.cuentaId,
-                clienteFinalId: solicitud.dispositivo.clienteFinalId,
-                id: { not: solicitud.dispositivoId },
-                estado: {
-                  in: [EstadoDispositivo.activo, EstadoDispositivo.bloqueado_por_suspension],
-                },
-              },
-            });
-            if (otrosDispositivos === 0) {
-              await tx.ventanaCuriosidad.updateMany({
-                where: {
-                  cuentaId: solicitud.cuentaId,
-                  clienteFinalId: solicitud.dispositivo.clienteFinalId,
-                  finRealEn: null,
-                },
-                data: {
-                  finRealEn: ahora,
-                  motivoFin: MotivoFinVentanaCuriosidad.cancelacion_venta,
-                },
-              });
-              await tx.ventaCompartida.deleteMany({
-                where: {
-                  cuentaId: solicitud.cuentaId,
-                  clienteFinalId: solicitud.dispositivo.clienteFinalId,
-                },
-              });
-            }
-          }
+          // Cuenta compartida. Decisión de negocio (Fase F): expirar una
+          // vinculación SIN equipos detectados NO cancela la venta 1+1/2+2.
+          // La venta queda reservada (comercialmente y en los contadores de
+          // SENSA) para que ese Cliente Final pueda cargar sus Dispositivos más
+          // adelante; la Ventana de Alta vence por su propia duración. Lo único
+          // que se limpia es la fila "fantasma" de Dispositivo que se creó para
+          // sondear (nunca tuvo MAC ni proveedor_device_id), junto con su
+          // Solicitud.
+          await tx.solicitudVinculacionDispositivo.update({
+            where: { id: solicitud.id },
+            data: { estado: EstadoSolicitudVinculacion.expirado, ultimoSondeoEn: ahora },
+          });
           await tx.dispositivo.delete({ where: { id: solicitud.dispositivoId } });
         }
       });
       if (!equipoYaVinculado && !solicitud.cuenta.esExclusiva) {
-        // Nadie se conectó: si esto era una venta nueva, el contador que se
-        // había subido en el alta se revierte solo al recalcular contra la
-        // base real (ya sin este Dispositivo).
+        // Tras expirar sin equipos, la venta compartida sigue reservada: se
+        // re-sincroniza el contador contra las ventas reales para dejar el
+        // valor consistente (si la venta se conservó, el contador no baja).
         await this.provisioning
           .sincronizarContadoresVenta(solicitud.cuentaId, datos.operadorPrincipalId)
           .catch(async (error) => {
             this.logger.error(
-              `No se pudo revertir el contador de la Cuenta ${solicitud.cuentaId} tras expirar ` +
+              `No se pudo re-sincronizar el contador de la Cuenta ${solicitud.cuentaId} tras expirar ` +
                 `la vinculación: ${(error as Error).message}`,
             );
             await this.cola.encolarSincronizacionContadoresVenta({

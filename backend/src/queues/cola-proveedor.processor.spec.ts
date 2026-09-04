@@ -17,10 +17,9 @@ import { CuentasProvisioningService } from '../modules/cuentas/cuentas-provision
  * sistema "olvidaba" que la Cuenta ya tenía dueño y el próximo alta creaba una
  * Cuenta nueva. Este test fija que, en una Cuenta exclusiva, el vínculo se
  * preserva (la fila "disponible" queda como marcador de dueño); en una
- * compartida, la fila directamente se borra — nunca tuvo MAC ni
- * proveedor_device_id y no le pertenece a nadie, así que dejarla vacía para
- * siempre sólo ensucia el listado de Dispositivos (15 filas así detectadas en
- * la base real el 24/08/2026, puro ruido de ventanas que nunca conectaron).
+ * compartida, la fila "fantasma" se borra (nunca tuvo MAC ni
+ * proveedor_device_id), pero la venta 1+1/2+2 NO se cancela: queda reservada
+ * para que el Cliente Final cargue sus Dispositivos más adelante (Fase F).
  * =============================================================================
  */
 describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', () => {
@@ -130,15 +129,30 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
     expect(ventaDeleteMany).not.toHaveBeenCalled();
   });
 
-  it('no libera la venta vencida si otro alta ya vinculó un Dispositivo del mismo cliente', async () => {
-    const { procesador, ventaDeleteMany, tx } = crearProcesador(false);
-    tx.dispositivo.count.mockResolvedValueOnce(1);
+  it('Opción A: al vencer una venta nueva compartida sin equipos, la venta conserva su cupo técnico', async () => {
+    const { procesador, dispositivoDelete, ventaDeleteMany, tx, provisioning } =
+      crearProcesador(false);
 
     await procesador.process({
       name: TRABAJOS_PROVEEDOR.SONDEAR_VINCULACION,
       data: { solicitudId: 'solicitud-1', operadorPrincipalId: 'operador-1', intento: 1 },
     } as never);
 
+    // La venta reservada NO se borra ni se cierra su Ventana de Alta (vence sola).
     expect(ventaDeleteMany).not.toHaveBeenCalled();
+    expect(tx.ventanaCuriosidad.updateMany).not.toHaveBeenCalled();
+    // La solicitud expira y la fila "fantasma" se limpia.
+    expect(tx.solicitudVinculacionDispositivo.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ estado: EstadoSolicitudVinculacion.expirado }),
+      }),
+    );
+    expect(dispositivoDelete).toHaveBeenCalledWith({ where: { id: 'dispositivo-1' } });
+    // Se re-sincroniza el contador contra las ventas reales: como la venta se
+    // conserva, el cupo técnico reservado queda intacto para el Cliente Final.
+    expect(provisioning.sincronizarContadoresVenta).toHaveBeenCalledWith(
+      'cuenta-1',
+      'operador-1',
+    );
   });
 });
