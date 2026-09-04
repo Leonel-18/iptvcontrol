@@ -88,6 +88,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      # Identidades ficticias de Cuentas compartidas (raiz del repo).
+      - ./Nombres.xlsx:/app/Nombres.xlsx:ro
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
