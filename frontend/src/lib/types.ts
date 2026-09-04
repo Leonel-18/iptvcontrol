@@ -494,6 +494,15 @@ export interface CuriosityWindowSettings {
   duracion_predeterminada_minutos: number;
 }
 
+/** Plantilla de WhatsApp de la Empresa Revendedora y catálogo de tokens. */
+export interface WhatsappTemplateData {
+  contenido: string;
+  version: number;
+  personalizada: boolean;
+  actualizada_en: string | null;
+  tokens: { token: string; etiqueta: string; ayuda: string }[];
+}
+
 export interface ConnectionTest {
   ok: boolean;
   mensaje: string;

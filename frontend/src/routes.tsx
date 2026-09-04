@@ -17,13 +17,13 @@ import { TeamMemberList } from './features/team-members/TeamMemberList';
 import { AuditLogList } from './features/audit-log/AuditLogList';
 import { ReportsView } from './features/reports/ReportsView';
 import { SettingsView } from './features/settings/SettingsView';
-import { CuriosityWindowSettings } from './features/settings/CuriosityWindowSettings';
+import { ResellerSettingsView } from './features/settings/ResellerSettingsView';
 import { LandingPage } from './features/landing/LandingPage';
 import { useSesion } from './lib/session';
 
 const SettingsPage = () => {
   const { esOperador } = useSesion();
-  return esOperador ? <SettingsView /> : <CuriosityWindowSettings />;
+  return esOperador ? <SettingsView /> : <ResellerSettingsView />;
 };
 
 /**

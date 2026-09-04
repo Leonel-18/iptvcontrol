@@ -43,6 +43,7 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   suspension_empresa_revendedora: 'Suspensión de Empresa Revendedora',
   reactivacion_empresa_revendedora: 'Reactivación de Empresa Revendedora',
   cambio_slots_cuenta: 'Cambio de cupos (slots) de una Cuenta',
+  cambio_plantilla_whatsapp: 'Cambio de plantilla de WhatsApp',
 };
 
 /**
