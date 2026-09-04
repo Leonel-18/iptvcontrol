@@ -359,13 +359,17 @@ export class DispositivosService {
           });
       }
       if (esColisionConcurrente) {
-        // El índice único por Cuenta limita a una vinculación abierta a la vez:
-        // es una colisión de altas concurrentes, no un fallo de SENSA.
+        // Antes existía un índice único por Cuenta que limitaba a una
+        // vinculación abierta a la vez; se eliminó para permitir ventas
+        // simultáneas (SENSA no identifica qué Cliente inicia sesión: la
+        // atribución se corrige manualmente vía incidencias). Si llega un P2002
+        // acá es por otra restricción de unicidad (ej. doble submit de la misma
+        // venta), no por una vinculación en curso.
         this.logger.warn(
-          `Alta concurrente sobre la Cuenta ${cuenta.id}: ya existe una vinculación en curso.`,
+          `Alta concurrente sobre la Cuenta ${cuenta.id}: conflicto de unicidad al reservar.`,
         );
         throw new BadRequestException(
-          'La Cuenta ya tiene una vinculación de Dispositivo en curso. Espere a que finalice antes de otra venta.',
+          'Esta venta ya se está procesando en paralelo. Reintente en un momento.',
         );
       }
       throw error;

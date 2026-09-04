@@ -113,6 +113,13 @@ export interface AccountDetail extends Account {
     nombre: string;
     dispositivos: number;
   }[];
+  /** Ventas compartidas (sólo panel revendedor): reserva 1+1/2+2 y ocupación. */
+  ventas_compartidas?: {
+    id: string;
+    cliente_final: { id: string; numero_cliente: number; nombre: string };
+    cupos_por_categoria: 1 | 2;
+    ocupacion: { fijos: number; moviles: number };
+  }[];
   /** Sólo llega al panel revendedor para Cuentas compartidas. */
   ventana_curiosidad?: CuriosityWindow | null;
   historial_ventanas_curiosidad?: CuriosityWindow[];

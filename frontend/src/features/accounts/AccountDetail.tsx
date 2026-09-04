@@ -43,6 +43,7 @@ import {
   ConfirmDialog,
   Dialog,
   DialogContent,
+  Select,
   Tabs,
   TabsContent,
   TabsList,
@@ -129,6 +130,26 @@ export const AccountDetail = () => {
     onSuccess: () => {
       toast.success("Ventana de Alta levantada.");
       setConfirmarLiberacion(false);
+      void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const ajustarSlot = useMutation({
+    mutationFn: ({
+      customerId,
+      cupos,
+    }: {
+      customerId: string;
+      cupos: 1 | 2;
+    }) =>
+      api(`/accounts/${id}/sales/${customerId}/slots`, {
+        metodo: "PATCH",
+        body: { cupos_por_categoria: cupos },
+      }),
+    onSuccess: () => {
+      toast.success("Reserva de la venta actualizada.");
       void queryClient.invalidateQueries({ queryKey: ["account", id] });
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
@@ -338,8 +359,69 @@ export const AccountDetail = () => {
                 </TabsContent>
                 {!esOperador ? (
                   <TabsContent value="customers">
-                    {data.clientes_finales &&
-                    data.clientes_finales.length > 0 ? (
+                    {data.ventas_compartidas &&
+                    data.ventas_compartidas.length > 0 ? (
+                      <div className="space-y-3">
+                        <Table>
+                          <THead>
+                            <TR>
+                              <TH>N° cliente</TH>
+                              <TH>Cliente</TH>
+                              <TH align="right">Dispositivos cargados</TH>
+                              <TH>Reserva de la venta</TH>
+                            </TR>
+                          </THead>
+                          <TBody>
+                            {data.ventas_compartidas.map((venta) => (
+                              <TR key={venta.id}>
+                                <TD>
+                                  <span className="id-tecnico">
+                                    {venta.cliente_final.numero_cliente}
+                                  </span>
+                                </TD>
+                                <TD>
+                                  <Link
+                                    to={`/customers/${venta.cliente_final.id}`}
+                                    className="text-sm text-azure-600 hover:underline dark:text-azure-400"
+                                  >
+                                    {venta.cliente_final.nombre}
+                                  </Link>
+                                </TD>
+                                <TD align="right">
+                                  <span className="tabular-nums">
+                                    {venta.ocupacion.fijos} fijos · {venta.ocupacion.moviles}{" "}
+                                    móviles
+                                  </span>
+                                </TD>
+                                <TD>
+                                  <Select
+                                    value={String(venta.cupos_por_categoria)}
+                                    onChange={(valor) =>
+                                      ajustarSlot.mutate({
+                                        customerId: venta.cliente_final.id,
+                                        cupos: valor === "2" ? 2 : 1,
+                                      })
+                                    }
+                                    disabled={ajustarSlot.isPending}
+                                    className="max-w-40"
+                                    opciones={[
+                                      { value: "1", label: "1 + 1" },
+                                      { value: "2", label: "2 + 2" },
+                                    ]}
+                                  />
+                                </TD>
+                              </TR>
+                            ))}
+                          </TBody>
+                        </Table>
+                        <p className="text-xs texto-suave">
+                          Ajuste la reserva para dar lugar a que un Cliente Final cargue sus
+                          dispositivos. No se puede reducir la reserva si el cliente ya cargó más de
+                          un equipo de una categoría.
+                        </p>
+                      </div>
+                    ) : data.clientes_finales &&
+                      data.clientes_finales.length > 0 ? (
                       <Table>
                         <THead>
                           <TR>
