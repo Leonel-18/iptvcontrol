@@ -423,6 +423,7 @@ model ClienteFinal {
   ventasCompartidas  VentaCompartida[]
   ventanasCuriosidad VentanaCuriosidad[]
   cuentasExclusivas  Cuenta[]             @relation("ClienteFinalCuentaExclusiva")
+  solicitudesVinculacion SolicitudVinculacionDispositivo[] @relation("SolicitudVinculacionClienteFinal")
 
   @@unique([empresaRevendedoraId, numeroCliente])
   @@index([empresaRevendedoraId, estado])
@@ -628,8 +629,16 @@ model Dispositivo {
 model SolicitudVinculacionDispositivo {
   id String @id @default(uuid()) @db.Uuid
 
-  dispositivoId String      @map("dispositivo_id") @db.Uuid
-  dispositivo   Dispositivo @relation(fields: [dispositivoId], references: [id], onDelete: Cascade)
+  /// Para una venta compartida la ventana se abre SIN una fila de Dispositivo
+  /// previa (Pieza 4): el equipo se materializa recién cuando el Proveedor lo
+  /// reporta. `cliente_final_id` identifica al Cliente Final de la venta.
+  /// En Cuentas exclusivas (y altas adicionales) la fila existe y `dispositivoId`
+  /// la referencia, como antes.
+  dispositivoId String?     @map("dispositivo_id") @db.Uuid
+  dispositivo   Dispositivo? @relation(fields: [dispositivoId], references: [id], onDelete: Cascade)
+
+  clienteFinalId String?       @map("cliente_final_id") @db.Uuid
+  clienteFinal   ClienteFinal? @relation("SolicitudVinculacionClienteFinal", fields: [clienteFinalId], references: [id], onDelete: SetNull)
 
   cuentaId String @map("cuenta_id") @db.Uuid
   cuenta   Cuenta @relation(fields: [cuentaId], references: [id], onDelete: Cascade)

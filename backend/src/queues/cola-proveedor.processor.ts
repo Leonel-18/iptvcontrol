@@ -188,8 +188,11 @@ export class ColaProveedorProcessor extends WorkerHost {
       // ventana (ej. un fijo de una venta compartida, o alguno de los hasta 3
       // fijos/3 móviles de una Cuenta exclusiva), la venta quedó cumplida
       // igual: lo que expira es sólo la búsqueda de un candidato adicional.
+      // En una venta compartida SIN fila previa (Pieza 4) todavía no hay
+      // Dispositivo: nunca pudo estar "ya vinculado".
       const equipoYaVinculado =
-        solicitud.dispositivo.estadoVinculacion === EstadoVinculacionDispositivo.vinculado;
+        solicitud.dispositivoId !== null &&
+        solicitud.dispositivo?.estadoVinculacion === EstadoVinculacionDispositivo.vinculado;
       await this.prisma.transactionComoOperador(datos.operadorPrincipalId, async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${solicitud.cuentaId}))`;
         if (equipoYaVinculado) {
@@ -200,7 +203,7 @@ export class ColaProveedorProcessor extends WorkerHost {
           return;
         }
 
-        // Sin equipo detectado: el Dispositivo nunca se vendió.
+        // Sin equipo detectado: el Dispositivo nunca se materializó.
         if (solicitud.cuenta.esExclusiva) {
           // La Cuenta es de este Cliente Final igual, sólo tardó más de 10
           // minutos en conectar el equipo: se conserva la fila (liberada,
@@ -211,28 +214,31 @@ export class ColaProveedorProcessor extends WorkerHost {
             where: { id: solicitud.id },
             data: { estado: EstadoSolicitudVinculacion.expirado, ultimoSondeoEn: ahora },
           });
-          await tx.dispositivo.update({
-            where: { id: solicitud.dispositivoId },
-            data: {
-              estado: EstadoDispositivo.disponible,
-              estadoVinculacion: EstadoVinculacionDispositivo.expirado,
-              clienteFinalId: solicitud.dispositivo.clienteFinalId,
-            },
-          });
+          if (solicitud.dispositivoId) {
+            await tx.dispositivo.update({
+              where: { id: solicitud.dispositivoId },
+              data: {
+                estado: EstadoDispositivo.disponible,
+                estadoVinculacion: EstadoVinculacionDispositivo.expirado,
+                clienteFinalId: solicitud.dispositivo?.clienteFinalId,
+              },
+            });
+          }
         } else {
           // Cuenta compartida. Decisión de negocio (Fase F): expirar una
           // vinculación SIN equipos detectados NO cancela la venta 1+1/2+2.
           // La venta queda reservada (comercialmente y en los contadores de
           // SENSA) para que ese Cliente Final pueda cargar sus Dispositivos más
-          // adelante; la Ventana de Alta vence por su propia duración. Lo único
-          // que se limpia es la fila "fantasma" de Dispositivo que se creó para
-          // sondear (nunca tuvo MAC ni proveedor_device_id), junto con su
-          // Solicitud.
+          // adelante; la Ventana de Alta vence por su propia duración. Se
+          // expira la Solicitud; si hubo una fila previa (alta adicional o
+          // flujos legados) se borra porque nunca representó un equipo real.
           await tx.solicitudVinculacionDispositivo.update({
             where: { id: solicitud.id },
             data: { estado: EstadoSolicitudVinculacion.expirado, ultimoSondeoEn: ahora },
           });
-          await tx.dispositivo.delete({ where: { id: solicitud.dispositivoId } });
+          if (solicitud.dispositivoId) {
+            await tx.dispositivo.delete({ where: { id: solicitud.dispositivoId } });
+          }
         }
       });
       if (!equipoYaVinculado && !solicitud.cuenta.esExclusiva) {
@@ -550,10 +556,14 @@ export class ColaProveedorProcessor extends WorkerHost {
   private async vincularCandidatos(
     solicitud: {
       id: string;
-      dispositivoId: string;
+      dispositivoId: string | null;
       cuentaId: string;
       empresaRevendedoraId: string;
-      dispositivo: { clienteFinalId: string | null; notaDescriptiva: string | null };
+      clienteFinalId: string | null;
+      dispositivo?: {
+        clienteFinalId: string | null;
+        notaDescriptiva: string | null;
+      } | null;
       cuenta: { esExclusiva: boolean };
     },
     candidatos: {
@@ -566,7 +576,8 @@ export class ColaProveedorProcessor extends WorkerHost {
     intento: number,
   ): Promise<unknown> {
     const resultado = await this.prisma.transactionComoOperador(operadorPrincipalId, async (tx) => {
-      const clienteFinalId = solicitud.dispositivo.clienteFinalId;
+      const clienteFinalId =
+        solicitud.clienteFinalId ?? solicitud.dispositivo?.clienteFinalId ?? null;
       const yaVinculados = await tx.dispositivo.findMany({
         where: {
           cuentaId: solicitud.cuentaId,
@@ -615,22 +626,48 @@ export class ColaProveedorProcessor extends WorkerHost {
 
       if (admitidos.length > 0) {
         const [primero, ...adicionales] = admitidos;
-        await tx.dispositivo.update({
-          where: { id: solicitud.dispositivoId },
-          data: {
-            proveedorDeviceId: primero.proveedorDeviceId,
-            mac: primero.mac ?? null,
-            tipo: this.tipoLocal(primero.tipo),
-            tipoProveedor: primero.tipo ?? null,
-            estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
-          },
-        });
+        if (solicitud.dispositivoId) {
+          // Venta con fila previa (exclusiva, alta adicional, legados): la fila
+          // esperaba su equipo y ahora se completa con el detectado.
+          await tx.dispositivo.update({
+            where: { id: solicitud.dispositivoId },
+            data: {
+              proveedorDeviceId: primero.proveedorDeviceId,
+              mac: primero.mac ?? null,
+              tipo: this.tipoLocal(primero.tipo),
+              tipoProveedor: primero.tipo ?? null,
+              estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+            },
+          });
+        } else {
+          // Venta compartida SIN fila previa (Pieza 4): se materializa el
+          // Dispositivo recién ahora, cuando SENSA lo reportó, y la Solicitud
+          // pasa a referenciarlo.
+          const creado = await tx.dispositivo.create({
+            data: {
+              cuentaId: solicitud.cuentaId,
+              empresaRevendedoraId: solicitud.empresaRevendedoraId,
+              clienteFinalId,
+              proveedorDeviceId: primero.proveedorDeviceId,
+              mac: primero.mac ?? null,
+              tipo: this.tipoLocal(primero.tipo),
+              tipoProveedor: primero.tipo ?? null,
+              estado: EstadoDispositivo.activo,
+              estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+              notaDescriptiva: solicitud.dispositivo?.notaDescriptiva ?? null,
+            },
+          });
+          await tx.solicitudVinculacionDispositivo.update({
+            where: { id: solicitud.id },
+            data: { dispositivoId: creado.id },
+          });
+        }
         for (const adicional of adicionales) {
           await tx.dispositivo.create({
             data: {
               cuentaId: solicitud.cuentaId,
               empresaRevendedoraId: solicitud.empresaRevendedoraId,
-              clienteFinalId: solicitud.dispositivo.clienteFinalId,
+              clienteFinalId,
               proveedorDeviceId: adicional.proveedorDeviceId,
               mac: adicional.mac ?? null,
               tipo: this.tipoLocal(adicional.tipo),

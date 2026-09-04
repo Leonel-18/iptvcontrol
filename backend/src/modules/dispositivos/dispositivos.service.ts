@@ -43,10 +43,16 @@ export interface AltaDispositivoParams {
   /** Cupos reservados por categoría para una venta compartida nueva. */
   cuposPorCategoria?: 1 | 2;
   duracionVentanaCuriosidadMinutos?: number;
+  /** true sólo en el alta wizard de una venta COMPARTIDA: no se crea la fila de
+   *  Dispositivo previa (Pieza 4); la ventana de detección queda asociada al
+   *  Cliente Final y el equipo se materializa al primer login. */
+  abrirVentanaSinFila?: boolean;
 }
 
 export interface ResultadoAltaDispositivo {
-  dispositivo: Dispositivo;
+  /** Puede ser null en una venta compartida: el equipo se materializa al
+   *  primer login del Cliente Final (Pieza 4). */
+  dispositivo: Dispositivo | null;
   cuenta: Cuenta;
   cuentaCreada: boolean;
   pendienteDeAutoprovision: boolean;
@@ -277,35 +283,50 @@ export class DispositivosService {
             },
           });
         }
-        const dispositivo = params.dispositivoIdForzado
-          ? await tx.dispositivo.update({
-              where: { id: params.dispositivoIdForzado },
-              data: {
-                clienteFinalId: clienteFinal.id,
-                cuentaId: cuenta.id,
-                estado: EstadoDispositivo.activo,
-                estadoVinculacion: EstadoVinculacionDispositivo.observando,
-                proveedorDeviceId: null,
-                mac: null,
-                tipo: null,
-                tipoProveedor: null,
-                notaDescriptiva: params.notaDescriptiva ?? null,
-              },
-            })
-          : await tx.dispositivo.create({
-              data: {
-                cuentaId: cuenta.id,
-                empresaRevendedoraId: empresaRevendedora.id,
-                clienteFinalId: clienteFinal.id,
-                tipo: null,
-                estado: EstadoDispositivo.activo,
-                estadoVinculacion: EstadoVinculacionDispositivo.observando,
-                notaDescriptiva: params.notaDescriptiva ?? null,
-              },
-            });
+        // Cuenta COMPARTIDA (Pieza 4): el alta wizard de una venta no crea una
+        // fila de Dispositivo previa. La ventana de detección queda asociada al
+        // Cliente Final y el equipo se materializa cuando SENSA lo reporta al
+        // primer login. En Cuentas exclusivas, en una reasignación/activación de
+        // un Dispositivo ya existente y en las altas adicionales (altaAdicional)
+        // la fila se crea/actualiza como antes.
+        const esVentanaCompartida =
+          params.abrirVentanaSinFila === true &&
+          !cuenta.esExclusiva &&
+          !params.dispositivoIdForzado;
+        let dispositivo: Dispositivo | null = null;
+        if (!esVentanaCompartida) {
+          dispositivo = params.dispositivoIdForzado
+            ? await tx.dispositivo.update({
+                where: { id: params.dispositivoIdForzado },
+                data: {
+                  clienteFinalId: clienteFinal.id,
+                  cuentaId: cuenta.id,
+                  estado: EstadoDispositivo.activo,
+                  estadoVinculacion: EstadoVinculacionDispositivo.observando,
+                  proveedorDeviceId: null,
+                  mac: null,
+                  tipo: null,
+                  tipoProveedor: null,
+                  notaDescriptiva: params.notaDescriptiva ?? null,
+                },
+              })
+            : await tx.dispositivo.create({
+                data: {
+                  cuentaId: cuenta.id,
+                  empresaRevendedoraId: empresaRevendedora.id,
+                  clienteFinalId: clienteFinal.id,
+                  tipo: null,
+                  estado: EstadoDispositivo.activo,
+                  estadoVinculacion: EstadoVinculacionDispositivo.observando,
+                  notaDescriptiva: params.notaDescriptiva ?? null,
+                },
+              });
+        }
         const solicitud = await tx.solicitudVinculacionDispositivo.create({
           data: {
-            dispositivoId: dispositivo.id,
+            ...(esVentanaCompartida
+              ? { clienteFinalId: clienteFinal.id }
+              : { dispositivoId: dispositivo!.id }),
             cuentaId: cuenta.id,
             empresaRevendedoraId: empresaRevendedora.id,
             estado: EstadoSolicitudVinculacion.observando,
@@ -323,7 +344,9 @@ export class DispositivosService {
           empresaRevendedoraId: empresaRevendedora.id,
           detalle: {
             cuenta_id: cuenta.id,
-            dispositivo_id: dispositivo.id,
+            ...(dispositivo
+              ? { dispositivo_id: dispositivo.id }
+              : { cliente_final_id: clienteFinal.id, ventana_sin_dispositivo: true }),
             expira_en: expiraEn.toISOString(),
           },
         });
@@ -845,7 +868,7 @@ export class DispositivosService {
     await this.audit.registrar({
       accion: AccionAuditoria.reasignacion_dispositivo,
       entidad: EntidadAuditada.Dispositivo,
-      entidadId: resultado.dispositivo.id,
+      entidadId: resultado.dispositivo!.id,
       empresaRevendedoraId: dispositivo.empresaRevendedoraId,
       detalle: { cliente_final_id: clienteFinalId, cuenta_id: dispositivo.cuentaId },
     });

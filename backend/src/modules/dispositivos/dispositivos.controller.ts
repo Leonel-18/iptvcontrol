@@ -115,7 +115,7 @@ export class DispositivosController {
     });
 
     return {
-      dispositivo: await this.consultas.obtener(resultado.dispositivo.id),
+      dispositivo: await this.consultas.obtener(resultado.dispositivo!.id),
       cuenta_creada: resultado.cuentaCreada,
       migro_de_cuenta: resultado.migro,
       dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
@@ -137,7 +137,7 @@ export class DispositivosController {
       notaDescriptiva: dto.nota_descriptiva,
     });
     return {
-      dispositivo: await this.consultas.obtener(resultado.dispositivo.id),
+      dispositivo: await this.consultas.obtener(resultado.dispositivo!.id),
       dispositivo_pendiente_de_activacion: resultado.pendienteDeAutoprovision,
     };
   }
