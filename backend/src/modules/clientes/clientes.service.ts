@@ -145,6 +145,10 @@ export class ClientesService {
       where: { id },
       include: {
         cuentasExclusivas: true,
+        // Las ventas compartidas también asocian al cliente con su Cuenta:
+        // un Cliente Final con venta reservada pero sin Dispositivos todavía
+        // tiene que verse asociado (Fase de ventas compartidas).
+        ventasCompartidas: { include: { cuenta: true } },
         dispositivos: {
           include: {
             cuenta: true,
@@ -198,7 +202,11 @@ export class ClientesService {
       };
     }
 
-    const cuentaPrincipal = cliente.dispositivos[0]?.cuenta ?? cliente.cuentasExclusivas[0] ?? null;
+    const cuentaPrincipal =
+      cliente.dispositivos[0]?.cuenta ??
+      cliente.ventasCompartidas[0]?.cuenta ??
+      cliente.cuentasExclusivas[0] ??
+      null;
     const capacidad = cuentaPrincipal
       ? calcularCapacidad({
           ...cuentaPrincipal,
