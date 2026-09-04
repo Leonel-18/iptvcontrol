@@ -129,15 +129,30 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
     expect(ventaDeleteMany).not.toHaveBeenCalled();
   });
 
-  it('no libera la venta vencida si otro alta ya vinculó un Dispositivo del mismo cliente', async () => {
-    const { procesador, ventaDeleteMany, tx } = crearProcesador(false);
-    tx.dispositivo.count.mockResolvedValueOnce(1);
+  it('Opción A: al vencer una venta nueva compartida sin equipos, la venta conserva su cupo técnico', async () => {
+    const { procesador, dispositivoDelete, ventaDeleteMany, tx, provisioning } =
+      crearProcesador(false);
 
     await procesador.process({
       name: TRABAJOS_PROVEEDOR.SONDEAR_VINCULACION,
       data: { solicitudId: 'solicitud-1', operadorPrincipalId: 'operador-1', intento: 1 },
     } as never);
 
+    // La venta reservada NO se borra ni se cierra su Ventana de Alta (vence sola).
     expect(ventaDeleteMany).not.toHaveBeenCalled();
+    expect(tx.ventanaCuriosidad.updateMany).not.toHaveBeenCalled();
+    // La solicitud expira y la fila "fantasma" se limpia.
+    expect(tx.solicitudVinculacionDispositivo.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ estado: EstadoSolicitudVinculacion.expirado }),
+      }),
+    );
+    expect(dispositivoDelete).toHaveBeenCalledWith({ where: { id: 'dispositivo-1' } });
+    // Se re-sincroniza el contador contra las ventas reales: como la venta se
+    // conserva, el cupo técnico reservado queda intacto para el Cliente Final.
+    expect(provisioning.sincronizarContadoresVenta).toHaveBeenCalledWith(
+      'cuenta-1',
+      'operador-1',
+    );
   });
 });
