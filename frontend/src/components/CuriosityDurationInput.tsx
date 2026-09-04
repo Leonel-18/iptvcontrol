@@ -14,6 +14,12 @@ const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 const normalizeMinutes = (value: number): number =>
   Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 
+/** Si el predeterminado es 0 (funcionalidad sin configurar), no se aplica tope. */
+const maxEfectivo = (maxMinutes?: number): number | undefined => {
+  const normalizado = normalizeMinutes(maxMinutes ?? 0);
+  return normalizado > 0 ? normalizado : undefined;
+};
+
 export const CuriosityDurationInput = ({
   value,
   onChange,
@@ -31,15 +37,21 @@ export const CuriosityDurationInput = ({
 }) => {
   const id = useId();
   const parts = splitDurationMinutes(value);
-  const normalizedMax = maxMinutes === undefined ? undefined : normalizeMinutes(maxMinutes);
+  const tope = maxEfectivo(maxMinutes);
 
   const updatePart = (part: keyof DurationParts, rawValue: string) => {
-    const parsed = normalizeMinutes(Number(rawValue));
+    // Permitir vaciar el campo mientras se escribe sin que salte a 0 al instante.
+    const texto = rawValue.replace(/[^\d]/g, '');
+    if (texto === '') {
+      onChange(0);
+      return;
+    }
+    const parsed = normalizeMinutes(Number(texto));
     const numericValue = part === 'days' ? parsed : Math.min(parsed, part === 'hours' ? 23 : 59);
     const next = { ...parts, [part]: numericValue };
     const total =
       next.days * MINUTES_PER_DAY + next.hours * MINUTES_PER_HOUR + next.minutes;
-    onChange(normalizedMax === undefined ? total : Math.min(total, normalizedMax));
+    onChange(tope === undefined ? total : Math.min(total, tope));
   };
 
   return (

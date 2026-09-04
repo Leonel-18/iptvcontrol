@@ -110,7 +110,8 @@ export class RevendedorasService {
         cantidad_cuentas: totalCuentas,
         cantidad_clientes: empresa._count.clientesFinales,
         cuentas_max_crear_mensual: empresa.cuentasMaxCrearMensual,
-        dispositivos_activos: conteo?.dispositivosActivos ?? 0,
+        // Dispositivos sincronizados (sin contar dados de baja).
+        dispositivos: conteo?.dispositivos ?? 0,
         comerciales: {
           cuentas_a_cobrar: this.calcularCuentasACobrar({
             modalidad: empresa.modalidadComercial,
@@ -151,7 +152,7 @@ export class RevendedorasService {
         total_cuentas: bigint;
         creadas_mes_sistema: bigint;
         cuentas_activas: bigint;
-        dispositivos_activos: bigint;
+        dispositivos: bigint;
       }>
     >`
       SELECT
@@ -164,7 +165,8 @@ export class RevendedorasService {
         (SELECT COUNT(*)::bigint FROM "cuenta" c
           WHERE c."empresa_revendedora_id" = er."id" AND c."estado" = 'activa') AS cuentas_activas,
         (SELECT COUNT(*)::bigint FROM "dispositivo" d
-          WHERE d."empresa_revendedora_id" = er."id" AND d."estado" = 'activo') AS dispositivos_activos
+          WHERE d."empresa_revendedora_id" = er."id"
+            AND d."estado" IN ('activo', 'bloqueado_por_suspension', 'disponible')) AS dispositivos
       FROM "empresa_revendedora" er
       WHERE 1=1 ${filtroBase} ${filtroBusqueda}
     `;
@@ -176,7 +178,7 @@ export class RevendedorasService {
           totalCuentas: Number(fila.total_cuentas),
           creadasMesSistema: Number(fila.creadas_mes_sistema),
           cuentasActivas: Number(fila.cuentas_activas),
-          dispositivosActivos: Number(fila.dispositivos_activos),
+          dispositivos: Number(fila.dispositivos),
         },
       ]),
     );

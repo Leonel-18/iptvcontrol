@@ -153,7 +153,7 @@ export const ResellerList = () => {
                     <span className="tabular-nums">{empresa.cantidad_clientes}</span>
                   </TD>
                   <TD align="right">
-                    <span className="tabular-nums">{empresa.dispositivos_activos}</span>
+                    <span className="tabular-nums">{empresa.dispositivos}</span>
                   </TD>
                 </TR>
               ))}
