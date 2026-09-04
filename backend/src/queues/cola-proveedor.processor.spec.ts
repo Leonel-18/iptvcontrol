@@ -150,9 +150,6 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
     expect(dispositivoDelete).toHaveBeenCalledWith({ where: { id: 'dispositivo-1' } });
     // Se re-sincroniza el contador contra las ventas reales: como la venta se
     // conserva, el cupo técnico reservado queda intacto para el Cliente Final.
-    expect(provisioning.sincronizarContadoresVenta).toHaveBeenCalledWith(
-      'cuenta-1',
-      'operador-1',
-    );
+    expect(provisioning.sincronizarContadoresVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
   });
 });

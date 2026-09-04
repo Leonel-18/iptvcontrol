@@ -266,7 +266,8 @@ export interface Reseller {
   cantidad_cuentas: number;
   cantidad_clientes: number;
   cuentas_max_crear_mensual: number;
-  dispositivos_activos: number;
+  /** Dispositivos sincronizados de la empresa (sin contar dados de baja). */
+  dispositivos: number;
   comerciales: {
     cuentas_a_cobrar: number;
     cuentas_maximas: number;
