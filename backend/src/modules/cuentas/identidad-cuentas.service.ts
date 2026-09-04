@@ -51,7 +51,9 @@ export class IdentidadCuentasService {
 
   /** DNI aleatorio dentro del rango admitido (siempre 8 dígitos). */
   dniAleatorio(): string {
-    return String(randomInt(IdentidadCuentasService.DNI_MINIMO, IdentidadCuentasService.DNI_MAXIMO + 1));
+    return String(
+      randomInt(IdentidadCuentasService.DNI_MINIMO, IdentidadCuentasService.DNI_MAXIMO + 1),
+    );
   }
 
   /** Ruta del Excel: variable de entorno o raíz del proyecto (backend/../). */
@@ -59,7 +61,10 @@ export class IdentidadCuentasService {
     const env = process.env.NOMBRES_XLSX_PATH;
     const candidatos = env
       ? [env]
-      : [join(process.cwd(), IdentidadCuentasService.ARCHIVO_DEFAULT), resolve(process.cwd(), '..', IdentidadCuentasService.ARCHIVO_DEFAULT)];
+      : [
+          join(process.cwd(), IdentidadCuentasService.ARCHIVO_DEFAULT),
+          resolve(process.cwd(), '..', IdentidadCuentasService.ARCHIVO_DEFAULT),
+        ];
     const ruta = candidatos.find((c) => existsSync(c));
     if (!ruta) {
       throw new Error(

@@ -135,8 +135,12 @@ export class RevendedorasService {
 
   /**
    * Conteos por Empresa Revendedora para el listado, en un solo query batch.
+   * Corre dentro del contexto RLS del Operador (mismo patrón que el resto de
+   * las queries crudas del sistema): sin esto, un subquery de conteo podría no
+   * ver filas según la sesión.
    */
   private async conteosComerciales(query: ListarRevendedorasQueryDto) {
+    const operadorPrincipalId = this.requerirOperador();
     const ahora = new Date();
     const inicioMes = inicioMesArgentina(ahora);
     const finMes = finMesArgentina(ahora);
@@ -146,15 +150,18 @@ export class RevendedorasService {
       ? Prisma.sql`AND (er."razon_social" ILIKE ${`%${query.q}%`} OR er."cuit" LIKE ${`%${query.q}%`} OR er."email_contacto" ILIKE ${`%${query.q}%`})`
       : Prisma.empty;
 
-    const filas = await this.prisma.db.$queryRaw<
-      Array<{
-        empresa_revendedora_id: string;
-        total_cuentas: bigint;
-        creadas_mes_sistema: bigint;
-        cuentas_activas: bigint;
-        dispositivos: bigint;
-      }>
-    >`
+    const filas = await this.prisma.transactionComoOperador(
+      operadorPrincipalId,
+      (tx) =>
+        tx.$queryRaw<
+          Array<{
+            empresa_revendedora_id: string;
+            total_cuentas: bigint;
+            creadas_mes_sistema: bigint;
+            cuentas_activas: bigint;
+            dispositivos: bigint;
+          }>
+        >`
       SELECT
         er."id" AS empresa_revendedora_id,
         (SELECT COUNT(*)::bigint FROM "cuenta" c WHERE c."empresa_revendedora_id" = er."id") AS total_cuentas,
@@ -166,10 +173,11 @@ export class RevendedorasService {
           WHERE c."empresa_revendedora_id" = er."id" AND c."estado" = 'activa') AS cuentas_activas,
         (SELECT COUNT(*)::bigint FROM "dispositivo" d
           WHERE d."empresa_revendedora_id" = er."id"
-            AND d."estado" IN ('activo', 'bloqueado_por_suspension', 'disponible')) AS dispositivos
+            AND d."estado" = 'activo') AS dispositivos
       FROM "empresa_revendedora" er
       WHERE 1=1 ${filtroBase} ${filtroBusqueda}
-    `;
+    `,
+    );
 
     return new Map(
       filas.map((fila) => [
