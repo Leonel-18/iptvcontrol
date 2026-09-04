@@ -11,6 +11,7 @@ import {
   EstadoCuenta,
   MotivoFinVentanaCuriosidad,
   Prisma,
+  TipoDispositivo,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
@@ -20,7 +21,12 @@ import { ProveedorService } from '../../proveedor/proveedor.service';
 import { normalizarServicios, validarServiciosContratados } from '../../proveedor/servicios.util';
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { ColaProveedorService } from '../../queues/cola-proveedor.service';
-import { calcularCapacidad, ESTADOS_QUE_OCUPAN } from './capacidad.util';
+import {
+  calcularCapacidad,
+  contarDispositivosCliente,
+  ESTADOS_QUE_OCUPAN,
+  LIMITE_POR_CATEGORIA_COMPARTIDA,
+} from './capacidad.util';
 import {
   CuentaOperadorDto,
   CuentaRevendedoraDto,
@@ -30,6 +36,7 @@ import {
   mapDispositivoParaRevendedora,
 } from './cuentas.mapper';
 import { ActualizarCuentaDto } from './dto/actualizar-cuenta.dto';
+import { AjustarSlotVentaDto } from './dto/ajustar-slot.dto';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
 import { CuentasProvisioningService } from './cuentas-provisioning.service';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
@@ -127,6 +134,7 @@ export class CuentasService {
         proveedor: { select: { nombre: true } },
         ventasCompartidas: {
           select: {
+            id: true,
             cuposPorCategoria: true,
             clienteFinalId: true,
             clienteFinal: {
@@ -184,6 +192,31 @@ export class CuentasService {
               .join(' '),
           }
         : null,
+      // Ventas compartidas con su reserva (1+1/2+2) y cuántos Dispositivos
+      // cargó cada Cliente Final: base para editar el slot desde el panel.
+      ventas_compartidas: cuenta.ventasCompartidas.map((venta) => ({
+        id: venta.id,
+        cliente_final: {
+          id: venta.clienteFinal.id,
+          numero_cliente: venta.clienteFinal.numeroCliente,
+          nombre: [venta.clienteFinal.nombre, venta.clienteFinal.apellido]
+            .filter(Boolean)
+            .join(' '),
+        },
+        cupos_por_categoria: venta.cuposPorCategoria,
+        ocupacion: {
+          fijos: contarDispositivosCliente(
+            cuenta.dispositivos,
+            venta.clienteFinalId,
+            TipoDispositivo.fijo,
+          ),
+          moviles: contarDispositivosCliente(
+            cuenta.dispositivos,
+            venta.clienteFinalId,
+            TipoDispositivo.movil,
+          ),
+        },
+      })),
       clientes_finales: this.resumirClientes(cuenta.dispositivos, [
         ...(cuenta.clienteFinalExclusivo ? [cuenta.clienteFinalExclusivo] : []),
         ...cuenta.ventasCompartidas.map((venta) => venta.clienteFinal),
@@ -445,6 +478,105 @@ export class CuentasService {
     }
 
     return this.obtener(id);
+  }
+
+  /**
+   * Ajusta la reserva (slot 1+1/2+2) de una venta compartida y sincroniza los
+   * contadores del Proveedor. Herramienta manual del vendedor para acomodar la
+   * carga de Dispositivos de un Cliente Final (docs 03, sección 2).
+   *
+   * - Subir (1+1 → 2+2): la suma de cupos de todas las ventas de la Cuenta no
+   *   puede superar el máximo de 3 por categoría.
+   * - Bajar (2+2 → 1+1): se rechaza si el Cliente Final ya cargó más de un
+   *   Dispositivo de alguna categoría en la Cuenta.
+   */
+  async ajustarSlotVentaCompartida(
+    cuentaId: string,
+    clienteFinalId: string,
+    dto: AjustarSlotVentaDto,
+  ) {
+    if (this.contexto.esOperador) {
+      throw new ForbiddenException(
+        'El Operador Principal no administra los cupos de las ventas de sus Empresas Revendedoras.',
+      );
+    }
+    const nuevo = dto.cupos_por_categoria;
+
+    const cuenta = await this.prisma.db.cuenta.findUnique({
+      where: { id: cuentaId },
+      include: {
+        ventasCompartidas: { select: { clienteFinalId: true, cuposPorCategoria: true } },
+        dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
+      },
+    });
+    if (!cuenta) throw new NotFoundException('La cuenta no existe o no está disponible.');
+    if (cuenta.esExclusiva) {
+      throw new BadRequestException('Una Cuenta exclusiva no tiene ventas compartidas.');
+    }
+    const venta = cuenta.ventasCompartidas.find((item) => item.clienteFinalId === clienteFinalId);
+    if (!venta) {
+      throw new NotFoundException('Este Cliente Final no tiene una venta en esta Cuenta.');
+    }
+    if (venta.cuposPorCategoria === nuevo) return this.obtener(cuentaId);
+
+    if (nuevo > venta.cuposPorCategoria) {
+      const suma = cuenta.ventasCompartidas.reduce(
+        (total, item) => total + item.cuposPorCategoria,
+        0,
+      );
+      if (suma - venta.cuposPorCategoria + nuevo > LIMITE_POR_CATEGORIA_COMPARTIDA) {
+        throw new BadRequestException(
+          'No quedan cupos en esta Cuenta para agrandar la venta. Use otra Cuenta compatible o cree una nueva.',
+        );
+      }
+    } else {
+      const fijos = contarDispositivosCliente(
+        cuenta.dispositivos,
+        clienteFinalId,
+        TipoDispositivo.fijo,
+      );
+      const moviles = contarDispositivosCliente(
+        cuenta.dispositivos,
+        clienteFinalId,
+        TipoDispositivo.movil,
+      );
+      if (fijos > 1 || moviles > 1) {
+        throw new BadRequestException(
+          `Este Cliente Final ya cargó ${fijos} fijo(s) y ${moviles} móvil(es): no se puede reducir su venta a 1+1.`,
+        );
+      }
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      await tx.ventaCompartida.updateMany({
+        where: { cuentaId, clienteFinalId },
+        data: { cuposPorCategoria: nuevo },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.cambio_slots_cuenta,
+        entidad: EntidadAuditada.Cuenta,
+        entidadId: cuentaId,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        detalle: {
+          cliente_final_id: clienteFinalId,
+          cupos_anterior: venta.cuposPorCategoria,
+          cupos_nuevo: nuevo,
+        },
+      });
+    });
+
+    const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
+    try {
+      await this.provisioning.sincronizarContadoresVenta(cuentaId, operadorPrincipalId);
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo sincronizar el contador tras ajustar el slot de la Cuenta ${cuentaId}: ` +
+          `${(error as Error).message}. Se encola un reintento.`,
+      );
+      await this.cola.encolarSincronizacionContadoresVenta({ cuentaId, operadorPrincipalId });
+    }
+    return this.obtener(cuentaId);
   }
 
   /**

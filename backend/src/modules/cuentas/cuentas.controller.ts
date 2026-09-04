@@ -14,6 +14,7 @@ import { Response } from 'express';
 import { CuentasService } from './cuentas.service';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
 import { ActualizarCuentaDto } from './dto/actualizar-cuenta.dto';
+import { AjustarSlotVentaDto } from './dto/ajustar-slot.dto';
 import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
@@ -90,14 +91,31 @@ export class CuentasController {
   @Patch(':id')
   @SoloRevendedor()
   @ApiOperation({
-    summary: 'Edita el tipo de Cuenta (exclusiva ↔ compartida) y/o sus servicios.',
+    summary: 'Edita el tipo de Cuenta y/o sus servicios.',
     description:
-      'Cambiar de tipo sólo es posible con a lo sumo un Cliente Final activo; de exclusiva a ' +
-      'compartida, además, sin superar 2 Dispositivos fijos ni 2 móviles (máximo de una venta ' +
-      '2+2). Los servicios se validan siempre contra lo contratado.',
+      'El tipo de Cuenta se fija al crearla: una exclusiva no puede pasar a compartida; una ' +
+      'compartida puede pasar a exclusiva sólo con a lo sumo un Cliente Final activo. Los ' +
+      'servicios se validan siempre contra lo contratado.',
   })
   async actualizar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ActualizarCuentaDto) {
     return this.cuentas.actualizarPropiedades(id, dto);
+  }
+
+  @Patch(':id/sales/:customerId/slots')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Ajusta la reserva (1+1/2+2) de una venta compartida.',
+    description:
+      'Sube o baja los cupos por categoría de la venta de un Cliente Final en la Cuenta y ' +
+      'sincroniza los contadores del proveedor. Bajar se rechaza si el cliente ya cargó más de un ' +
+      'Dispositivo de alguna categoría.',
+  })
+  async ajustarSlot(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('customerId', ParseUUIDPipe) customerId: string,
+    @Body() dto: AjustarSlotVentaDto,
+  ) {
+    return this.cuentas.ajustarSlotVentaCompartida(id, customerId, dto);
   }
 
   @Get(':id/credentials')

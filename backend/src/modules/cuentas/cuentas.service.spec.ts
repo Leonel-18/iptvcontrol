@@ -593,3 +593,134 @@ describe('CuentasService — actualizarPropiedades', () => {
     );
   });
 });
+
+/**
+ * =============================================================================
+ * ajustarSlotVentaCompartida — reserva 1+1/2+2 editable por venta
+ * =============================================================================
+ * Herramienta manual del vendedor para dar lugar a que un Cliente Final cargue
+ * sus Dispositivos. Subir exige cupos libres en la Cuenta; bajar se rechaza si
+ * el cliente ya cargó más de un equipo de una categoría.
+ * =============================================================================
+ */
+describe('CuentasService — ajustarSlotVentaCompartida', () => {
+  const crearServicio = (cuenta: Record<string, unknown>) => {
+    const ventaUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      ventaCompartida: { updateMany: ventaUpdateMany },
+    };
+    const findUnique = jest.fn().mockResolvedValue(cuenta);
+    const prisma = {
+      db: { cuenta: { findUnique } },
+      transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const audit = { registrarEnTx: jest.fn() } as unknown as AuditService;
+    const contexto = {
+      esOperador: false,
+      operadorPrincipalId: 'operador-1',
+    } as unknown as RequestContextService;
+    const sincronizarContadoresVenta = jest.fn().mockResolvedValue(undefined);
+    const provisioning = { sincronizarContadoresVenta } as unknown as CuentasProvisioningService;
+    const encolarSincronizacionContadoresVenta = jest.fn();
+    const cola = { encolarSincronizacionContadoresVenta } as unknown as ColaProveedorService;
+
+    const servicio = new CuentasService(
+      prisma,
+      {} as CryptoService,
+      contexto,
+      {} as ProveedorService,
+      audit,
+      {} as VentanasCuriosidadService,
+      provisioning,
+      cola,
+    );
+    // `ajustarSlot` termina devolviendo `obtener()`, que no interesa acá.
+    jest.spyOn(servicio, 'obtener').mockResolvedValue({} as never);
+
+    return {
+      servicio,
+      ventaUpdateMany,
+      audit,
+      sincronizarContadoresVenta,
+      encolarSincronizacionContadoresVenta,
+    };
+  };
+
+  const baseCuenta = {
+    id: 'cuenta-1',
+    esExclusiva: false,
+    proveedorCuentaId: '30000001',
+    empresaRevendedoraId: 'empresa-1',
+    ventasCompartidas: [{ clienteFinalId: 'cliente-1', cuposPorCategoria: 1 }],
+    dispositivos: [],
+  };
+
+  it('agranda una venta 1+1 a 2+2 y sincroniza los contadores', async () => {
+    const { servicio, ventaUpdateMany, audit, sincronizarContadoresVenta } =
+      crearServicio(baseCuenta);
+
+    await servicio.ajustarSlotVentaCompartida('cuenta-1', 'cliente-1', {
+      cupos_por_categoria: 2,
+    });
+
+    expect(ventaUpdateMany).toHaveBeenCalledWith({
+      where: { cuentaId: 'cuenta-1', clienteFinalId: 'cliente-1' },
+      data: { cuposPorCategoria: 2 },
+    });
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'cambio_slots_cuenta',
+        detalle: expect.objectContaining({ cupos_anterior: 1, cupos_nuevo: 2 }),
+      }),
+    );
+    expect(sincronizarContadoresVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+  });
+
+  it('rechaza agrandar si la suma de ventas supera los 3 cupos por categoría', async () => {
+    const { servicio, ventaUpdateMany } = crearServicio({
+      ...baseCuenta,
+      ventasCompartidas: [
+        { clienteFinalId: 'cliente-1', cuposPorCategoria: 2 },
+        { clienteFinalId: 'cliente-2', cuposPorCategoria: 1 },
+      ],
+    });
+
+    await expect(
+      servicio.ajustarSlotVentaCompartida('cuenta-1', 'cliente-2', {
+        cupos_por_categoria: 2,
+      }),
+    ).rejects.toThrow('No quedan cupos en esta Cuenta');
+    expect(ventaUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('rechaza reducir a 1+1 si el Cliente Final ya cargó más de un equipo de una categoría', async () => {
+    const { servicio, ventaUpdateMany } = crearServicio({
+      ...baseCuenta,
+      ventasCompartidas: [{ clienteFinalId: 'cliente-1', cuposPorCategoria: 2 }],
+      dispositivos: [
+        { tipo: 'movil', estado: EstadoDispositivo.activo, clienteFinalId: 'cliente-1' },
+        { tipo: 'movil', estado: EstadoDispositivo.activo, clienteFinalId: 'cliente-1' },
+        { tipo: 'fijo', estado: EstadoDispositivo.activo, clienteFinalId: 'cliente-1' },
+      ],
+    });
+
+    await expect(
+      servicio.ajustarSlotVentaCompartida('cuenta-1', 'cliente-1', {
+        cupos_por_categoria: 1,
+      }),
+    ).rejects.toThrow('no se puede reducir');
+    expect(ventaUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('rechaza tocar una venta que no existe', async () => {
+    const { servicio } = crearServicio(baseCuenta);
+
+    await expect(
+      servicio.ajustarSlotVentaCompartida('cuenta-1', 'cliente-inexistente', {
+        cupos_por_categoria: 1,
+      }),
+    ).rejects.toThrow('no tiene una venta en esta Cuenta');
+  });
+});
