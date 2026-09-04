@@ -3,12 +3,14 @@ import {
   CuentasProvisioningService,
   SincronizacionContadoresPendienteError,
 } from './cuentas-provisioning.service';
+import { DniRepetidoError } from '../../common/errors/proveedor.errors';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
 import { ConfiguracionProveedorService } from '../../proveedor/configuracion-proveedor.service';
 import { IdentificadoresService } from './identificadores.service';
+import { IdentidadCuentasService } from './identidad-cuentas.service';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 /**
@@ -61,7 +63,11 @@ describe('CuentasProvisioningService — crearCuenta', () => {
     const tx = {
       $executeRaw: jest.fn().mockResolvedValue(1),
       cuenta: {
-        create: jest.fn().mockResolvedValue(cuentaReservada),
+        create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) => ({
+          ...cuentaReservada,
+          ...data,
+          id: cuentaReservada.id,
+        })),
         update: jest.fn().mockResolvedValue(cuentaReservada),
         count: jest.fn().mockResolvedValue(0),
       },
@@ -95,6 +101,11 @@ describe('CuentasProvisioningService — crearCuenta', () => {
       siguienteEmailCuenta: jest.fn().mockResolvedValue({ email: 'contacto1@isp.com' }),
     } as unknown as IdentificadoresService;
 
+    const identidad = {
+      elegirIdentidad: jest.fn().mockResolvedValue({ nombre: 'Agustín', apellido: 'Acosta' }),
+      dniAleatorio: jest.fn().mockReturnValue('30000026'),
+    } as unknown as IdentidadCuentasService;
+
     const audit = { registrarEnTx: jest.fn() } as unknown as AuditService;
 
     const servicio = new CuentasProvisioningService(
@@ -103,11 +114,12 @@ describe('CuentasProvisioningService — crearCuenta', () => {
       proveedor,
       configuracion,
       identificadores,
+      identidad,
       audit,
       {} as VentanasCuriosidadService,
     );
 
-    return { servicio, crearCuentaProveedor };
+    return { servicio, crearCuentaProveedor, identidad };
   };
 
   it('envía referenciaExterna igual al DNI generado, no al UUID de la Cuenta', async () => {
@@ -159,12 +171,88 @@ describe('CuentasProvisioningService — crearCuenta', () => {
       empresaRevendedora,
       operadorPrincipalId: 'operador-1',
       esExclusiva: true,
+      // Exclusiva: la identidad sale del formulario del cliente (DNI + correo).
+      clienteFinal: {
+        id: 'cliente-1',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        telefono: null,
+        direccion: null,
+        dni: '30000026',
+        email: 'juan@correo.com',
+      },
     });
 
     const [, params] = crearCuentaProveedor.mock.calls[0];
     expect(params.dispositivosFijos).toBe(3);
     expect(params.dispositivosMoviles).toBe(3);
     expect(params.limiteDispositivos).toBe(3);
+  });
+
+  it('una Cuenta compartida envía al Proveedor la identidad aleatoria del Excel y el DNI aleatorio', async () => {
+    const { servicio, crearCuentaProveedor, identidad } = crearServicio();
+
+    await servicio.crearCuenta({
+      empresaRevendedora,
+      operadorPrincipalId: 'operador-1',
+      esExclusiva: false,
+    });
+
+    expect(identidad.elegirIdentidad).toHaveBeenCalled();
+    const [, params] = crearCuentaProveedor.mock.calls[0];
+    expect(params.nombre).toBe('Agustín');
+    expect(params.apellido).toBe('Acosta');
+    expect(params.dni).toBe('30000026');
+  });
+
+  it('una Cuenta exclusiva envía el DNI, el correo y el nombre del formulario del cliente', async () => {
+    const { servicio, crearCuentaProveedor, identidad } = crearServicio();
+
+    await servicio.crearCuenta({
+      empresaRevendedora,
+      operadorPrincipalId: 'operador-1',
+      esExclusiva: true,
+      clienteFinal: {
+        id: 'cliente-1',
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        telefono: null,
+        direccion: null,
+        dni: '30111222',
+        email: 'juan@correo.com',
+      },
+    });
+
+    // Exclusiva no usa la identidad aleatoria.
+    expect(identidad.elegirIdentidad).not.toHaveBeenCalled();
+    const [, params] = crearCuentaProveedor.mock.calls[0];
+    expect(params.dni).toBe('30111222');
+    expect(params.email).toBe('juan@correo.com');
+    expect(params.nombre).toBe('Juan');
+    expect(params.apellido).toBe('Pérez');
+  });
+
+  it('una Cuenta exclusiva corta el alta si su DNI ya está registrado en el Proveedor', async () => {
+    const { servicio, crearCuentaProveedor } = crearServicio();
+    crearCuentaProveedor.mockRejectedValueOnce(new DniRepetidoError('30111222'));
+
+    await expect(
+      servicio.crearCuenta({
+        empresaRevendedora,
+        operadorPrincipalId: 'operador-1',
+        esExclusiva: true,
+        clienteFinal: {
+          id: 'cliente-1',
+          nombre: 'Juan',
+          apellido: 'Pérez',
+          telefono: null,
+          direccion: null,
+          dni: '30111222',
+          email: 'juan@correo.com',
+        },
+      }),
+    ).rejects.toThrow('ya está registrado en el proveedor');
+    expect(crearCuentaProveedor).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -233,6 +321,7 @@ describe('CuentasProvisioningService — contadores de venta', () => {
       proveedor,
       {} as ConfiguracionProveedorService,
       {} as IdentificadoresService,
+      {} as IdentidadCuentasService,
       {} as AuditService,
       {
         abrirPorNuevaVentaEnTx: jest.fn().mockResolvedValue(undefined),
@@ -412,6 +501,7 @@ describe('CuentasProvisioningService — búsqueda por cupos', () => {
       {} as ProveedorService,
       {} as ConfiguracionProveedorService,
       {} as IdentificadoresService,
+      {} as IdentidadCuentasService,
       {} as AuditService,
       {} as VentanasCuriosidadService,
     );

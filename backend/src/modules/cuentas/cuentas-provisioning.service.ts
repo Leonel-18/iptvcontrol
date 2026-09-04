@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   AccionAuditoria,
   ClienteFinal,
@@ -8,6 +8,7 @@ import {
   EstadoCuenta,
   EstadoDispositivo,
 } from '@prisma/client';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { AuditService } from '../../common/audit/audit.service';
@@ -19,6 +20,7 @@ import {
   ReintentosDniAgotadosError,
 } from '../../common/errors/proveedor.errors';
 import { IdentificadoresService } from './identificadores.service';
+import { IdentidadCuentasService } from './identidad-cuentas.service';
 import {
   calcularCapacidad,
   LIMITE_POR_CATEGORIA_COMPARTIDA,
@@ -63,7 +65,10 @@ export interface CrearCuentaOpciones {
   operadorPrincipalId: string;
   /** true si la Cuenta se crea para un único Cliente Final (cuenta exclusiva). */
   esExclusiva: boolean;
-  clienteFinal?: Pick<ClienteFinal, 'id' | 'nombre' | 'apellido' | 'telefono' | 'direccion'>;
+  clienteFinal?: Pick<
+    ClienteFinal,
+    'id' | 'nombre' | 'apellido' | 'telefono' | 'direccion' | 'dni' | 'email'
+  >;
   /** Firma canónica de servicios. */
   servicios?: string;
   /**
@@ -111,6 +116,7 @@ export class CuentasProvisioningService {
     private readonly proveedor: ProveedorService,
     private readonly configuracion: ConfiguracionProveedorService,
     private readonly identificadores: IdentificadoresService,
+    private readonly identidad: IdentidadCuentasService,
     private readonly audit: AuditService,
     private readonly ventanasCuriosidad: VentanasCuriosidadService,
   ) {}
@@ -138,11 +144,50 @@ export class CuentasProvisioningService {
     const pin = this.crypto.generarPinNumerico(6);
 
     // --- Paso 1: reserva local ------------------------------------------------
+    // Identidad que recibe el Proveedor según el modo de la Cuenta:
+    //  - Exclusiva: los datos del formulario del Cliente Final (nombre, apellido,
+    //    DNI real como customer_id y correo). Si no hay correo, se genera uno y
+    //    queda como "generado" para reintentar si SENSA lo rechazara.
+    //  - Compartida: nombre y apellido aleatorios del Excel, DNI aleatorio y
+    //    correo de la Empresa Revendedora (autoincremental, como antes).
+    const clienteFinal = opciones.clienteFinal;
+    const identidadNombres: { nombre: string; apellido: string } = esExclusiva
+      ? {
+          nombre: clienteFinal?.nombre?.trim() || 'Cliente',
+          apellido: clienteFinal?.apellido?.trim() || 'Sin apellido',
+        }
+      : { nombre: '', apellido: '' };
+    let emailGenerado = false;
+
     const reserva = await this.prisma.transaction(async (tx) => {
       await this.validarCupoCreacionMensual(tx, empresaRevendedora);
 
-      const dni = await this.identificadores.siguienteDni(tx, operadorPrincipalId);
-      const { email } = await this.identificadores.siguienteEmailCuenta(tx, empresaRevendedora.id);
+      let dni: string;
+      let email: string;
+      if (esExclusiva) {
+        if (!clienteFinal?.dni) {
+          throw new BadRequestException(
+            'Una Cuenta exclusiva requiere el DNI del Cliente Final: es el identificador que recibe el Proveedor.',
+          );
+        }
+        dni = clienteFinal.dni.trim();
+        if (clienteFinal.email?.trim()) {
+          email = clienteFinal.email.trim().toLowerCase();
+        } else {
+          email = this.generarEmailCliente(identidadNombres, empresaRevendedora);
+          emailGenerado = true;
+        }
+      } else {
+        const ident = await this.identidad.elegirIdentidad();
+        identidadNombres.nombre = ident.nombre;
+        identidadNombres.apellido = ident.apellido;
+        dni = this.identidad.dniAleatorio();
+        const { email: emailSecuencial } = await this.identificadores.siguienteEmailCuenta(
+          tx,
+          empresaRevendedora.id,
+        );
+        email = emailSecuencial;
+      }
 
       const cuenta = await tx.cuenta.create({
         data: {
@@ -150,13 +195,13 @@ export class CuentasProvisioningService {
           proveedorId: config.proveedorId,
           dniAltaSensa: dni,
           // En SENSA el usuario de la Cuenta es su `customer_id`, que coincide
-          // con el identificador tipo DNI generado por IPTVControl.
+          // con el DNI enviado (real en exclusiva, aleatorio en compartida).
           usuario: dni,
           passwordCifrado: this.crypto.encrypt(password),
           pinCifrado: this.crypto.encrypt(pin),
           emailContacto: email,
           esExclusiva,
-          clienteFinalExclusivoId: esExclusiva ? opciones.clienteFinal?.id : null,
+          clienteFinalExclusivoId: esExclusiva ? clienteFinal?.id : null,
           servicios: opciones.servicios ?? config.serviciosPorDefecto,
           limiteDispositivos,
           dispositivosFijosHabilitados: dispositivosFijos,
@@ -186,23 +231,19 @@ export class CuentasProvisioningService {
           email: cuentaActual.emailContacto,
           password,
           pin,
-          // En una Cuenta exclusiva (un único Cliente Final) se prioriza el
-          // nombre y apellido cargados en el formulario del cliente: son los
-          // datos reales del titular del servicio, y una Cuenta compartida no
-          // podría usar este mismo criterio porque atañe a varios clientes
-          // distintos (confirmado con Bruno, 26/08/2026). El contacto de la
-          // Empresa Revendedora sigue siendo el fallback si el campo vino vacío.
-          nombre: esExclusiva
-            ? opciones.clienteFinal?.nombre ||
-              empresaRevendedora.nombreContacto ||
-              empresaRevendedora.razonSocial
-            : empresaRevendedora.nombreContacto || empresaRevendedora.razonSocial,
-          apellido: esExclusiva
-            ? opciones.clienteFinal?.apellido || empresaRevendedora.apellidoContacto || 'Revendedor'
-            : empresaRevendedora.apellidoContacto || 'Revendedor',
-          direccion: opciones.clienteFinal?.direccion || empresaRevendedora.direccion,
+          // La identidad que recibe SENSA depende del modo (ver Paso 1):
+          // exclusiva = datos del formulario del Cliente Final; compartida =
+          // nombre y apellido aleatorios del Excel (la BDD guarda los datos
+          // reales del vendedor, no esta identidad ficticia).
+          nombre: identidadNombres.nombre,
+          apellido: identidadNombres.apellido,
+          direccion: esExclusiva
+            ? clienteFinal?.direccion || empresaRevendedora.direccion
+            : empresaRevendedora.direccion,
           ciudad: config.ciudadPorDefecto,
-          telefono: opciones.clienteFinal?.telefono || empresaRevendedora.telefonoContacto,
+          telefono: esExclusiva
+            ? clienteFinal?.telefono || empresaRevendedora.telefonoContacto
+            : empresaRevendedora.telefonoContacto,
           servicios: cuentaActual.servicios,
           // El contador genérico de SENSA (`auto_provision_count`, STB) no se
           // usa como categoría propia del negocio: se manda siempre igual a
@@ -211,9 +252,9 @@ export class CuentasProvisioningService {
           limiteDispositivos: dispositivosFijos,
           dispositivosFijos,
           dispositivosMoviles,
-          // El external_customer_id debe coincidir con el DNI generado, no con
-          // el UUID interno de la Cuenta: es el identificador que Bruno usa
-          // para cruzar la Cuenta de SENSA con IPTVControl.
+          // El external_customer_id debe coincidir con el DNI enviado: es el
+          // identificador que Bruno usa para cruzar la Cuenta de SENSA con
+          // IPTVControl.
           referenciaExterna: cuentaActual.dniAltaSensa,
         });
 
@@ -256,15 +297,20 @@ export class CuentasProvisioningService {
         );
         return confirmada;
       } catch (error) {
-        // "ID (DNI) repetido": se incrementa el número y se reintenta sin
-        // molestar al usuario (reglas de negocio 2.3 y 5).
+        // "ID (DNI) repetido" en el Proveedor.
         if (error instanceof DniRepetidoError) {
-          cuentaActual = await this.prisma.transaction(async (tx) => {
-            const nuevoDni = await this.identificadores.avanzarDniPorColision(
-              tx,
-              operadorPrincipalId,
-              cuentaActual.dniAltaSensa,
+          if (esExclusiva) {
+            // El DNI real del cliente ya está registrado en SENSA: no se puede
+            // elegir otro al azar. Se corta el alta y se avisa al vendedor.
+            await this.eliminarReserva(cuentaActual.id);
+            throw new BadRequestException(
+              `El DNI ${cuentaActual.dniAltaSensa} ya está registrado en el proveedor. ` +
+                'Verifique el DNI del cliente antes de volver a intentar.',
             );
+          }
+          // Compartida: se elige otro DNI aleatorio y se reintenta.
+          cuentaActual = await this.prisma.transaction(async (tx) => {
+            const nuevoDni = this.identidad.dniAleatorio();
             return tx.cuenta.update({
               where: { id: cuentaActual.id },
               data: { dniAltaSensa: nuevoDni, usuario: nuevoDni },
@@ -273,9 +319,28 @@ export class CuentasProvisioningService {
           continue;
         }
 
-        // El email derivado ya existía en el Proveedor: se avanza el correlativo
-        // y se reintenta, con el mismo criterio que el DNI.
+        // El email ya existía en el Proveedor.
         if (error instanceof EmailRepetidoError) {
+          if (esExclusiva && !emailGenerado) {
+            // Es el correo del formulario: no se puede inventar otro.
+            await this.eliminarReserva(cuentaActual.id);
+            throw new BadRequestException(
+              `El correo ${cuentaActual.emailContacto} ya está registrado en el proveedor. ` +
+                'Verifique el correo del cliente antes de volver a intentar.',
+            );
+          }
+          if (esExclusiva && emailGenerado) {
+            // Correo generado: se regenera con otros números y se reintenta.
+            cuentaActual = await this.prisma.transaction(async (tx) => {
+              const nuevoEmail = this.generarEmailCliente(identidadNombres, empresaRevendedora);
+              return tx.cuenta.update({
+                where: { id: cuentaActual.id },
+                data: { emailContacto: nuevoEmail },
+              });
+            });
+            continue;
+          }
+          // Compartida: se avanza el correo derivado de la Empresa Revendedora.
           cuentaActual = await this.prisma.transaction(async (tx) => {
             const { email } = await this.identificadores.siguienteEmailCuenta(
               tx,
@@ -572,6 +637,28 @@ export class CuentasProvisioningService {
   }
 
   /** Compensación: borra una reserva local que el Proveedor nunca confirmó. */
+  /**
+   * Genera un correo técnico para una Cuenta exclusiva cuyo Cliente Final no
+   * cargó correo: `nombre.apellidoNN@dominio-empresa` en minúsculas y sin
+   * tildes/ñ. Sirve únicamente como dato de la Cuenta en SENSA.
+   */
+  private generarEmailCliente(
+    identidad: { nombre: string; apellido: string },
+    empresa: EmpresaRevendedora,
+  ): string {
+    const limpiar = (texto: string) =>
+      texto
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9]/g, '');
+    const base = `${limpiar(identidad.nombre)}${limpiar(identidad.apellido)}` || 'cliente';
+    const dominio = (empresa.emailContacto ?? '').split('@')[1];
+    const sufijo = String(randomInt(100)).padStart(2, '0');
+    return `${base.slice(0, 40)}${sufijo}@${dominio || 'iptvcontrol.local'}`;
+  }
+
   private async eliminarReserva(cuentaId: string): Promise<void> {
     try {
       await this.prisma.db.cuenta.delete({ where: { id: cuentaId } });
