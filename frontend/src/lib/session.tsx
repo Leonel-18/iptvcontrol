@@ -39,13 +39,20 @@ export const ProveedorDeSesion = ({ children }: { children: ReactNode }) => {
   const dominio = import.meta.env.VITE_AUTH0_DOMAIN ?? '';
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID ?? '';
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE ?? '';
+  // URL canónica de retorno (sin www). Si no se configura, usa el origen actual
+  // (necesario en desarrollo local). En producción se fija con
+  // `VITE_AUTH0_REDIRECT_URI=https://iptvcontrol.com.ar` para que Auth0 reciba
+  // siempre un callback que esté en la lista permitida, aun si el usuario entró
+  // por `www.iptvcontrol.com.ar`.
+  const redirectUri =
+    import.meta.env.VITE_AUTH0_REDIRECT_URI?.replace(/\/$/, '') || window.location.origin;
 
   return (
     <Auth0Provider
       domain={dominio}
       clientId={clientId}
       authorizationParams={{
-        redirect_uri: window.location.origin,
+        redirect_uri: redirectUri,
         audience: audience || undefined,
       }}
       // El token queda en localStorage para que un F5 no obligue a re-loguear.
@@ -87,7 +94,14 @@ const PuenteDeSesion = ({ children }: { children: ReactNode }) => {
       error: (consulta.error as Error) ?? null,
       esOperador: sesion?.es_operador ?? false,
       esRevendedora: Boolean(sesion && !sesion.es_operador),
-      cerrarSesion: () => logout({ logoutParams: { returnTo: window.location.origin } }),
+      cerrarSesion: () =>
+        logout({
+          logoutParams: {
+            returnTo:
+              import.meta.env.VITE_AUTH0_REDIRECT_URI?.replace(/\/$/, '') ||
+              window.location.origin,
+          },
+        }),
     };
   }, [consulta.data, consulta.error, consulta.isLoading, isAuthenticated, isLoading, logout]);
 
