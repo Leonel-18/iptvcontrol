@@ -45,6 +45,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      # Identidades ficticias de Cuentas compartidas. Vive en la raiz del repo
+      # (no entra al build de ./backend), por eso se monta en runtime.
+      - ./Nombres.xlsx:/app/Nombres.xlsx:ro
     environment:
       NODE_ENV: production
       PORT: 3000
