@@ -531,6 +531,8 @@ export class ClientesService {
         servicios,
         cuposPorCategoria: dto.cupos_por_categoria,
         duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
+        // Pieza 4: la venta compartida NO crea una fila de Dispositivo previa.
+        abrirVentanaSinFila: dto.tipo_alta === TipoAltaClienteFinal.dispositivo_compartido,
       });
 
       await this.audit.registrar({
