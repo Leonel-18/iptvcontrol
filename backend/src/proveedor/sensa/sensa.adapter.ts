@@ -5,6 +5,7 @@ import {
   ActivarDispositivoParams,
   ActualizarCapacidadParams,
   ActualizarPasswordParams,
+  ActualizarPinParams,
   ActualizarServiciosParams,
   CredencialesProveedor,
   CrearCuentaParams,
@@ -243,6 +244,23 @@ export class SensaAdapter implements ProveedorAdapter {
       ruta: `/v4/user/${encodeURIComponent(params.proveedorCuentaId)}`,
       body,
       // 820: "user data was not modified" — si ya tenía esa misma contraseña,
+      // para IPTVControl el resultado deseado igual se cumplió.
+      codigosTolerados: [SENSA_CODIGOS.USER_DATA_WAS_NOT_MODIFIED],
+    });
+  }
+
+  async actualizarPin(
+    credenciales: CredencialesProveedor,
+    params: ActualizarPinParams,
+  ): Promise<void> {
+    const body: SensaEditUserRequest = { pin: params.pin };
+
+    await this.llamar<SensaUser>(credenciales, {
+      operacion: 'edit_user_pin',
+      metodo: 'PATCH',
+      ruta: `/v4/user/${encodeURIComponent(params.proveedorCuentaId)}`,
+      body,
+      // 820: "user data was not modified" — si ya tenía ese mismo PIN,
       // para IPTVControl el resultado deseado igual se cumplió.
       codigosTolerados: [SENSA_CODIGOS.USER_DATA_WAS_NOT_MODIFIED],
     });

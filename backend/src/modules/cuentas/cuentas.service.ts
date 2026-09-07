@@ -580,6 +580,51 @@ export class CuentasService {
   }
 
   /**
+   * Reemplaza manualmente el PIN de control parental de la Cuenta en el
+   * Proveedor (espejo de `cambiarPassword`): la Empresa Revendedora puede
+   * definirlo a mano cuando lo necesite (pedido de la demo con el cliente).
+   */
+  async cambiarPin(id: string, pinNuevo: string): Promise<{ id: string }> {
+    if (this.contexto.esOperador) {
+      throw new ForbiddenException(
+        'El Operador Principal no administra las credenciales de las Cuentas de sus Empresas Revendedoras.',
+      );
+    }
+
+    const cuenta = await this.prisma.db.cuenta.findUnique({ where: { id } });
+    if (!cuenta) {
+      throw new NotFoundException('La cuenta no existe o no está disponible.');
+    }
+    if (!cuenta.proveedorCuentaId) {
+      throw new BadRequestException(
+        'Esta Cuenta todavía no se confirmó en el Proveedor: espere a que termine de crearse.',
+      );
+    }
+
+    const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
+    await this.proveedor.actualizarPin(operadorPrincipalId, {
+      proveedorCuentaId: cuenta.proveedorCuentaId,
+      pin: pinNuevo,
+    });
+
+    await this.prisma.db.cuenta.update({
+      where: { id },
+      data: { pinCifrado: this.crypto.encrypt(pinNuevo) },
+    });
+
+    await this.audit.registrar({
+      accion: AccionAuditoria.cambio_pin_cuenta,
+      entidad: EntidadAuditada.Cuenta,
+      entidadId: id,
+      empresaRevendedoraId: cuenta.empresaRevendedoraId,
+      // Nunca se guarda el PIN en el detalle del log de auditoría.
+      detalle: { proveedor_cuenta_id: cuenta.proveedorCuentaId, modificado_manualmente: true },
+    });
+
+    return { id };
+  }
+
+  /**
    * Cierra una Cuenta sin uso (ej. creada por error, o que quedó abandonada).
    *
    * No se puede cerrar una Cuenta con Dispositivos ocupando lugar: primero hay
