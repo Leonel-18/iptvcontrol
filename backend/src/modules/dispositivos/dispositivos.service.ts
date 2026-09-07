@@ -136,7 +136,11 @@ export class DispositivosService {
       }
     };
 
-    if (!cuentaId && !params.cuentaExclusiva) {
+    // Regla de negocio (demo 7/9): si el vendedor aplicó una Ventana de Alta de
+    // duración mayor a 0 a esta venta compartida, la venta NO se agrega a una
+    // Cuenta compartida existente: se crea una Cuenta nueva dedicada para no
+    // mezclarla con clientes que ya están usando las mismas credenciales.
+    if (!cuentaId && !params.cuentaExclusiva && !params.duracionVentanaCuriosidadMinutos) {
       cuentaId = await this.provisioning.buscarCuentaConLugar(
         empresaRevendedora.id,
         umbral,

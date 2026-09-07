@@ -636,7 +636,7 @@ export const CustomerForm = () => {
                         onChange={(duration) =>
                           actualizar('duracionVentanaCuriosidadMinutos', duration)
                         }
-                        help={`Puede elegir desde cero hasta ${formatDurationMinutes(configuracionVentana.data.duracion_predeterminada_minutos)}.`}
+                        help={`Puede elegir de 0 a ${formatDurationMinutes(configuracionVentana.data.duracion_predeterminada_minutos)}. Si deja una duración mayor a 0, esta venta se creará en una Cuenta nueva propia (no se sumará a una compartida existente).`}
                       />
                     </div>
                   )}
@@ -828,8 +828,8 @@ export const CustomerForm = () => {
                     cliente, en una Cuenta compartida sólo con otras ventas de exactamente la misma
                     selección de servicios y con cupos suficientes.{' '}
                     {valores.duracionVentanaCuriosidadMinutos > 0
-                      ? `La Ventana de Alta durará ${formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}.`
-                      : 'No se aplicará una Ventana de Alta.'}
+                      ? `La Ventana de Alta durará ${formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}: esta venta se crea en una Cuenta nueva propia y no se comparte con otros clientes durante ese plazo.`
+                      : 'No se aplicará una Ventana de Alta: la venta puede reutilizar una Cuenta compartida compatible.'}
                   </p>
                 )}
               </Alert>
