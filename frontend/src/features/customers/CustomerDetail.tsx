@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ExternalLink,
   PauseCircle,
+  Pencil,
   PlayCircle,
   UserX,
 } from "lucide-react";
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/primitives";
 import { ConfirmDialog } from "@/components/ui/overlays";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { CustomerEditDialog } from "./CustomerEditDialog";
 
 /**
  * Vista por Cliente — `/customers/:id`.
@@ -60,6 +62,7 @@ export const CustomerDetail = () => {
   const [accion, setAccion] = useState<
     "suspend" | "reactivate" | "terminate" | null
   >(null);
+  const [editarContactoAbierto, setEditarContactoAbierto] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["customer", id],
@@ -271,8 +274,16 @@ export const CustomerDetail = () => {
 
           {!esOperador ? (
             <Card>
-              <CardHeader>
+              <CardHeader className="flex-row items-center justify-between gap-2">
                 <CardTitle>Datos de contacto</CardTitle>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setEditarContactoAbierto(true)}
+                >
+                  <Pencil />
+                  Editar datos
+                </Button>
               </CardHeader>
               <CardContent>
                 <dl className="divide-y divide-[rgb(var(--borde))]">
@@ -464,6 +475,14 @@ export const CustomerDetail = () => {
           las mismas credenciales de esta cuenta. La contraseña no se rota.
         </Alert>
       </ConfirmDialog>
+
+      {!esOperador ? (
+        <CustomerEditDialog
+          cliente={data}
+          abierto={editarContactoAbierto}
+          onCambio={setEditarContactoAbierto}
+        />
+      ) : null}
 
     </>
   );

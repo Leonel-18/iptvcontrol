@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import {
+  EstadoClienteFinal,
   EstadoCuenta,
   EstadoDispositivo,
   EstadoEmpresaRevendedora,
   EstadoLlamadaProveedor,
+  TipoAltaClienteFinal,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
@@ -135,7 +137,7 @@ export class DashboardService {
         _count: { _all: true },
       }),
       this.prisma.db.clienteFinal.groupBy({
-        by: ['estado'],
+        by: ['estado', 'tipoAlta'],
         where: { empresaRevendedoraId },
         _count: { _all: true },
       }),
@@ -149,6 +151,17 @@ export class DashboardService {
     const contarDispositivos = (estado: EstadoDispositivo, tipo?: 'fijo' | 'movil') =>
       dispositivos
         .filter((grupo) => grupo.estado === estado && (!tipo || grupo.tipo === tipo))
+        .reduce((total, grupo) => total + grupo._count._all, 0);
+
+    // Clientes activos según cómo se dieron de alta (regla 2.1): exclusivos
+    // (Cuenta completa) vs. de ventas en Cuentas compartidas.
+    const contarClientesActivosPorTipo = (tipo: TipoAltaClienteFinal) =>
+      clientes
+        .filter((grupo) => grupo.estado === EstadoClienteFinal.activo && grupo.tipoAlta === tipo)
+        .reduce((total, grupo) => total + grupo._count._all, 0);
+    const contarClientesPorEstado = (estado: EstadoClienteFinal) =>
+      clientes
+        .filter((grupo) => grupo.estado === estado)
         .reduce((total, grupo) => total + grupo._count._all, 0);
 
     return {
@@ -165,9 +178,13 @@ export class DashboardService {
         disponibles: contarDispositivos(EstadoDispositivo.disponible),
       },
       clientes_finales: {
-        activos: clientes.find((grupo) => grupo.estado === 'activo')?._count._all ?? 0,
-        suspendidos: clientes.find((grupo) => grupo.estado === 'suspendido')?._count._all ?? 0,
-        dados_de_baja: clientes.find((grupo) => grupo.estado === 'dado_de_baja')?._count._all ?? 0,
+        activos: contarClientesPorEstado(EstadoClienteFinal.activo),
+        suspendidos: contarClientesPorEstado(EstadoClienteFinal.suspendido),
+        dados_de_baja: contarClientesPorEstado(EstadoClienteFinal.dado_de_baja),
+        activos_exclusivos: contarClientesActivosPorTipo(TipoAltaClienteFinal.cuenta_exclusiva),
+        activos_compartidos: contarClientesActivosPorTipo(
+          TipoAltaClienteFinal.dispositivo_compartido,
+        ),
       },
       modalidad_comercial: empresa?.modalidadComercial
         ? {

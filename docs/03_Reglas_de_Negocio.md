@@ -50,6 +50,12 @@ Al dar de alta un Cliente Final nuevo, la Empresa Revendedora elige entre:
    servicios y solo comparte Cuenta con otras ventas de firma idéntica. Una Cuenta compartida tiene
    **3 cupos fijos + 3 móviles**: puede alojar tres ventas 1+1, o una venta 2+2 y otra 1+1.
    Una venta 2+2 no puede entrar donde sólo quede un cupo por categoría.
+   **Regla de "cuenta dedicada" (07/09/2026, demo con Micom):** si la venta se confirma con una
+   **Ventana de Alta de duración mayor a 0**, el sistema **no busca ni reutiliza** una Cuenta
+   compartida existente: crea una **Cuenta nueva propia** para esa venta (no se mezcla con otros
+   clientes que ya están usando las mismas credenciales). Sólo cuando la duración es **0** la venta
+   puede sumarse a una Cuenta compartida compatible existente (y únicamente si esa Cuenta no tiene
+   una Ventana activa de otro cliente — ver sección 15).
 3. El formulario no solicita tipo ni MAC: SENSA los informa al primer login de cada equipo.
 4. **Carga manual en una Cuenta compartida vacía** (`POST /customers` con `cuenta_id`): las
    Cuentas importadas de SENSA pueden llegar sin Clientes Finales, porque la API no informa esa
@@ -392,21 +398,36 @@ mecanismo de seguridad de SENSA ni reemplaza al riesgo aceptado de la sección 6
 compartida sin rotación): es una restricción puramente local de IPTVControl sobre a quién se le
 puede vender esa Cuenta en las próximas horas/días.
 
+**Regla principal (actualizada 07/09/2026, demo con Micom):** la duración que el vendedor deja
+puesta en cada alta compartida decide **si esa venta comparte Cuenta o no**:
+- **Duración mayor a 0** → la venta se crea SIEMPRE en una **Cuenta nueva propia** (dedicada), sin
+  buscar ni reutilizar una compartida existente. El objetivo es no mezclar a ese cliente nuevo con
+  otros que ya usan las mismas credenciales.
+- **Duración 0** → la venta puede sumarse a una Cuenta compartida compatible existente, y
+  únicamente si esa Cuenta no tiene una Ventana activa de otro cliente. Si ninguna compatible está
+  disponible, también se crea una Cuenta nueva.
+
+**Consecuencia operativa:** si la Empresa Revendedora tiene una duración predeterminada mayor a 0
+en `/settings`, TODAS sus ventas compartidas nuevas nacerán en cuenta dedicada (no compartirán),
+salvo que el vendedor baje la duración a 0 en esa venta puntual. Quien quiera compartir por defecto
+debe dejar el predeterminado en 0 y subir la duración caso a caso cuando quiera aislar una venta.
+
 **Alcance:**
 - Aplica **únicamente a Cuentas compartidas** (`dispositivo_compartido`). Las Cuentas exclusivas
   nunca quedan bloqueadas — pertenecen a un único cliente desde el alta.
 - **Nunca bloquea al dueño de la venta que abrió la ventana**: ese mismo Cliente Final puede seguir
   vinculando los Dispositivos de su 1+1 o 2+2 sin restricción, aunque la ventana siga activa.
 - Bloquea exclusivamente que la Cuenta se le ofrezca a un Cliente Final **nuevo** (uno que todavía
-  no tiene una venta ahí) — tanto por el buscador automático de Cuenta compatible (sección 2.1)
-  como por la reasignación manual de un Dispositivo liberado (sección 6).
+  no tiene una venta ahí) — tanto por el buscador automático de Cuenta compatible (sección 2.1,
+  cuando la duración es 0) como por la reasignación manual de un Dispositivo liberado (sección 6).
 - No modifica los contadores `auto_provision_count*` de SENSA ni la capacidad comercial de la
   Cuenta (sección 2.2): un cupo bloqueado por la ventana sigue contando como libre a efectos de
   `auto_provision_count*`, simplemente IPTVControl no se lo ofrece a nadie nuevo mientras dure.
 
 **Duración:**
 - Cada Empresa Revendedora define, desde su Menú de Parametrización (`/settings`), una **duración
-  predeterminada** en días/horas/minutos (puede ser `0`, lo que equivale a no usar la funcionalidad).
+  predeterminada** en días/horas/minutos (puede ser `0`, lo que equivale a no usar la funcionalidad
+  y a permitir que las ventas reutilicen Cuentas compartidas).
 - En cada alta compartida nueva, el vendedor puede **reducir** esa duración para esa venta puntual
   (incluso a `0`), pero **nunca superar** el predeterminado vigente de su Empresa Revendedora. El
   backend valida el tope, no sólo el selector del wizard.
@@ -415,10 +436,12 @@ puede vender esa Cuenta en las próximas horas/días.
   abiertas.
 
 **Ciclo de vida:**
-- Se abre automáticamente al confirmar una venta nueva sobre una Cuenta compartida (ya sea por el
-  wizard de alta, por resolver una incidencia de Dispositivo no autorizado vinculándola a un
-  cliente nuevo, o por reasignar un Dispositivo liberado a un cliente que todavía no tiene venta en
-  esa Cuenta).
+- Se abre automáticamente al confirmar una venta nueva sobre una Cuenta compartida (en el wizard,
+  al crear la Cuenta dedicada o al sumarse a una compartida compatible), o al resolver una
+  incidencia de Dispositivo no autorizado vinculándola a un cliente nuevo. La reasignación manual de
+  un Dispositivo liberado a un Cliente Final **sin venta previa** en esa Cuenta no es una vía de
+  entrada: el sistema exige que la venta exista, por lo que un cliente nuevo entra siempre por el
+  wizard u otra vía que crea la venta.
 - Vence "al vuelo": no depende de un job en segundo plano. Cada vez que se consulta o se intenta
   usar la Cuenta, el sistema recalcula si la ventana sigue vigente comparando la fecha actual
   contra el fin previsto.

@@ -8,7 +8,11 @@ import {
 import {
   AccionAuditoria,
   EntidadAuditada,
+  EstadoClienteFinal,
   EstadoCuenta,
+  EstadoDispositivo,
+  EstadoSolicitudVinculacion,
+  EstadoVinculacionDispositivo,
   MotivoFinVentanaCuriosidad,
   Prisma,
   TipoDispositivo,
@@ -627,18 +631,22 @@ export class CuentasService {
   /**
    * Cierra una Cuenta sin uso (ej. creada por error, o que quedó abandonada).
    *
-   * No se puede cerrar una Cuenta con Dispositivos ocupando lugar: primero hay
-   * que dar de baja a esos Clientes Finales. Si la Cuenta nunca llegó a
-   * confirmarse en el Proveedor (falló el alta a mitad de camino), sólo se
-   * borra la reserva local; si ya tiene `proveedor_cuenta_id`, se cierra
-   * también en SENSA antes de marcarla localmente.
+   * - Cuenta compartida con Dispositivos ocupando o ventas: no se puede cerrar;
+   *   primero hay que dar de baja a esos Clientes Finales.
+   * - Cuenta exclusiva con un Cliente Final activo/suspendido todavía vinculado:
+   *   el cierre ejecuta su baja definitiva integral (dispositivos en el
+   *   Proveedor + ficha del cliente) y recién después cierra la Cuenta. Si ese
+   *   cliente tuviera dispositivos o ventas en OTRAS Cuentas, se bloquea.
+   * - Si la Cuenta nunca llegó a confirmarse en el Proveedor (falló el alta a
+   *   mitad de camino), sólo se borra la reserva local; si ya tiene
+   *   `proveedor_cuenta_id`, se cierra también en SENSA antes de marcarla.
    */
   async cerrar(id: string): Promise<{ id: string; estado: EstadoCuenta }> {
     const cuenta = await this.prisma.db.cuenta.findUnique({
       where: { id },
       include: {
-        dispositivos: { select: { estado: true } },
-        ventasCompartidas: { select: { id: true } },
+        dispositivos: { select: { id: true, estado: true } },
+        ventasCompartidas: { select: { id: true, clienteFinalId: true } },
       },
     });
     if (!cuenta) {
@@ -647,14 +655,46 @@ export class CuentasService {
     if (cuenta.estado === EstadoCuenta.cerrada) {
       throw new BadRequestException('La Cuenta ya está cerrada.');
     }
+
+    let estadoClienteExclusivo: EstadoClienteFinal | undefined;
+    if (cuenta.esExclusiva && cuenta.clienteFinalExclusivoId) {
+      const cliente = await this.prisma.db.clienteFinal.findUnique({
+        where: { id: cuenta.clienteFinalExclusivoId },
+        select: { estado: true },
+      });
+      estadoClienteExclusivo = cliente?.estado;
+    }
+    // En una exclusiva con su Cliente Final todavía vigente, cerrar implica
+    // darle la baja definitiva (el cierre se ofrece "aunque tenga cliente
+    // activo"); si el cliente ya está dado de baja, sólo se cierra la Cuenta.
+    const requiereBajaIntegral = Boolean(
+      cuenta.esExclusiva &&
+      cuenta.clienteFinalExclusivoId &&
+      estadoClienteExclusivo &&
+      estadoClienteExclusivo !== EstadoClienteFinal.dado_de_baja,
+    );
+
     const tieneDispositivosOcupando = cuenta.dispositivos.some((dispositivo) =>
       ESTADOS_QUE_OCUPAN.includes(dispositivo.estado),
     );
-    if (tieneDispositivosOcupando || cuenta.ventasCompartidas.length > 0) {
+    if (
+      !requiereBajaIntegral &&
+      (tieneDispositivosOcupando || cuenta.ventasCompartidas.length > 0)
+    ) {
       throw new BadRequestException(
         'No se puede cerrar una Cuenta con Dispositivos activos o bloqueados por suspensión. ' +
           'Dé de baja a esos Clientes Finales primero.',
       );
+    }
+
+    const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
+    if (requiereBajaIntegral) {
+      await this.bajaIntegralClienteExclusivo({
+        cuentaId: id,
+        clienteFinalId: cuenta.clienteFinalExclusivoId!,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        operadorPrincipalId,
+      });
     }
 
     if (!cuenta.proveedorCuentaId) {
@@ -670,7 +710,6 @@ export class CuentasService {
       return { id, estado: EstadoCuenta.cerrada };
     }
 
-    const operadorPrincipalId = await this.operadorDeCuenta(cuenta.empresaRevendedoraId);
     await this.proveedor.cerrarCuenta(operadorPrincipalId, cuenta.proveedorCuentaId);
 
     await this.prisma.db.cuenta.update({
@@ -685,6 +724,94 @@ export class CuentasService {
       detalle: { proveedor_cuenta_id: cuenta.proveedorCuentaId },
     });
     return { id, estado: EstadoCuenta.cerrada };
+  }
+
+  /**
+   * Baja definitiva del Cliente Final de una Cuenta exclusiva que se está
+   * cerrando con su servicio todavía vigente. Sólo se ejecuta cuando ese
+   * cliente no tiene dispositivos ni ventas en otras Cuentas: si los tuviera,
+   * la "baja integral" alcanzaría servicios que no dependen de esta Cuenta.
+   */
+  private async bajaIntegralClienteExclusivo(opciones: {
+    cuentaId: string;
+    clienteFinalId: string;
+    empresaRevendedoraId: string;
+    operadorPrincipalId: string;
+  }): Promise<void> {
+    const { cuentaId, clienteFinalId, empresaRevendedoraId, operadorPrincipalId } = opciones;
+
+    const [dispositivosEnOtras, ventasEnOtras] = await Promise.all([
+      this.prisma.db.dispositivo.count({
+        where: {
+          clienteFinalId,
+          cuentaId: { not: cuentaId },
+          estado: { in: ESTADOS_QUE_OCUPAN },
+        },
+      }),
+      this.prisma.db.ventaCompartida.count({
+        where: { clienteFinalId, cuentaId: { not: cuentaId } },
+      }),
+    ]);
+    if (dispositivosEnOtras > 0 || ventasEnOtras > 0) {
+      throw new BadRequestException(
+        'El Cliente Final de esta Cuenta exclusiva tiene dispositivos o ventas en otras ' +
+          'Cuentas, así que no se puede cerrar ésta con su baja definitiva. Resuelva primero ' +
+          'esa actividad y vuelva a intentar.',
+      );
+    }
+
+    const ocupando = await this.prisma.db.dispositivo.findMany({
+      where: { cuentaId, estado: { in: ESTADOS_QUE_OCUPAN } },
+      select: { id: true, proveedorDeviceId: true },
+    });
+    for (const dispositivo of ocupando) {
+      if (dispositivo.proveedorDeviceId) {
+        await this.proveedor.eliminarDispositivo(
+          operadorPrincipalId,
+          dispositivo.proveedorDeviceId,
+        );
+      }
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      const ahora = new Date();
+      await tx.solicitudVinculacionDispositivo.updateMany({
+        where: {
+          dispositivoId: { in: ocupando.map((item) => item.id) },
+          estado: {
+            in: [EstadoSolicitudVinculacion.pendiente, EstadoSolicitudVinculacion.observando],
+          },
+        },
+        data: { estado: EstadoSolicitudVinculacion.cancelado },
+      });
+      await tx.dispositivo.updateMany({
+        where: { cuentaId, estado: { in: ESTADOS_QUE_OCUPAN } },
+        data: {
+          estado: EstadoDispositivo.dado_de_baja,
+          estadoVinculacion: EstadoVinculacionDispositivo.cancelado,
+          proveedorDeviceId: null,
+          clienteFinalId: null,
+        },
+      });
+      await tx.clienteFinal.update({
+        where: { id: clienteFinalId },
+        data: {
+          estado: EstadoClienteFinal.dado_de_baja,
+          dadoDeBajaEn: ahora,
+        },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.baja_cliente,
+        entidad: EntidadAuditada.ClienteFinal,
+        entidadId: clienteFinalId,
+        empresaRevendedoraId,
+        detalle: {
+          cuenta_id: cuentaId,
+          motivo: 'cierre_de_cuenta_exclusiva',
+          dispositivos_dados_de_baja: ocupando.length,
+        },
+      });
+    });
   }
 
   /** Cuentas cerca del tope, para el aviso visual del panel (regla 12). */
