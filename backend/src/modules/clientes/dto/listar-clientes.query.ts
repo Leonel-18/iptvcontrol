@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { EstadoClienteFinal } from '@prisma/client';
+import { EstadoClienteFinal, TipoAltaClienteFinal } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
@@ -15,6 +15,16 @@ export class ListarClientesQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(EstadoClienteFinal)
   status?: EstadoClienteFinal;
+
+  @ApiPropertyOptional({
+    enum: TipoAltaClienteFinal,
+    description:
+      'Filtra clientes por tipo de alta: `cuenta_exclusiva` (Cuenta completa) o ' +
+      '`dispositivo_compartido` (venta en Cuenta compartida).',
+  })
+  @IsOptional()
+  @IsEnum(TipoAltaClienteFinal)
+  tipo?: TipoAltaClienteFinal;
 
   @ApiPropertyOptional({ description: 'Filtra por Cuenta.' })
   @IsOptional()

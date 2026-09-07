@@ -476,6 +476,8 @@ export interface ResellerDashboard {
     activos: number;
     suspendidos: number;
     dados_de_baja: number;
+    activos_exclusivos: number;
+    activos_compartidos: number;
   };
   modalidad_comercial: {
     tipo: string;

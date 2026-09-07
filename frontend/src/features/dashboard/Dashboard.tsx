@@ -352,7 +352,7 @@ const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'resel
       <Metric
         etiqueta="Clientes activos"
         valor={formatearNumero(data.clientes_finales.activos)}
-        detalle={`${data.clientes_finales.suspendidos} suspendidos`}
+        detalle={`${data.clientes_finales.activos_exclusivos} de cuentas exclusivas · ${data.clientes_finales.activos_compartidos} de cuentas compartidas`}
         tono="azure"
         icono={<Users className="size-4" />}
       />

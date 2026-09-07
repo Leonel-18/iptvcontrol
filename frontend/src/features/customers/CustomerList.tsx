@@ -5,14 +5,14 @@ import { api, descargarCsv, type Paginado } from '@/lib/api';
 import { useSesion } from '@/lib/session';
 import { formatearFecha } from '@/lib/utils';
 import type { Customer, CustomerOperatorView } from '@/lib/types';
-import { customerIntakeLabels, customerStatusLabels, traducir } from '@/i18n/entityLabels';
+import { customerStatusLabels } from '@/i18n/entityLabels';
 import {
   CopyableId,
   CustomerStatusBadge,
   ExportCsvButton,
   PageHeader,
 } from '@/components/common';
-import { Button, Card, EmptyState, Input } from '@/components/ui/primitives';
+import { Badge, Button, Card, EmptyState, Input } from '@/components/ui/primitives';
 import { Select } from '@/components/ui/overlays';
 import { Paginacion, Table, TableSkeleton, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
@@ -35,6 +35,7 @@ export const CustomerList = () => {
   const estado = params.get('status') ?? 'activo';
   const busqueda = params.get('q') ?? '';
   const accountId = params.get('account_id') ?? '';
+  const tipo = params.get('tipo') ?? 'todos';
 
   const filtros = {
     page: pagina,
@@ -42,6 +43,7 @@ export const CustomerList = () => {
     status: estado === 'todos' ? undefined : estado,
     q: busqueda || undefined,
     account_id: accountId || undefined,
+    tipo: tipo === 'todos' ? undefined : tipo,
   };
 
   const { data, isLoading } = useQuery({
@@ -106,6 +108,16 @@ export const CustomerList = () => {
               ...Object.entries(customerStatusLabels).map(([value, label]) => ({ value, label })),
             ]}
           />
+          <Select
+            value={tipo}
+            onChange={(valor) => actualizar('tipo', valor)}
+            className="max-w-48"
+            opciones={[
+              { value: 'todos', label: 'Todos los tipos de cuenta' },
+              { value: 'cuenta_exclusiva', label: 'Exclusivas' },
+              { value: 'dispositivo_compartido', label: 'Compartidas' },
+            ]}
+          />
         </div>
 
         <Table>
@@ -115,7 +127,7 @@ export const CustomerList = () => {
               {!esOperador ? <TH>Cliente</TH> : null}
               {!esOperador ? <TH>ID de gestión</TH> : null}
               <TH>Estado</TH>
-              <TH>Método de alta</TH>
+              <TH>Tipo de cuenta</TH>
               <TH align="right">Dispositivos</TH>
               <TH align="right">Alta</TH>
             </TR>
@@ -169,9 +181,9 @@ export const CustomerList = () => {
                       <CustomerStatusBadge estado={cliente.estado} />
                     </TD>
                     <TD>
-                      <span className="text-sm texto-suave">
-                        {traducir(customerIntakeLabels, cliente.tipo_alta)}
-                      </span>
+                      <Badge tone={cliente.tipo_alta === 'cuenta_exclusiva' ? 'info' : 'neutral'}>
+                        {cliente.tipo_alta === 'cuenta_exclusiva' ? 'Exclusiva' : 'Compartida'}
+                      </Badge>
                     </TD>
                     <TD align="right">
                       <span className="tabular-nums">{dispositivos}</span>

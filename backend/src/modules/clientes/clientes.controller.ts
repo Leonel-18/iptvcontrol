@@ -72,7 +72,10 @@ export class ClientesController {
       const columnas: ColumnaCsv<CsvCliente>[] = [
         { encabezado: 'Número de cliente', valor: (fila) => fila.numero_cliente },
         { encabezado: 'Estado', valor: (fila) => fila.estado },
-        { encabezado: 'Tipo de alta', valor: (fila) => fila.tipo_alta },
+        {
+          encabezado: 'Tipo de cuenta',
+          valor: (fila) => (fila.tipo_alta === 'cuenta_exclusiva' ? 'Exclusiva' : 'Compartida'),
+        },
         { encabezado: 'Dispositivos', valor: (fila) => fila.cantidad_dispositivos },
         {
           encabezado: 'Alta',
