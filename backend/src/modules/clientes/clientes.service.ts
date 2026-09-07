@@ -82,6 +82,7 @@ export class ClientesService {
     const where: Prisma.ClienteFinalWhereInput = {
       empresaRevendedoraId: query.reseller_id,
       estado: query.status,
+      tipoAlta: query.tipo,
       idGestionExterno: query.external_id,
       AND: query.account_id
         ? [
@@ -579,6 +580,31 @@ export class ClientesService {
       );
     }
 
+    const idGestionExterno =
+      dto.id_gestion_externo === undefined ? undefined : dto.id_gestion_externo.trim() || null;
+
+    // Validación de ID de gestión externo al editar (regla 2.4): mismo criterio
+    // que en el alta. Sólo se chequea si el valor cambió, para no rechazar un
+    // guardado sin cambios.
+    if (idGestionExterno) {
+      const actual = await this.prisma.db.clienteFinal.findUnique({
+        where: { id },
+        select: { idGestionExterno: true },
+      });
+      if (actual && actual.idGestionExterno !== idGestionExterno) {
+        const coincidencias = await this.buscarCoincidenciasGestionExterna(idGestionExterno);
+        if (coincidencias.length > 0) {
+          throw new ConflictException({
+            statusCode: 409,
+            error: 'IdGestionExternoDuplicado',
+            message:
+              'Ya existe otro Cliente Final con ese ID de gestión. Elíjalo distinto o déjelo vacío.',
+            coincidencias,
+          });
+        }
+      }
+    }
+
     return this.prisma.db.clienteFinal.update({
       where: { id },
       data: {
@@ -588,7 +614,7 @@ export class ClientesService {
         telefono: dto.telefono?.trim(),
         email: dto.email?.trim(),
         direccion: dto.direccion?.trim(),
-        idGestionExterno: dto.id_gestion_externo?.trim(),
+        idGestionExterno,
       },
     });
   }
