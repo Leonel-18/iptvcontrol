@@ -70,9 +70,12 @@ export const AccountDetail = () => {
   const [credencialesVisibles, setCredencialesVisibles] = useState(false);
   const [confirmarLiberacion, setConfirmarLiberacion] = useState(false);
   const [cambiarPasswordAbierto, setCambiarPasswordAbierto] = useState(false);
+  const [cambiarPinAbierto, setCambiarPinAbierto] = useState(false);
   const [editarAbierto, setEditarAbierto] = useState(false);
   const [passwordNueva, setPasswordNueva] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
+  const [pinNuevo, setPinNuevo] = useState("");
+  const [errorPin, setErrorPin] = useState("");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["account", id],
@@ -152,6 +155,23 @@ export const AccountDetail = () => {
       toast.success("Reserva de la venta actualizada.");
       void queryClient.invalidateQueries({ queryKey: ["account", id] });
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const cambiarPin = useMutation({
+    mutationFn: () =>
+      api(`/accounts/${id}/pin`, {
+        metodo: "PATCH",
+        body: { pin: pinNuevo },
+      }),
+    onSuccess: () => {
+      toast.success("PIN actualizado en el proveedor.");
+      setCambiarPinAbierto(false);
+      setPinNuevo("");
+      void queryClient.invalidateQueries({
+        queryKey: ["account-credentials", id],
+      });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -290,6 +310,60 @@ export const AccountDetail = () => {
                 {cambiarPassword.isPending
                   ? "Guardando…"
                   : "Guardar contraseña"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cambiarPinAbierto} onOpenChange={setCambiarPinAbierto}>
+        <DialogContent
+          titulo="Cambiar PIN de la Cuenta"
+          descripcion="Reemplaza el PIN de control parental generado automáticamente por uno definido a mano. Debe ser numérico, de 6 dígitos."
+        >
+          <div className="space-y-4">
+            <Field
+              label="PIN nuevo"
+              htmlFor="pin-nuevo"
+              required
+              error={errorPin}
+            >
+              <Input
+                id="pin-nuevo"
+                inputMode="numeric"
+                maxLength={6}
+                value={pinNuevo}
+                onChange={(evento) =>
+                  setPinNuevo(evento.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                autoFocus
+              />
+            </Field>
+            <Alert tone="warning">
+              El PIN de control parental es de la Cuenta. Si varios Clientes
+              Finales la comparten, el PIN nuevo aplica para todos.
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setCambiarPinAbierto(false)}
+                disabled={cambiarPin.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (!/^\d{6}$/.test(pinNuevo)) {
+                    setErrorPin("Ingrese 6 dígitos numéricos.");
+                    return;
+                  }
+                  setErrorPin("");
+                  cambiarPin.mutate();
+                }}
+                disabled={cambiarPin.isPending}
+              >
+                {cambiarPin.isPending ? "Guardando…" : "Guardar PIN"}
               </Button>
             </div>
           </div>
@@ -580,6 +654,19 @@ export const AccountDetail = () => {
                     >
                       <Lock className="size-3.5" />
                       Cambiar contraseña
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setPinNuevo("");
+                        setErrorPin("");
+                        setCambiarPinAbierto(true);
+                      }}
+                    >
+                      <KeyRound className="size-3.5" />
+                      Cambiar PIN
                     </Button>
                   </div>
                 ) : null}

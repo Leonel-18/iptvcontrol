@@ -16,6 +16,7 @@ import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
 import { ActualizarCuentaDto } from './dto/actualizar-cuenta.dto';
 import { AjustarSlotVentaDto } from './dto/ajustar-slot.dto';
 import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
+import { CambiarPinCuentaDto } from './dto/cambiar-pin-cuenta.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
 import { InventarioProveedorService } from './inventario-proveedor.service';
@@ -144,6 +145,18 @@ export class CuentasController {
     @Body() dto: CambiarPasswordCuentaDto,
   ) {
     return this.cuentas.cambiarPassword(id, dto.password);
+  }
+
+  @Patch(':id/pin')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Cambia manualmente el PIN de control parental de la Cuenta.',
+    description:
+      'El PIN se genera automáticamente al crear la Cuenta; este endpoint permite reemplazarlo ' +
+      'a mano (numérico, 6 dígitos). Exclusivo del panel de la Empresa Revendedora dueña.',
+  })
+  async cambiarPin(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CambiarPinCuentaDto) {
+    return this.cuentas.cambiarPin(id, dto.pin);
   }
 
   @Post(':id/curiosity-window/release')

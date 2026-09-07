@@ -94,6 +94,12 @@ export interface ActualizarPasswordParams {
   password: string;
 }
 
+export interface ActualizarPinParams {
+  proveedorCuentaId: string;
+  /** PIN numérico (6 dígitos), igual que en el alta. */
+  pin: string;
+}
+
 export interface ActualizarServiciosParams {
   proveedorCuentaId: string;
   /** Firma canónica de servicios, ej. "1|3|5". */
@@ -179,6 +185,9 @@ export interface ProveedorAdapter {
     credenciales: CredencialesProveedor,
     params: ActualizarPasswordParams,
   ): Promise<void>;
+
+  /** Cambia el PIN de control parental de una Cuenta en el Proveedor. */
+  actualizarPin(credenciales: CredencialesProveedor, params: ActualizarPinParams): Promise<void>;
 
   /** Actualiza la parametrización de contenido (servicios) de una Cuenta. */
   actualizarServicios(
