@@ -58,8 +58,8 @@ interface ItemMenu {
 const ITEMS: ItemMenu[] = [
   { to: '/dashboard', label: navLabels.dashboard, icono: <LayoutDashboard /> },
   { to: '/resellers', label: navLabels.resellers, icono: <Building2 />, soloOperador: true },
-  { to: '/accounts', label: navLabels.accounts, icono: <CreditCard />, soloRevendedor: true },
   { to: '/customers', label: navLabels.customers, icono: <Users />, soloRevendedor: true },
+  { to: '/accounts', label: navLabels.accounts, icono: <CreditCard />, soloRevendedor: true },
   { to: '/devices', label: navLabels.devices, icono: <MonitorPlay />, soloRevendedor: true },
   { to: '/commercial-plans', label: navLabels.commercialPlans, icono: <FileBarChart /> },
   { to: '/reports', label: navLabels.reports, icono: <FileBarChart />, soloOperador: true },
