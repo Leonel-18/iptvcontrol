@@ -5,9 +5,10 @@ import {
   Lock,
   Pencil,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { useSesion } from "@/lib/session";
@@ -76,6 +77,8 @@ export const AccountDetail = () => {
   const [errorPassword, setErrorPassword] = useState("");
   const [pinNuevo, setPinNuevo] = useState("");
   const [errorPin, setErrorPin] = useState("");
+  const [confirmarCierre, setConfirmarCierre] = useState(false);
+  const navegar = useNavigate();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["account", id],
@@ -193,6 +196,17 @@ export const AccountDetail = () => {
     onError: (causa: ApiError) => toast.error(causa.message),
   });
 
+  const cerrarCuenta = useMutation({
+    mutationFn: () => api(`/accounts/${id}/close`, { metodo: "POST" }),
+    onSuccess: () => {
+      toast.success("Cuenta cerrada.");
+      void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      navegar("/accounts");
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
   if (isLoading) return <Skeleton className="h-64" />;
 
   if (error || !data) {
@@ -236,10 +250,44 @@ export const AccountDetail = () => {
                   : "Sincronizar contenido"}
               </Button>
             ) : null}
+            {!esOperador && data.es_exclusiva && data.estado === "activa" ? (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setConfirmarCierre(true)}
+              >
+                <Trash2 />
+                Cerrar cuenta
+              </Button>
+            ) : null}
           </>
         }
       />
 
+      <ConfirmDialog
+        abierto={confirmarCierre}
+        onCambio={setConfirmarCierre}
+        titulo="Cerrar esta Cuenta exclusiva"
+        descripcion={
+          data.cliente_final_exclusivo
+            ? "La Cuenta se cierra en el proveedor y deja de usarse. Como todavía tiene un cliente final asociado, ese cliente pasa a baja definitiva junto con sus dispositivos."
+            : "La Cuenta se cierra en el proveedor y deja de usarse."
+        }
+        etiquetaConfirmar="Cerrar cuenta"
+        cargando={cerrarCuenta.isPending}
+        onConfirmar={() => cerrarCuenta.mutate()}
+      >
+        <Alert tone="danger">
+          {data.cliente_final_exclusivo ? (
+            <>
+              Se dará de baja definitiva a {data.cliente_final_exclusivo.nombre || "este cliente"} y
+              a sus dispositivos. Esta acción no se puede deshacer.
+            </>
+          ) : (
+            "Confirme que ya no necesita esta Cuenta: no se puede deshacer."
+          )}
+        </Alert>
+      </ConfirmDialog>
       <ConfirmDialog
         abierto={confirmarLiberacion}
         onCambio={setConfirmarLiberacion}
