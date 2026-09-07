@@ -672,7 +672,7 @@ export class CuentasService {
           ? capacidad.esExclusiva
             ? 'La Cuenta llegó al límite de 3 fijos y 3 móviles.'
             : 'La Cuenta comprometió sus 3 cupos por categoría.'
-          : 'La cuenta está cerca del tope de capacidad.',
+          : 'La cuenta está cerca del límite de capacidad.',
       }));
   }
 

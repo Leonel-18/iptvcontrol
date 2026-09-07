@@ -385,7 +385,7 @@ export const CustomerDetail = () => {
 
                 {data.cuenta.cerca_del_tope ? (
                   <Alert tone="warning">
-                    Esta cuenta está cerca del tope. El próximo alta puede
+                    Esta cuenta está cerca del límite. El próximo alta puede
                     requerir otra cuenta.
                   </Alert>
                 ) : null}

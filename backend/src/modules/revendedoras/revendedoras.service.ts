@@ -214,7 +214,7 @@ export class RevendedorasService {
       throw new NotFoundException('La Empresa Revendedora no existe o no está disponible.');
     }
 
-    const [cuentas, dispositivos, clientesActivos] = await Promise.all([
+    const [cuentas, dispositivos, clientesActivos, creadasMesSistema] = await Promise.all([
       this.prisma.db.cuenta.groupBy({
         by: ['estado'],
         where: { empresaRevendedoraId: id },
@@ -228,12 +228,38 @@ export class RevendedorasService {
       this.prisma.db.clienteFinal.count({
         where: { empresaRevendedoraId: id, estado: 'activo' },
       }),
+      // Cuentas creadas por IPTVControl en el mes calendario AR (las importadas
+      // no consumen el cupo mensual).
+      this.prisma.db.cuenta.count({
+        where: {
+          empresaRevendedoraId: id,
+          procedencia: 'creada_en_sistema',
+          creadoEn: { gte: inicioMesArgentina(new Date()), lt: finMesArgentina(new Date()) },
+        },
+      }),
     ]);
 
     const contar = <T extends { _count: { _all: number } }>(
       grupos: T[],
       predicado: (grupo: T) => boolean,
     ) => grupos.filter(predicado).reduce((total, grupo) => total + grupo._count._all, 0);
+
+    const totalCuentas = contar(cuentas, () => true);
+    const cuentasActivas = contar(cuentas, (grupo) => grupo.estado === EstadoCuenta.activa);
+    const comerciales = {
+      cuentas_a_cobrar: this.calcularCuentasACobrar({
+        modalidad: empresa.modalidadComercial,
+        asignadaEn: empresa.modalidadAsignadaEn ?? empresa.creadoEn,
+        creadasEnMes: creadasMesSistema,
+        cuentasActivas,
+      }),
+      cuentas_maximas: this.calcularMaximoComercial({
+        totalCuentas,
+        creadasEnMes: creadasMesSistema,
+        cuentasMaxCrearMensual: empresa.cuentasMaxCrearMensual,
+      }),
+      creadas_mes: creadasMesSistema,
+    };
 
     return {
       id: empresa.id,
@@ -266,7 +292,7 @@ export class RevendedorasService {
         ultimo_acceso_en: miembro.ultimoAccesoEn,
       })),
       resumen: {
-        cuentas_activas: contar(cuentas, (grupo) => grupo.estado === EstadoCuenta.activa),
+        cuentas_activas: cuentasActivas,
         cuentas_cerradas: contar(cuentas, (grupo) => grupo.estado === EstadoCuenta.cerrada),
         dispositivos_activos: contar(
           dispositivos,
@@ -282,6 +308,8 @@ export class RevendedorasService {
         ),
         clientes_activos: clientesActivos,
       },
+      // Límites visibles antes de crear una Cuenta (TAREA 1).
+      comerciales,
       creado_en: empresa.creadoEn,
     };
   }

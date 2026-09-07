@@ -93,15 +93,15 @@ export const ResellerList = () => {
         <Table>
           <THead>
             <TR>
-              <TH>Empresa</TH>
-              <TH>Modalidad</TH>
-              <TH>Precio por cuenta</TH>
-              <TH align="right">Cuenta máxima</TH>
-              <TH align="right">Cuentas a cobrar</TH>
-              <TH align="right">Max. crear / mes</TH>
-              <TH align="right">Cuentas</TH>
-              <TH align="right">Clientes</TH>
-              <TH align="right">Dispositivos</TH>
+              <TH className="py-3">Empresa</TH>
+              <TH className="py-3">Modalidad</TH>
+              <TH className="py-3 leading-tight">Precio<br />por cuenta</TH>
+              <TH align="right" className="py-3 leading-tight">Cuentas<br />a cobrar</TH>
+              <TH align="right" className="py-3">Cuentas</TH>
+              <TH align="right" className="py-3 leading-tight">Cuentas<br />máximas</TH>
+              <TH align="right" className="py-3 leading-tight">Máx. crear<br />/ mes</TH>
+              <TH align="right" className="py-3">Clientes</TH>
+              <TH align="right" className="py-3">Dispositivos</TH>
             </TR>
           </THead>
 
@@ -138,16 +138,16 @@ export const ResellerList = () => {
                     </span>
                   </TD>
                   <TD align="right">
-                    <span className="tabular-nums">{empresa.comerciales.cuentas_maximas}</span>
-                  </TD>
-                  <TD align="right">
                     <span className="tabular-nums">{empresa.comerciales.cuentas_a_cobrar}</span>
                   </TD>
                   <TD align="right">
-                    <span className="tabular-nums">{empresa.cuentas_max_crear_mensual}</span>
+                    <span className="tabular-nums">{empresa.cantidad_cuentas}</span>
                   </TD>
                   <TD align="right">
-                    <span className="tabular-nums">{empresa.cantidad_cuentas}</span>
+                    <span className="tabular-nums">{empresa.comerciales.cuentas_maximas}</span>
+                  </TD>
+                  <TD align="right">
+                    <span className="tabular-nums">{empresa.cuentas_max_crear_mensual}</span>
                   </TD>
                   <TD align="right">
                     <span className="tabular-nums">{empresa.cantidad_clientes}</span>

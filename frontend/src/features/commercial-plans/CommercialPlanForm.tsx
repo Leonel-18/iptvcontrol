@@ -144,9 +144,9 @@ export const CommercialPlanForm = ({
             ) : null}
 
             <Field
-              label="Tope de cuentas activas"
+              label="Límite de cuentas activas"
               htmlFor="tope"
-              help="Opcional. Vacío = sin tope explícito."
+              help="Opcional. Vacío = sin límite configurado."
             >
               <Input
                 id="tope"

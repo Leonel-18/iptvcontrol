@@ -30,7 +30,7 @@ export const CapacityMeter = ({
     Math.max(bloqueados, 0),
     capacidad.ocupados,
   );
-  const detalle = `Ocupados: ${capacidad.ocupados} · Libres: ${capacidad.libres} · Tope: ${capacidad.limite}`;
+  const detalle = `Ocupados: ${capacidad.ocupados} · Libres: ${capacidad.libres} · Límite: ${capacidad.limite}`;
   const cantidadBarras = Math.max(1, capacidad.limite);
 
   return (

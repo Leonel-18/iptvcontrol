@@ -102,8 +102,8 @@ export const CommercialPlanDetail = () => {
               <DetailRow etiqueta="Incremento mensual">
                 {data.ritmo_incremento ? `${data.ritmo_incremento} cuentas por mes` : '—'}
               </DetailRow>
-              <DetailRow etiqueta="Tope de cuentas activas">
-                {data.tope_cuentas_activas ?? 'Sin tope explícito'}
+              <DetailRow etiqueta="Límite de cuentas activas">
+                {data.tope_cuentas_activas ?? 'Sin límite configurado'}
               </DetailRow>
               <DetailRow etiqueta="Vigencia">
                 {formatearFecha(data.vigente_desde)}

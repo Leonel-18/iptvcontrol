@@ -330,9 +330,9 @@ export const AccountDetail = () => {
               <CapacityMeter capacidad={data.capacidad} />
               <OcupacionDetalle ocupacion={data.capacidad} />
               {data.capacidad.cerca_del_tope ? (
-                <Alert tone="warning" titulo="Cerca del tope de capacidad">
+                <Alert tone="warning" titulo="Cerca del límite de capacidad">
                   {data.es_exclusiva
-                    ? "Esta Cuenta está cerca de su tope de 3 fijos + 3 móviles."
+                    ? "Esta Cuenta está cerca de su límite de 3 fijos + 3 móviles."
                     : "Una venta compartida adicional puede asignarse a otra Cuenta compatible."}
                 </Alert>
               ) : null}
@@ -368,50 +368,70 @@ export const AccountDetail = () => {
                               <TH>N° cliente</TH>
                               <TH>Cliente</TH>
                               <TH align="right">Dispositivos cargados</TH>
+                              <TH align="right">Pendientes</TH>
                               <TH>Reserva de la venta</TH>
                             </TR>
                           </THead>
                           <TBody>
-                            {data.ventas_compartidas.map((venta) => (
-                              <TR key={venta.id}>
-                                <TD>
-                                  <span className="id-tecnico">
-                                    {venta.cliente_final.numero_cliente}
-                                  </span>
-                                </TD>
-                                <TD>
-                                  <Link
-                                    to={`/customers/${venta.cliente_final.id}`}
-                                    className="text-sm text-azure-600 hover:underline dark:text-azure-400"
-                                  >
-                                    {venta.cliente_final.nombre}
-                                  </Link>
-                                </TD>
-                                <TD align="right">
-                                  <span className="tabular-nums">
-                                    {venta.ocupacion.fijos} fijos · {venta.ocupacion.moviles}{" "}
-                                    móviles
-                                  </span>
-                                </TD>
-                                <TD>
-                                  <Select
-                                    value={String(venta.cupos_por_categoria)}
-                                    onChange={(valor) =>
-                                      ajustarSlot.mutate({
-                                        customerId: venta.cliente_final.id,
-                                        cupos: valor === "2" ? 2 : 1,
-                                      })
-                                    }
-                                    disabled={ajustarSlot.isPending}
-                                    className="max-w-40"
-                                    opciones={[
-                                      { value: "1", label: "1 + 1" },
-                                      { value: "2", label: "2 + 2" },
-                                    ]}
-                                  />
-                                </TD>
-                              </TR>
-                            ))}
+                            {data.ventas_compartidas.map((venta) => {
+                              const pendientes = Math.max(
+                                0,
+                                venta.cupos_por_categoria - venta.ocupacion.fijos,
+                              ) + Math.max(
+                                0,
+                                venta.cupos_por_categoria - venta.ocupacion.moviles,
+                              );
+                              return (
+                                <TR key={venta.id}>
+                                  <TD>
+                                    <span className="id-tecnico">
+                                      {venta.cliente_final.numero_cliente}
+                                    </span>
+                                  </TD>
+                                  <TD>
+                                    <Link
+                                      to={`/customers/${venta.cliente_final.id}`}
+                                      className="text-sm text-azure-600 hover:underline dark:text-azure-400"
+                                    >
+                                      {venta.cliente_final.nombre}
+                                    </Link>
+                                  </TD>
+                                  <TD align="right">
+                                    <span className="tabular-nums">
+                                      {venta.ocupacion.fijos} fijos · {venta.ocupacion.moviles}{" "}
+                                      móviles
+                                    </span>
+                                  </TD>
+                                  <TD align="right">
+                                    <span
+                                      className={`tabular-nums ${
+                                        pendientes > 0 ? "text-warn" : ""
+                                      }`}
+                                      title="Dispositivos requeridos por la venta menos los ya cargados/sincronizados"
+                                    >
+                                      {pendientes}
+                                    </span>
+                                  </TD>
+                                  <TD>
+                                    <Select
+                                      value={String(venta.cupos_por_categoria)}
+                                      onChange={(valor) =>
+                                        ajustarSlot.mutate({
+                                          customerId: venta.cliente_final.id,
+                                          cupos: valor === "2" ? 2 : 1,
+                                        })
+                                      }
+                                      disabled={ajustarSlot.isPending}
+                                      className="max-w-40"
+                                      opciones={[
+                                        { value: "1", label: "1 + 1" },
+                                        { value: "2", label: "2 + 2" },
+                                      ]}
+                                    />
+                                  </TD>
+                                </TR>
+                              );
+                            })}
                           </TBody>
                         </Table>
                         <p className="text-xs texto-suave">
