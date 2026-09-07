@@ -319,7 +319,7 @@ const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'resel
       <Card>
         <CardHeader className="flex-row items-center gap-2.5">
           <AlertTriangle className="size-4 text-warn" />
-          <CardTitle>Cuentas cerca del tope</CardTitle>
+          <CardTitle>Cuentas cerca del límite</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm texto-suave">

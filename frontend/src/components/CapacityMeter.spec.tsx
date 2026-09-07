@@ -29,7 +29,7 @@ describe('CapacityMeter', () => {
   it('describe ocupados, libres y tope para lectores de pantalla', () => {
     montar(1);
 
-    expect(screen.getByText(/Capacidad: Ocupados: 1 · Libres: 2 · Tope: 3/)).toBeInTheDocument();
+    expect(screen.getByText(/Capacidad: Ocupados: 1 · Libres: 2 · Límite: 3/)).toBeInTheDocument();
   });
 
   it('refleja el tope alcanzado', () => {

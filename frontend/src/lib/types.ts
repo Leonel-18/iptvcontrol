@@ -325,6 +325,12 @@ export interface ResellerDetail {
   estado: "activa" | "suspendida";
   cuentas_max_crear_mensual: number;
   modalidad_asignada_en: string | null;
+  /** Límites visibles antes de crear una Cuenta (TAREA 1). */
+  comerciales: {
+    cuentas_a_cobrar: number;
+    cuentas_maximas: number;
+    creadas_mes: number;
+  };
   modalidad_comercial: {
     id: string;
     tipo: string;

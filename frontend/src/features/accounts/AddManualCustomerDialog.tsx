@@ -97,7 +97,11 @@ export const AddManualCustomerDialog = ({
       setDuracion(0);
       setError("");
     },
-    onError: (causa: ApiError) => toast.error(causa.message),
+    onError: (causa: ApiError) => {
+      toast.error(causa.message);
+      // El error también queda visible dentro del modal hasta corregirlo o cerrarlo.
+      setError(causa.message);
+    },
   });
 
   const confirmar = () => {
@@ -130,6 +134,28 @@ export const AddManualCustomerDialog = ({
               {cuenta.servicios_nombres.join(", ")}.
             </Alert>
           ) : null}
+
+          {/* Límite correspondiente a esta operación: la capacidad de la Cuenta */}
+          {cuenta.es_exclusiva ? (
+            <Alert
+              tone={cuenta.capacidad.cerca_del_tope ? "warning" : "info"}
+              titulo="Límite de esta Cuenta (exclusiva)"
+            >
+              Hasta 3 fijos + 3 móviles para su único Cliente Final. Ocupados:{" "}
+              {cuenta.capacidad.ocupados} de {cuenta.capacidad.limite}.
+            </Alert>
+          ) : (
+            <Alert
+              tone={cuenta.capacidad.cerca_del_tope ? "warning" : "info"}
+              titulo="Cupos de esta Cuenta"
+            >
+              Cupos 1+1 libres en esta Cuenta: {cuenta.capacidad.libres} de{" "}
+              {cuenta.capacidad.limite}.
+              {cuenta.capacidad.cerca_del_tope
+                ? " Está cerca del límite: la próxima venta puede requerir otra Cuenta."
+                : ""}
+            </Alert>
+          )}
 
           {error ? <Alert tone="danger">{error}</Alert> : null}
 

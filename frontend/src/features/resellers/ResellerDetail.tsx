@@ -208,8 +208,8 @@ export const ResellerDetail = () => {
                     </DetailRow>
                   ) : null}
                   {data.modalidad_comercial.tope_cuentas_activas ? (
-                    <DetailRow etiqueta="Tope de cuentas activas">
-                      {data.modalidad_comercial.tope_cuentas_activas}
+                    <DetailRow etiqueta="Límite de cuentas activas">
+                      {data.modalidad_comercial.tope_cuentas_activas ?? 'Sin límite configurado'}
                     </DetailRow>
                   ) : null}
                 </dl>

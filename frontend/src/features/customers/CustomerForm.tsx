@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { AccountLimitsPanel } from '@/features/resellers/AccountLimitsPanel';
 import type {
   CustomerDetail,
   ExternalIdMatch,
@@ -129,6 +130,7 @@ export const CustomerForm = () => {
   const [paso, setPaso] = useState(0);
   const [valores, setValores] = useState<EstadoFormulario>(INICIAL);
   const [errores, setErrores] = useState<Partial<Record<keyof EstadoFormulario, string>>>({});
+  const [errorAlta, setErrorAlta] = useState("");
   const [coincidencias, setCoincidencias] = useState<ExternalIdMatch[]>([]);
   const durationInitialized = useRef(false);
   /** Decisión tomada frente al ID duplicado: agrupar en un cliente o seguir. */
@@ -263,6 +265,7 @@ export const CustomerForm = () => {
         return;
       }
       toast.error(causa.message);
+      setErrorAlta(causa.message);
     },
   });
 
@@ -370,6 +373,11 @@ export const CustomerForm = () => {
         })}
       </ol>
 
+      {/* Límites de la Empresa Revendedora, visibles antes de crear la Cuenta */}
+      <div className="mb-4">
+        <AccountLimitsPanel />
+      </div>
+
       <Card className="max-w-3xl">
         {crear.isPending ? (
           <CardContent>
@@ -377,6 +385,11 @@ export const CustomerForm = () => {
           </CardContent>
         ) : (
         <CardContent className="space-y-4">
+          {errorAlta ? (
+            <Alert tone="danger" titulo="No se pudo crear la cuenta">
+              {errorAlta}
+            </Alert>
+          ) : null}
           {/* ---------------------------------------------------------------- */}
           {/* Paso 1 — Datos del cliente                                       */}
           {/* ---------------------------------------------------------------- */}
@@ -527,7 +540,7 @@ export const CustomerForm = () => {
               {decisionDuplicado?.tipo === 'agrupar' ? (
                 <Alert tone="info" titulo="Se va a agrupar el dispositivo">
                   El dispositivo se agrega a <strong>{decisionDuplicado.nombre}</strong>. Si su
-                  cuenta actual está en el tope, el sistema le asigna una cuenta con capacidad y
+                  cuenta actual está al límite, el sistema le asigna una cuenta con capacidad y
                   migra sus dispositivos.
                 </Alert>
               ) : null}

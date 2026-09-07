@@ -343,7 +343,7 @@ const ConnectionSection = () => {
               <Field
                 label="Umbral de alerta de capacidad"
                 htmlFor="umbral"
-                help="A partir de cuántos dispositivos ocupados se avisa que la cuenta está cerca del tope de 3."
+                help="A partir de cuántos dispositivos ocupados se avisa que la cuenta está cerca del límite de 3."
               >
                 <Input
                   id="umbral"
