@@ -369,7 +369,7 @@ export class ClientesService {
         dto.duracion_ventana_curiosidad_minutos !== undefined)
     ) {
       throw new BadRequestException(
-        'Los cupos y la Ventana de curiosidad sólo corresponden a una venta compartida.',
+        'Los cupos y la Ventana de Alta sólo corresponden a una venta compartida.',
       );
     }
 

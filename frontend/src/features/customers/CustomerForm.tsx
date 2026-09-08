@@ -632,11 +632,10 @@ export const CustomerForm = () => {
                     <div className="rounded-lg border p-4">
                       <CuriosityDurationInput
                         value={valores.duracionVentanaCuriosidadMinutos}
-                        maxMinutes={configuracionVentana.data.duracion_predeterminada_minutos}
                         onChange={(duration) =>
                           actualizar('duracionVentanaCuriosidadMinutos', duration)
                         }
-                        help={`Puede elegir de 0 a ${formatDurationMinutes(configuracionVentana.data.duracion_predeterminada_minutos)}. Si deja una duración mayor a 0, esta venta se creará en una Cuenta nueva propia (no se sumará a una compartida existente).`}
+                        help="Arranca con la duración predeterminada de su empresa, pero puede poner la que quiera en cada venta. Con 0 la venta puede sumarse a una Cuenta compartida; con una duración mayor a 0 se crea una Cuenta nueva propia."
                       />
                     </div>
                   )}

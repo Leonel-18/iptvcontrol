@@ -7,6 +7,7 @@ import {
   MonitorPlay,
   RefreshCw,
   ShieldAlert,
+  UserCheck,
   Users,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -352,8 +353,21 @@ const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'resel
       <Metric
         etiqueta="Clientes activos"
         valor={formatearNumero(data.clientes_finales.activos)}
-        detalle={`${data.clientes_finales.activos_exclusivos} de cuentas exclusivas · ${data.clientes_finales.activos_compartidos} de cuentas compartidas`}
+        detalle={`${data.clientes_finales.suspendidos} suspendidos`}
         tono="azure"
+        icono={<Users className="size-4" />}
+      />
+      <Metric
+        etiqueta="Clientes en exclusivas"
+        valor={formatearNumero(data.clientes_finales.activos_exclusivos)}
+        detalle="Cuentas completas de un solo cliente"
+        tono="azure"
+        icono={<UserCheck className="size-4" />}
+      />
+      <Metric
+        etiqueta="Clientes en compartidas"
+        valor={formatearNumero(data.clientes_finales.activos_compartidos)}
+        detalle="Ventas 1+1 / 2+2 en cuentas compartidas"
         icono={<Users className="size-4" />}
       />
       <Metric

@@ -130,8 +130,9 @@ export class CrearClienteDto {
 
   @ApiPropertyOptional({
     description:
-      'Duración de la Ventana de curiosidad para esta venta, en minutos. Puede reducir el ' +
-      'predeterminado de la Empresa Revendedora hasta 0, pero nunca superarlo.',
+      'Duración de la Ventana de Alta para esta venta, en minutos. Se precarga con la ' +
+      'predeterminada de la Empresa Revendedora, pero en cada venta se puede elegir cualquier ' +
+      'duración (0 = la venta puede compartir Cuenta; mayor a 0 = se crea una Cuenta nueva propia).',
   })
   @IsOptional()
   @Type(() => Number)

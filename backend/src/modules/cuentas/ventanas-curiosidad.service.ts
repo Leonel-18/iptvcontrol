@@ -54,10 +54,14 @@ export class VentanasCuriosidadService {
       select: { duracionVentanaCuriosidadMinutos: true },
     });
     const predeterminada = empresa.duracionVentanaCuriosidadMinutos;
+    // La duración predeterminada de la Empresa sólo precarga los formularios: el
+    // vendedor elige en cada venta la duración que quiera, por arriba o por abajo.
+    // Cuando la venta no manda una duración propia (ej. resolución de incidencias),
+    // se aplica la predeterminada.
     const aplicada = params.duracionSolicitadaMinutos ?? predeterminada;
-    if (!Number.isInteger(aplicada) || aplicada < 0 || aplicada > predeterminada) {
+    if (!Number.isInteger(aplicada) || aplicada < 0) {
       throw new BadRequestException(
-        `La Ventana de curiosidad debe estar entre 0 y ${predeterminada} minutos.`,
+        'La Ventana de Alta debe ser un número entero de minutos mayor o igual a 0.',
       );
     }
 
@@ -130,7 +134,7 @@ export class VentanasCuriosidadService {
   async levantarManualmente(cuentaId: string) {
     if (this.contexto.esOperador || !this.contexto.empresaRevendedoraId) {
       throw new ForbiddenException(
-        'Sólo la Empresa Revendedora dueña puede levantar la Ventana de curiosidad.',
+        'Sólo la Empresa Revendedora dueña puede levantar la Ventana de Alta.',
       );
     }
     const teamMemberId = this.contexto.teamMemberId;
@@ -141,7 +145,7 @@ export class VentanasCuriosidadService {
       if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
       if (cuenta.esExclusiva) {
         throw new BadRequestException(
-          'La Ventana de curiosidad sólo aplica a Cuentas compartidas.',
+          'La Ventana de Alta sólo aplica a Cuentas compartidas.',
         );
       }
       await this.cerrarVencidasEnTx(tx, cuentaId, ahora);

@@ -54,10 +54,10 @@ export const CuriosityWindowSettings = () => {
       </CardHeader>
       <CardContent className="space-y-5">
         <Alert tone="info">
-          Después de una venta compartida, la Cuenta queda bloqueada para clientes nuevos durante
-          esta duración. Puede reducirla para una venta puntual, incluso a cero, sin cambiar la
-          configuración general. El cliente que abrió la venta sigue vinculando sus propios
-          dispositivos sin restricción.
+          Esta es la duración que viene por defecto en cada alta compartida. No es un límite: en
+          cada venta el vendedor puede poner la duración que quiera. Con 0 la venta puede sumarse
+          a una Cuenta compartida existente; con una duración mayor a 0 se crea una Cuenta nueva
+          propia para esa venta.
         </Alert>
 
         <CuriosityDurationInput value={duration} onChange={setDuration} />

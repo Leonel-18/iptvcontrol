@@ -426,14 +426,15 @@ debe dejar el predeterminado en 0 y subir la duración caso a caso cuando quiera
 
 **Duración:**
 - Cada Empresa Revendedora define, desde su Menú de Parametrización (`/settings`), una **duración
-  predeterminada** en días/horas/minutos (puede ser `0`, lo que equivale a no usar la funcionalidad
-  y a permitir que las ventas reutilicen Cuentas compartidas).
-- En cada alta compartida nueva, el vendedor puede **reducir** esa duración para esa venta puntual
-  (incluso a `0`), pero **nunca superar** el predeterminado vigente de su Empresa Revendedora. El
-  backend valida el tope, no sólo el selector del wizard.
-- La duración que se guarda es la que estaba vigente al momento de esa venta puntual: si la Empresa
-  Revendedora cambia el predeterminado después, **no afecta retroactivamente** a ventanas ya
-  abiertas.
+  predeterminada** en días/horas/minutos (puede ser `0`, lo que hace que los formularios arranquen
+  en 0 = permitir que la venta reutilice Cuentas compartidas).
+- La predeterminada **sólo precarga los formularios: no es un tope**. En cada alta compartida el
+  vendedor elige la duración que quiera para esa venta puntual, por arriba o por abajo del
+  predeterminado (incluso `0`). El backend sólo exige un número entero de minutos mayor o igual
+  a 0. Las vías que no reciben una duración elegida (ej. resolución de incidencias) usan la
+  predeterminada.
+- La duración que se guarda es la elegida en esa venta puntual: si la Empresa Revendedora cambia
+  el predeterminado después, **no afecta retroactivamente** a ventanas ya abiertas.
 
 **Ciclo de vida:**
 - Se abre automáticamente al confirmar una venta nueva sobre una Cuenta compartida (en el wizard,
