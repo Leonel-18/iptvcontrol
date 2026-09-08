@@ -11,7 +11,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { ColaProveedorService } from '../../queues/cola-proveedor.service';
 import { CuentasService } from '../cuentas/cuentas.service';
-import { calcularCapacidad } from '../cuentas/capacidad.util';
+import { calcularCapacidad, LIMITE_POR_CATEGORIA_EXCLUSIVA } from '../cuentas/capacidad.util';
 
 /**
  * =============================================================================
@@ -125,7 +125,7 @@ export class DashboardService {
   private async resumenRevendedora() {
     const empresaRevendedoraId = this.contexto.empresaRevendedoraId!;
 
-    const [cuentas, dispositivos, clientes, alertas, empresa] = await Promise.all([
+    const [cuentas, dispositivos, clientes, alertas, capacidad, empresa] = await Promise.all([
       this.prisma.db.cuenta.groupBy({
         by: ['estado'],
         where: { empresaRevendedoraId },
@@ -142,6 +142,7 @@ export class DashboardService {
         _count: { _all: true },
       }),
       this.cuentas.alertasCapacidad(empresaRevendedoraId),
+      this.capacidadGlobalRevendedora(empresaRevendedoraId),
       this.prisma.db.empresaRevendedora.findUnique({
         where: { id: empresaRevendedoraId },
         include: { modalidadComercial: true },
@@ -193,8 +194,53 @@ export class DashboardService {
             precio_por_cuenta: Number(empresa.modalidadComercial.precioPorCuenta),
           }
         : null,
+      capacidad,
       alertas_capacidad: alertas,
     };
+  }
+
+  /**
+   * Capacidad utilizada a nivel Empresa Revendedora, por categoría, sobre sus
+   * Cuentas ACTIVAS (las cerradas no ocupan cupos).
+   *
+   * - Cuenta exclusiva: cada categoría habilita 3 asientos; ocupa un asiento por
+   *   Dispositivo fijo/móvil activo o bloqueado por suspensión.
+   * - Cuenta compartida: cada venta 1+1/2+2 compromete la misma cantidad de
+   *   cupos en ambas categorías (una venta 2+2 = 2 cupos fijos + 2 móviles).
+   *
+   * Es un cálculo real (se suma lo que el resto del sistema ya cuenta por
+   * Cuenta con `calcularCapacidad`), no un estimado.
+   */
+  private async capacidadGlobalRevendedora(empresaRevendedoraId: string) {
+    const cuentas = await this.prisma.db.cuenta.findMany({
+      where: { estado: EstadoCuenta.activa, empresaRevendedoraId },
+      select: {
+        esExclusiva: true,
+        dispositivos: { select: { tipo: true, estado: true } },
+        ventasCompartidas: { select: { cuposPorCategoria: true } },
+      },
+    });
+
+    const fijos = { ocupados: 0, limite: 0 };
+    const moviles = { ocupados: 0, limite: 0 };
+    for (const cuenta of cuentas) {
+      fijos.limite += LIMITE_POR_CATEGORIA_EXCLUSIVA;
+      moviles.limite += LIMITE_POR_CATEGORIA_EXCLUSIVA;
+      if (cuenta.esExclusiva) {
+        const cap = calcularCapacidad(cuenta, 0);
+        fijos.ocupados += cap.fijo.ocupados;
+        moviles.ocupados += cap.movil.ocupados;
+      } else {
+        const cupos = (cuenta.ventasCompartidas ?? []).reduce(
+          (total, venta) => total + venta.cuposPorCategoria,
+          0,
+        );
+        fijos.ocupados += cupos;
+        moviles.ocupados += cupos;
+      }
+    }
+
+    return { fijos, moviles };
   }
 
   /**
