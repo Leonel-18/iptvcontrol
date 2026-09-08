@@ -1,15 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
   Building2,
   CheckCircle2,
   CreditCard,
   MonitorPlay,
   RefreshCw,
   ShieldAlert,
-  UserPlus,
   Users,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -382,8 +381,67 @@ const MedidorDeCupos = ({ ocupados, limite }: { ocupados: number; limite: number
   );
 };
 
-const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'reseller' }> }) => {
+const colorPrincipal = (tono: "azure" | "signal" | "warn"): string =>
+  tono === "azure"
+    ? "text-azure-600 dark:text-azure-400"
+    : tono === "signal"
+      ? "text-signal"
+      : "text-warn";
+
+const TilePrincipal = ({
+  a,
+  icono,
+  etiqueta,
+  valor,
+  tono = "azure",
+  children,
+}: {
+  a: string;
+  icono: ReactNode;
+  etiqueta: string;
+  valor: ReactNode;
+  tono?: "azure" | "signal" | "warn";
+  children?: ReactNode;
+}) => (
+  <Link
+    to={a}
+    className="superficie group block rounded-lg border p-4 transition-colors hover:border-azure-300 dark:hover:border-azure-700"
+  >
+    <div className="flex items-start justify-between gap-2">
+      <p className="eyebrow">{etiqueta}</p>
+      <span className="rounded-lg bg-navy-100 p-1.5 text-azure-600 dark:bg-navy-800 dark:text-azure-400">
+        {icono}
+      </span>
+    </div>
+    <p className={cn("mt-2 font-display text-3xl font-bold tabular-nums", colorPrincipal(tono))}>
+      {valor}
+    </p>
+    {children}
+  </Link>
+);
+
+const FilaMini = ({
+  etiqueta,
+  valor,
+  resaltar = false,
+}: {
+  etiqueta: string;
+  valor: ReactNode;
+  resaltar?: boolean;
+}) => (
+  <p className="flex items-baseline justify-between gap-3">
+    <span className="texto-suave">{etiqueta}</span>
+    <span className={cn("font-medium tabular-nums", resaltar && "text-signal")}>{valor}</span>
+  </p>
+);
+
+const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: "reseller" }> }) => {
   const hayAlertas = data.alertas_capacidad.length > 0;
+  const { fijos, moviles } = data.capacidad;
+  const totalOcupados = fijos.ocupados + moviles.ocupados;
+  const totalLimite = fijos.limite + moviles.limite;
+  const porcentajeTotal =
+    totalLimite > 0 ? Math.round((totalOcupados / totalLimite) * 100) : 0;
 
   return (
     <>
@@ -391,8 +449,10 @@ const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'resel
         <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-sm">
           <AlertTriangle className="size-4 shrink-0 text-warn" />
           <span className="font-medium">
-            {data.alertas_capacidad.length}{' '}
-            {data.alertas_capacidad.length === 1 ? 'cuenta cerca del límite' : 'cuentas cerca del límite'}
+            {data.alertas_capacidad.length}{" "}
+            {data.alertas_capacidad.length === 1
+              ? "cuenta cerca del límite"
+              : "cuentas cerca del límite"}
           </span>
           <span className="texto-suave">
             · el próximo alta puede requerir buscar otra cuenta o crear una nueva.
@@ -400,198 +460,168 @@ const PanelRevendedora = ({ data }: { data: Extract<DashboardData, { rol: 'resel
         </div>
       ) : null}
 
-      <div className="grid items-start gap-4 lg:grid-cols-12">
-        {/* Columna principal: estado + capacidad + alertas */}
-        <div className="space-y-4 lg:col-span-8">
-          <Card>
-            <CardContent className="p-5">
-              {/* Tres números primarios, integrados y sin cards sueltas */}
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 sm:divide-x sm:divide-[rgb(var(--borde))] sm:gap-0">
-                <div className="sm:pr-5">
-                  <p className="eyebrow">Clientes activos</p>
-                  <p className="mt-1 font-display text-3xl font-bold tabular-nums text-azure-600 dark:text-azure-400">
-                    {formatearNumero(data.clientes_finales.activos)}
-                  </p>
-                  <div className="mt-3 space-y-1 text-xs">
-                    <p className="flex items-baseline justify-between gap-3">
-                      <span className="texto-suave">En exclusivas</span>
-                      <span className="font-medium tabular-nums">
-                        {formatearNumero(data.clientes_finales.activos_exclusivos)}
-                      </span>
-                    </p>
-                    <p className="flex items-baseline justify-between gap-3">
-                      <span className="texto-suave">En compartidas</span>
-                      <span className="font-medium tabular-nums">
-                        {formatearNumero(data.clientes_finales.activos_compartidos)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
+      {/* Resumen: los tres números principales, cada uno lleva a su listado */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <TilePrincipal
+          a="/customers"
+          icono={<Users className="size-4" />}
+          etiqueta="Clientes activos"
+          valor={formatearNumero(data.clientes_finales.activos)}
+        >
+          <div className="mt-3 space-y-1 text-xs">
+            <FilaMini
+              etiqueta="En exclusivas"
+              valor={formatearNumero(data.clientes_finales.activos_exclusivos)}
+            />
+            <FilaMini
+              etiqueta="En compartidas"
+              valor={formatearNumero(data.clientes_finales.activos_compartidos)}
+            />
+          </div>
+        </TilePrincipal>
 
-                <div className="sm:px-5">
-                  <p className="eyebrow">Cuentas activas</p>
-                  <p className="mt-1 font-display text-3xl font-bold tabular-nums text-azure-600 dark:text-azure-400">
-                    {formatearNumero(data.cuentas.activas)}
-                  </p>
-                  <p className="mt-3 text-xs texto-suave">
-                    {data.cuentas.cerradas > 0
-                      ? `${formatearNumero(data.cuentas.cerradas)} cerradas`
-                      : 'Ninguna cerrada'}
-                  </p>
-                </div>
+        <TilePrincipal
+          a="/accounts"
+          icono={<CreditCard className="size-4" />}
+          etiqueta="Cuentas activas"
+          valor={formatearNumero(data.cuentas.activas)}
+        >
+          <p className="mt-3 text-xs texto-suave">
+            {data.cuentas.cerradas > 0
+              ? `${formatearNumero(data.cuentas.cerradas)} cerradas`
+              : "Ninguna cerrada"}
+          </p>
+        </TilePrincipal>
 
-                <div className="sm:pl-5">
-                  <p className="eyebrow">Dispositivos activos</p>
-                  <p className="mt-1 font-display text-3xl font-bold tabular-nums text-azure-600 dark:text-azure-400">
-                    {formatearNumero(data.dispositivos.activos)}
-                  </p>
-                  <div className="mt-3 space-y-1 text-xs">
-                    <p className="flex items-baseline justify-between gap-3">
-                      <span className="texto-suave">Disponibles</span>
-                      <span
-                        className={cn(
-                          'font-medium tabular-nums',
-                          data.dispositivos.disponibles > 0 && 'text-signal',
-                        )}
-                      >
-                        {formatearNumero(data.dispositivos.disponibles)}
-                      </span>
-                    </p>
-                    <p className="flex items-baseline justify-between gap-3">
-                      <span className="texto-suave">Bloqueados por suspensión</span>
-                      <span className="font-medium tabular-nums">
-                        {formatearNumero(data.dispositivos.bloqueados)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
+        <TilePrincipal
+          a="/devices"
+          icono={<MonitorPlay className="size-4" />}
+          etiqueta="Dispositivos activos"
+          valor={formatearNumero(data.dispositivos.activos)}
+        >
+          <div className="mt-3 space-y-1 text-xs">
+            <FilaMini
+              etiqueta="Disponibles"
+              valor={formatearNumero(data.dispositivos.disponibles)}
+              resaltar={data.dispositivos.disponibles > 0}
+            />
+            <FilaMini
+              etiqueta="Bloqueados por suspensión"
+              valor={formatearNumero(data.dispositivos.bloqueados)}
+            />
+          </div>
+        </TilePrincipal>
+      </section>
+
+      <section className="mt-4 grid gap-4 lg:grid-cols-3">
+        {/* Capacidad utilizada: total claro + desglose por categoría */}
+        <Card className="lg:col-span-2">
+          <CardContent className="p-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="eyebrow">Capacidad utilizada</p>
+                <p
+                  className={cn(
+                    "mt-1 font-display text-3xl font-bold tabular-nums",
+                    porcentajeTotal >= 100 ? "text-warn" : "text-azure-600 dark:text-azure-400",
+                  )}
+                >
+                  {totalLimite > 0 ? `${porcentajeTotal}%` : "—"}
+                </p>
               </div>
+              <p className="text-xs texto-suave">
+                {totalLimite > 0
+                  ? `${totalOcupados} de ${totalLimite} cupos en sus cuentas activas`
+                  : "Aparece cuando cree su primera cuenta activa"}
+              </p>
+            </div>
 
-              <div className="my-5 h-px bg-[rgb(var(--borde))]" />
-
-              {/* Capacidad utilizada: barras reales por categoría */}
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <p className="text-sm font-semibold">Capacidad utilizada</p>
-                <span className="text-2xs texto-suave">Sobre sus cuentas activas</span>
+            {totalLimite > 0 ? (
+              <div className="mt-5 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                <BarraCapacidad etiqueta="Cupos fijos" dato={fijos} />
+                <BarraCapacidad etiqueta="Cupos móviles" dato={moviles} />
               </div>
-              {data.capacidad.fijos.limite > 0 || data.capacidad.moviles.limite > 0 ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <BarraCapacidad etiqueta="Cupos fijos" dato={data.capacidad.fijos} />
-                  <BarraCapacidad etiqueta="Cupos móviles" dato={data.capacidad.moviles} />
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {/* Modalidad comercial: información en segundo plano */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Modalidad comercial</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            {data.modalidad_comercial ? (
+              <dl className="space-y-2">
+                <div className="flex justify-between gap-3">
+                  <dt className="texto-suave">Modalidad</dt>
+                  <dd className="font-medium">
+                    {traducir(commercialPlanTypeLabels, data.modalidad_comercial.tipo)}
+                  </dd>
                 </div>
-              ) : (
-                <p className="text-sm texto-suave">
-                  Todavía no tiene cuentas activas: la capacidad aparece cuando cree la primera.
-                </p>
-              )}
+                <div className="flex justify-between gap-3">
+                  <dt className="texto-suave">Escala</dt>
+                  <dd className="id-tecnico">{data.modalidad_comercial.escala}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="texto-suave">Precio por cuenta</dt>
+                  <dd className="font-medium tabular-nums">
+                    {formatearImporte(data.modalidad_comercial.precio_por_cuenta)}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="texto-suave">
+                Sin modalidad asignada. Comuníquese con el operador principal.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </section>
 
-              {!hayAlertas ? (
-                <p className="mt-4 flex items-center gap-1.5 text-xs text-signal">
-                  <CheckCircle2 className="size-3.5" />
-                  Ninguna cuenta cerca del límite.
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          {hayAlertas ? (
-            <Card>
-              <CardHeader className="flex-row items-center justify-between gap-2">
-                <CardTitle className="text-base">Cuentas cerca del límite</CardTitle>
-                <span className="rounded-full bg-warn/10 px-2 py-0.5 font-mono text-2xs text-warn">
-                  {data.alertas_capacidad.length}
-                </span>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                {data.alertas_capacidad.map((alerta) => (
-                  <div
-                    key={alerta.cuenta_id}
-                    className="flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-navy-100/60 dark:hover:bg-navy-800/50"
-                  >
-                    <div className="min-w-0">
-                      <Link
-                        to={`/accounts/${alerta.cuenta_id}`}
-                        className="id-tecnico text-azure-600 hover:underline dark:text-azure-400"
-                      >
-                        {alerta.proveedor_cuenta_id ?? alerta.cuenta_id.slice(0, 8)}
-                      </Link>
-                      <p className="truncate text-xs texto-suave">{alerta.mensaje}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <MedidorDeCupos ocupados={alerta.ocupados} limite={alerta.limite} />
-                      <span className="font-mono text-2xs tabular-nums">
-                        {alerta.ocupados}/{alerta.limite}
-                      </span>
-                      <ArrowRight className="size-3.5 texto-suave" />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-
-        {/* Columna lateral: acciones + modalidad comercial en segundo plano */}
-        <aside className="space-y-4 lg:col-span-4">
+      {/* Cuentas cerca del límite */}
+      <section className="mt-4">
+        {hayAlertas ? (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Acciones</CardTitle>
+            <CardHeader className="flex-row items-center justify-between gap-2">
+              <CardTitle className="text-base">Cuentas cerca del límite</CardTitle>
+              <span className="rounded-full bg-warn/10 px-2 py-0.5 font-mono text-2xs text-warn">
+                {data.alertas_capacidad.length}
+              </span>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button asChild variant="primary" className="w-full justify-start">
-                <Link to="/customers/new">
-                  <UserPlus />
-                  Dar de alta un cliente
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" className="w-full justify-start">
-                <Link to="/accounts">
-                  <CreditCard />
-                  Cuentas y credenciales
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" className="w-full justify-start">
-                <Link to="/devices?status=disponible">
-                  <MonitorPlay />
-                  Reasignar disponibles ({formatearNumero(data.dispositivos.disponibles)})
-                </Link>
-              </Button>
+            <CardContent className="space-y-1">
+              {data.alertas_capacidad.map((alerta) => (
+                <div
+                  key={alerta.cuenta_id}
+                  className="flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-navy-100/60 dark:hover:bg-navy-800/50"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      to={`/accounts/${alerta.cuenta_id}`}
+                      className="id-tecnico text-azure-600 hover:underline dark:text-azure-400"
+                    >
+                      {alerta.proveedor_cuenta_id ?? alerta.cuenta_id.slice(0, 8)}
+                    </Link>
+                    <p className="truncate text-xs texto-suave">{alerta.mensaje}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <MedidorDeCupos ocupados={alerta.ocupados} limite={alerta.limite} />
+                    <span className="font-mono text-2xs tabular-nums">
+                      {alerta.ocupados}/{alerta.limite}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Modalidad comercial</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs">
-              {data.modalidad_comercial ? (
-                <dl className="space-y-1.5">
-                  <div className="flex justify-between gap-3">
-                    <dt className="texto-suave">Modalidad</dt>
-                    <dd className="font-medium">
-                      {traducir(commercialPlanTypeLabels, data.modalidad_comercial.tipo)}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="texto-suave">Escala</dt>
-                    <dd className="id-tecnico">{data.modalidad_comercial.escala}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="texto-suave">Precio por cuenta</dt>
-                    <dd className="font-medium tabular-nums">
-                      {formatearImporte(data.modalidad_comercial.precio_por_cuenta)}
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="texto-suave">
-                  Sin modalidad asignada. Comuníquese con el operador principal.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </aside>
-      </div>
+        ) : (
+          <p className="flex items-center gap-1.5 rounded-md border border-signal/30 bg-signal/10 px-3 py-2 text-sm text-signal">
+            <CheckCircle2 className="size-4 shrink-0" />
+            Ninguna cuenta cerca del límite: el próximo alta entra sin problemas en sus cuentas
+            activas.
+          </p>
+        )}
+      </section>
     </>
   );
 };
