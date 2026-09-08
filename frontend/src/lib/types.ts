@@ -184,6 +184,8 @@ export interface CapacityAlert {
   dispositivos: string;
   fijos: string;
   moviles: string;
+  ocupados: number;
+  limite: number;
   completa: boolean;
   mensaje: string;
 }
@@ -478,6 +480,11 @@ export interface ResellerDashboard {
     dados_de_baja: number;
     activos_exclusivos: number;
     activos_compartidos: number;
+  };
+  /** Cupos fijos/móviles comprometidos sobre el total de Cuentas activas. */
+  capacidad: {
+    fijos: { ocupados: number; limite: number };
+    moviles: { ocupados: number; limite: number };
   };
   modalidad_comercial: {
     tipo: string;

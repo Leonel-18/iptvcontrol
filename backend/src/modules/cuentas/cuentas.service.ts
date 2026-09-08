@@ -839,6 +839,8 @@ export class CuentasService {
           : `${capacidad.ocupados} de ${capacidad.limite} cupos por categoría`,
         fijos: `${capacidad.fijo.ocupados} de ${capacidad.fijo.limite}`,
         moviles: `${capacidad.movil.ocupados} de ${capacidad.movil.limite}`,
+        ocupados: capacidad.ocupados,
+        limite: capacidad.limite,
         completa: capacidad.completa,
         mensaje: capacidad.completa
           ? capacidad.esExclusiva
