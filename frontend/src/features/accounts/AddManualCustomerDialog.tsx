@@ -262,9 +262,8 @@ export const AddManualCustomerDialog = ({
           ) : !cuenta.es_exclusiva && settings.data ? (
             <CuriosityDurationInput
               value={duracion}
-              maxMinutes={settings.data.duracion_predeterminada_minutos}
               onChange={setDuracion}
-              help="Ponga 0 días, 0 horas y 0 minutos si no quiere bloquear la Cuenta para otro cliente."
+              help="Arranca con la duración predeterminada de su empresa, pero puede poner la que quiera. Con 0 la venta puede compartir esta Cuenta; con más de 0 se deja reservada para el cliente."
             />
           ) : null}
 

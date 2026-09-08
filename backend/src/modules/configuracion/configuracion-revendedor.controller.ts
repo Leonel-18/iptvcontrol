@@ -11,7 +11,7 @@ export class ConfiguracionRevendedorController {
   constructor(private readonly configuracion: ConfiguracionService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Obtiene la duración predeterminada de la Ventana de curiosidad.' })
+  @ApiOperation({ summary: 'Obtiene la duración predeterminada de la Ventana de Alta.' })
   obtener() {
     return this.configuracion.obtenerVentanaCuriosidad();
   }

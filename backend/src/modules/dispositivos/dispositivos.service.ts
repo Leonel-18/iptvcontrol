@@ -848,7 +848,7 @@ export class DispositivosService {
       // Reasignar un Dispositivo liberado a un cliente SIN venta previa en esta
       // Cuenta es, en los hechos, otra forma de alta (regla de negocio 6: el
       // cliente nuevo recibe las mismas credenciales que el saliente). Por eso
-      // respeta el mismo bloqueo de la Ventana de curiosidad que el wizard.
+      // respeta el mismo bloqueo de la Ventana de Alta que el wizard.
       // Nota: a diferencia del wizard, este camino NO crea `VentaCompartida` ni
       // toca los contadores de SENSA (comportamiento previo a esta Fase, sin
       // cambios acá) — pendiente de decisión de negocio si corresponde

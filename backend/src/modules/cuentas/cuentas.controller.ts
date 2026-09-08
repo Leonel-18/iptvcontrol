@@ -162,7 +162,7 @@ export class CuentasController {
   @Post(':id/curiosity-window/release')
   @SoloRevendedor()
   @ApiOperation({
-    summary: 'Levanta manualmente la Ventana de curiosidad activa de una Cuenta compartida.',
+    summary: 'Levanta manualmente la Ventana de Alta activa de una Cuenta compartida.',
   })
   levantarVentanaCuriosidad(@Param('id', ParseUUIDPipe) id: string) {
     return this.ventanasCuriosidad.levantarManualmente(id);

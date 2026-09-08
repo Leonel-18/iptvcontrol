@@ -82,7 +82,27 @@ describe('VentanasCuriosidadService', () => {
     });
   });
 
-  it('rechaza una duración superior al predeterminado de la Empresa', async () => {
+  it('admite una duración superior a la predeterminada (no es un tope)', async () => {
+    const { servicio, tx, ventanaCreate } = crear({ predeterminada: 60 });
+
+    await servicio.abrirPorNuevaVentaEnTx(tx, {
+      cuentaId: 'cuenta-1',
+      clienteFinalId: 'cliente-1',
+      empresaRevendedoraId: 'empresa-1',
+      ventaCompartidaId: 'venta-1',
+      duracionSolicitadaMinutos: 120,
+    });
+
+    expect(ventanaCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        duracionPredeterminadaMinutos: 60,
+        duracionAplicadaMinutos: 120,
+        finRealEn: null,
+      }),
+    });
+  });
+
+  it('rechaza una duración negativa o no entera', async () => {
     const { servicio, tx, ventanaCreate } = crear({ predeterminada: 60 });
 
     await expect(
@@ -91,9 +111,9 @@ describe('VentanasCuriosidadService', () => {
         clienteFinalId: 'cliente-1',
         empresaRevendedoraId: 'empresa-1',
         ventaCompartidaId: 'venta-1',
-        duracionSolicitadaMinutos: 61,
+        duracionSolicitadaMinutos: -5,
       }),
-    ).rejects.toThrow('entre 0 y 60 minutos');
+    ).rejects.toThrow('mayor o igual a 0');
     expect(ventanaCreate).not.toHaveBeenCalled();
   });
 

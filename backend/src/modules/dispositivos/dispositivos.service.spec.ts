@@ -395,16 +395,16 @@ describe('DispositivosService — altaAdicional reutiliza la Cuenta exclusiva ex
 
 /**
  * =============================================================================
- * reasignar() y la Ventana de curiosidad
+ * reasignar() y la Ventana de Alta
  * =============================================================================
  * Reasignar un Dispositivo `disponible` a un Cliente Final SIN venta previa en
  * esa Cuenta compartida es, en los hechos, otra forma de alta (regla de
  * negocio 6: credenciales compartidas sin rotación). Debe respetar el mismo
- * bloqueo que el wizard normal cuando hay una Ventana de curiosidad activa de
+ * bloqueo que el wizard normal cuando hay una Ventana de Alta activa de
  * OTRO cliente.
  * =============================================================================
  */
-describe('DispositivosService — reasignar y la Ventana de curiosidad', () => {
+describe('DispositivosService — reasignar y la Ventana de Alta', () => {
   const dispositivoDisponible = {
     id: 'dispositivo-1',
     cuentaId: 'cuenta-1',
