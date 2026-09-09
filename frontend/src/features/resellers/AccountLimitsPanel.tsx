@@ -26,7 +26,9 @@ export const AccountLimitsPanel = ({ variante = "tarjeta" }: { variante?: "tarje
 
   const { comerciales, cuentas_max_crear_mensual, resumen } = consulta.data;
   const limite = comerciales.cuentas_maximas;
-  const actuales = resumen.cuentas_activas + resumen.cuentas_cerradas;
+  // Las Cuentas cerradas (ya borradas en el proveedor) NO ocupan capacidad:
+  // "actuales" son las que siguen activas.
+  const actuales = resumen.cuentas_activas;
   const disponibles = Math.max(0, limite - actuales);
 
   const limiteMes = cuentas_max_crear_mensual;
