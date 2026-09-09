@@ -168,6 +168,7 @@ export class RevendedorasService {
         (SELECT COUNT(*)::bigint FROM "cuenta" c
           WHERE c."empresa_revendedora_id" = er."id"
             AND c."procedencia" = 'creada_en_sistema'
+            AND c."estado" = 'activa'
             AND c."creado_en" >= ${inicioMes} AND c."creado_en" < ${finMes}) AS creadas_mes_sistema,
         (SELECT COUNT(*)::bigint FROM "cuenta" c
           WHERE c."empresa_revendedora_id" = er."id" AND c."estado" = 'activa') AS cuentas_activas,
@@ -228,12 +229,14 @@ export class RevendedorasService {
       this.prisma.db.clienteFinal.count({
         where: { empresaRevendedoraId: id, estado: 'activo' },
       }),
-      // Cuentas creadas por IPTVControl en el mes calendario AR (las importadas
-      // no consumen el cupo mensual).
+      // Cuentas creadas por IPTVControl en el mes calendario AR y que siguen
+      // ACTIVAS (las cerradas en el proveedor ya liberaron su cupo y no se
+      // cuentan; las importadas no consumen cupo mensual).
       this.prisma.db.cuenta.count({
         where: {
           empresaRevendedoraId: id,
           procedencia: 'creada_en_sistema',
+          estado: EstadoCuenta.activa,
           creadoEn: { gte: inicioMesArgentina(new Date()), lt: finMesArgentina(new Date()) },
         },
       }),
