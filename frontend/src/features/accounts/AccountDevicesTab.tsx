@@ -341,9 +341,13 @@ export const AccountDevicesTab = ({
                   </span>
                 </TD>
                 <TD>
-                  <span className="text-sm texto-suave">
-                    {dispositivo.tipo_proveedor ?? "—"}
-                  </span>
+                  {dispositivo.tipo ? (
+                    <DeviceTypeBadge tipo={dispositivo.tipo} />
+                  ) : (
+                    <span className="text-sm texto-suave">
+                      {dispositivo.tipo_proveedor ?? "—"}
+                    </span>
+                  )}
                 </TD>
                 <TD>
                   <ProviderDeviceClassBadge

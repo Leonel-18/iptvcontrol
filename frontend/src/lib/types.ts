@@ -150,6 +150,9 @@ export interface CuriosityWindow {
 export interface AccountProviderDevice {
   proveedor_device_id: string;
   mac?: string | null;
+  /** Tipo normalizado por IPTVControl: `fijo` (stationary) o `movil` (mobile/cloud). */
+  tipo?: "fijo" | "movil" | null;
+  /** Tipo tal como lo reporta el Proveedor (glosario SENSA), para diagnóstico. */
   tipo_proveedor?: string | null;
   nombre?: string | null;
   modelo?: string | null;
