@@ -644,7 +644,9 @@ export class CuentasProvisioningService {
    * Valida el límite mensual de creación de Cuentas de la Empresa Revendedora
    * (`cuentas_max_crear_mensual`, default 10). Se evalúa por mes calendario AR
    * y sólo cuentan las Cuentas creadas por IPTVControl (`procedencia =
-   * 'creada_en_sistema'`); las importadas del Proveedor no consumen cupo.
+   * 'creada_en_sistema'`) que siguen ACTIVAS: una Cuenta cerrada (ya borrada en
+   * el Proveedor) libera su cupo y no impide crear otra. Las importadas del
+   * Proveedor no consumen cupo.
    *
    * Corre dentro de la misma transacción que crea la Cuenta, serializada con un
    * advisory lock por Empresa + mes, para que dos altas simultáneas no crucen
@@ -662,6 +664,7 @@ export class CuentasProvisioningService {
       where: {
         empresaRevendedoraId: empresa.id,
         procedencia: 'creada_en_sistema',
+        estado: EstadoCuenta.activa,
         creadoEn: { gte: inicioMesArgentina(ahora), lt: finMesArgentina(ahora) },
       },
     });
