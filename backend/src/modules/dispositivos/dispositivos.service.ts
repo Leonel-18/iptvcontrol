@@ -818,6 +818,66 @@ export class DispositivosService {
     });
   }
 
+  /**
+   * Baja definitiva de un Dispositivo: borra la fila de la base local (y lo
+   * elimina en el Proveedor si todavía existía allí). Sirve para limpiar filas
+   * que quedaron huérfanas: `disponible`, `pendiente` sin proveedor, o un equipo
+   * que ya no se quiere conservar.
+   *
+   * Único caso bloqueado: un Dispositivo `bloqueado_por_suspensión`. Su
+   * capacidad queda reservada para el Cliente Final suspendido (regla de
+   * negocio 3): borrarlo en silencio la liberaría por una vía que no existe.
+   * Primero hay que reactivar al cliente o pasarlo a baja definitiva.
+   */
+  async eliminarDefinitivamente(
+    dispositivoId: string,
+    operadorPrincipalId: string,
+  ): Promise<{ id: string }> {
+    const dispositivo = await this.prisma.db.dispositivo.findUnique({
+      where: { id: dispositivoId },
+    });
+    if (!dispositivo) throw new NotFoundException('El Dispositivo no existe.');
+
+    if (dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension) {
+      throw new BadRequestException(
+        'Este Dispositivo está bloqueado por suspensión de su Cliente Final. ' +
+          'Para liberarlo hay que reactivar al cliente o pasarlo a baja definitiva.',
+      );
+    }
+
+    if (dispositivo.proveedorDeviceId) {
+      await this.proveedor.eliminarDispositivo(operadorPrincipalId, dispositivo.proveedorDeviceId);
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.solicitudVinculacionDispositivo.updateMany({
+        where: {
+          dispositivoId,
+          estado: {
+            in: [EstadoSolicitudVinculacion.pendiente, EstadoSolicitudVinculacion.observando],
+          },
+        },
+        data: { estado: EstadoSolicitudVinculacion.cancelado },
+      });
+      await tx.dispositivo.delete({ where: { id: dispositivoId } });
+    });
+
+    await this.audit.registrar({
+      accion: AccionAuditoria.baja_dispositivo,
+      entidad: EntidadAuditada.Dispositivo,
+      entidadId: dispositivoId,
+      empresaRevendedoraId: dispositivo.empresaRevendedoraId,
+      detalle: {
+        cuenta_id: dispositivo.cuentaId,
+        cliente_final_id: dispositivo.clienteFinalId,
+        proveedor_device_id: dispositivo.proveedorDeviceId,
+        eliminacion_definitiva: true,
+      },
+    });
+
+    return { id: dispositivoId };
+  }
+
   async reasignar(
     dispositivoId: string,
     clienteFinalId: string,

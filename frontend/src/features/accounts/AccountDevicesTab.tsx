@@ -57,6 +57,9 @@ export const AccountDevicesTab = ({
     AccountDetail["dispositivos"][number] | null
   >(null);
   const [aEliminar, setAEliminar] = useState<AccountProviderDevice | null>(null);
+  const [aBajaDefinitiva, setABajaDefinitiva] = useState<
+    AccountDetail["dispositivos"][number] | null
+  >(null);
   const [aVincular, setAVincular] = useState<AccountProviderDevice | null>(null);
   const [clienteFinalId, setClienteFinalId] = useState("");
   const [busquedaCliente, setBusquedaCliente] = useState("");
@@ -132,6 +135,19 @@ export const AccountDevicesTab = ({
     onError: (causa: ApiError) => toast.error(causa.message),
   });
 
+  const bajaDefinitiva = useMutation({
+    mutationFn: (dispositivoId: string) =>
+      api(`/devices/${dispositivoId}/remove`, { metodo: "POST" }),
+    onSuccess: () => {
+      toast.success("Dispositivo eliminado definitivamente.");
+      setABajaDefinitiva(null);
+      void queryClient.invalidateQueries({ queryKey: ["account", cuenta.id] });
+      void queryClient.invalidateQueries({ queryKey: ["devices"] });
+      void queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
   const cerrarVinculacion = () => {
     setAVincular(null);
     setClienteFinalId("");
@@ -153,7 +169,10 @@ export const AccountDevicesTab = ({
         dispositivo.cliente_final,
     );
   const mostrarAcciones =
-    !esOperador && (puedeCorregir || dispositivosProveedor.length > 0);
+    !esOperador &&
+    (puedeCorregir ||
+      dispositivosProveedor.length > 0 ||
+      cuenta.dispositivos.length > 0);
   const sinDispositivos =
     cuenta.dispositivos.length === 0 && dispositivosProveedor.length === 0;
 
@@ -286,18 +305,31 @@ export const AccountDevicesTab = ({
                 ) : null}
                 {mostrarAcciones ? (
                   <TD align="right">
-                    {dispositivo.estado === "activo" &&
-                    dispositivo.estado_vinculacion === "vinculado" &&
-                    dispositivo.cliente_final ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setACorregir(dispositivo)}
-                      >
-                        <UserCog />
-                        Corregir
-                      </Button>
-                    ) : null}
+                    <div className="flex justify-end gap-2">
+                      {dispositivo.estado === "activo" &&
+                      dispositivo.estado_vinculacion === "vinculado" &&
+                      dispositivo.cliente_final ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setACorregir(dispositivo)}
+                        >
+                          <UserCog />
+                          Corregir
+                        </Button>
+                      ) : null}
+                      {dispositivo.estado !== "bloqueado_por_suspension" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-alert hover:bg-alert/10"
+                          onClick={() => setABajaDefinitiva(dispositivo)}
+                        >
+                          <Trash2 />
+                          Dar de baja
+                        </Button>
+                      ) : null}
+                    </div>
                   </TD>
                 ) : null}
               </TR>
@@ -409,6 +441,34 @@ export const AccountDevicesTab = ({
               equipo podría ser el legítimo de la venta.
             </span>
           </div>
+        </Alert>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        abierto={Boolean(aBajaDefinitiva)}
+        onCambio={(abierto) => !abierto && setABajaDefinitiva(null)}
+        titulo="Dar de baja definitiva al dispositivo"
+        descripcion={
+          aBajaDefinitiva?.proveedor_device_id
+            ? "Se elimina en el proveedor y la fila se borra del sistema. Ya no aparecerá como dispositivo de esta Cuenta."
+            : "La fila del dispositivo se borra del sistema (todavía no estaba en el proveedor)."
+        }
+        etiquetaConfirmar="Dar de baja"
+        tono="danger"
+        cargando={bajaDefinitiva.isPending}
+        onConfirmar={() =>
+          aBajaDefinitiva && bajaDefinitiva.mutate(aBajaDefinitiva.id)
+        }
+      >
+        <Alert tone="danger">
+          {aBajaDefinitiva?.cliente_final ? (
+            <>
+              Este equipo pertenece a {aBajaDefinitiva.cliente_final.nombre}. Al dar de baja el
+              dispositivo, ese cliente deja de tenerlo activo.
+            </>
+          ) : (
+            "Esta acción no se puede deshacer: la fila desaparece y no queda como dispositivo disponible."
+          )}
         </Alert>
       </ConfirmDialog>
 

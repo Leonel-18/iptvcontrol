@@ -142,6 +142,21 @@ export class DispositivosController {
     };
   }
 
+  @Post(':id/remove')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Baja definitiva de un Dispositivo (borra la fila).',
+    description:
+      'Elimina el Dispositivo en el Proveedor si todavía existía y borra la fila de la base ' +
+      'local. Pensado para limpiar filas huérfanas: `disponible`, pendientes sin proveedor o ' +
+      'equipos que ya no se quieren conservar. Los bloqueados por suspensión no se pueden borrar: ' +
+      'hay que reactivar al cliente o pasarlo a baja definitiva primero.',
+  })
+  async eliminarDefinitivamente(@Param('id', ParseUUIDPipe) id: string) {
+    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId();
+    return this.dispositivos.eliminarDefinitivamente(id, operadorPrincipalId);
+  }
+
   @Post(':id/correct-binding')
   @SoloRevendedor()
   @ApiOperation({
