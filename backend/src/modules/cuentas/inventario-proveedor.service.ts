@@ -13,9 +13,29 @@ import { DispositivoProveedor } from '../../proveedor/proveedor-adapter.interfac
 
 export type ClasificacionDispositivoProveedor = 'vinculado' | 'desconocido';
 
+/** Traduce el tipo que reporta SENSA al tipo interno de IPTVControl. */
+export const tipoProveedorANormalizado = (
+  tipo: string | null | undefined,
+): 'fijo' | 'movil' | null => {
+  const normalizado = (tipo ?? '').trim().toLowerCase();
+  if (normalizado === 'stationary' || normalizado === 'fijo') return 'fijo';
+  if (
+    normalizado === 'mobile' ||
+    normalizado === 'movil' ||
+    normalizado === 'cloud_client' ||
+    normalizado === 'cloud_cliente'
+  ) {
+    return 'movil';
+  }
+  return null;
+};
+
 export interface DispositivoInventarioDto {
   proveedor_device_id: string;
   mac?: string | null;
+  /** Tipo normalizado por IPTVControl: fijo (stationary) o movil (mobile/cloud). */
+  tipo?: 'fijo' | 'movil' | null;
+  /** Tipo tal como lo reporta el Proveedor (glosario SENSA). */
   tipo_proveedor?: string | null;
   nombre?: string | null;
   modelo?: string | null;
@@ -131,6 +151,7 @@ export class InventarioProveedorService {
         dispositivos.push({
           proveedor_device_id: item.proveedorDeviceId,
           mac: esOperador ? undefined : item.mac,
+          tipo: tipoProveedorANormalizado(item.tipo),
           tipo_proveedor: item.tipo,
           nombre: esOperador ? undefined : item.nombre,
           modelo: esOperador ? undefined : item.modelo,
@@ -167,6 +188,7 @@ export class InventarioProveedorService {
       dispositivos.push({
         proveedor_device_id: item.proveedorDeviceId,
         mac: esOperador ? undefined : item.mac,
+        tipo: tipoProveedorANormalizado(item.tipo),
         tipo_proveedor: item.tipo,
         nombre: esOperador ? undefined : item.nombre,
         modelo: esOperador ? undefined : item.modelo,
