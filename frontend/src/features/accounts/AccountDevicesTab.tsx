@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   RefreshCw,
@@ -6,16 +6,15 @@ import {
   UserCog,
   UserPlus,
 } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { api, ApiError, type Paginado } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { formatearFecha, formatearMac } from "@/lib/utils";
 import type {
   AccountDetail,
   AccountProviderDevice,
   AccountProviderInventory,
-  Customer,
 } from "@/lib/types";
 import {
   CopyableId,
@@ -28,7 +27,6 @@ import {
   Button,
   Field,
   Input,
-  Skeleton,
 } from "@/components/ui/primitives";
 import {
   ConfirmDialog,
@@ -64,18 +62,19 @@ export const AccountDevicesTab = ({
   const [clienteFinalId, setClienteFinalId] = useState("");
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [crearClienteAbierto, setCrearClienteAbierto] = useState(false);
-  const busquedaDiferida = useDeferredValue(busquedaCliente);
   const dispositivosProveedor = getUnlinkedProviderDevices(cuenta, inventario);
   const clienteExclusivo = cuenta.cliente_final_exclusivo;
 
-  const clientes = useQuery({
-    queryKey: ["customers", "incident-link", busquedaDiferida],
-    queryFn: () =>
-      api<Paginado<Customer>>("/customers", {
-        params: { status: "activo", q: busquedaDiferida, per_page: 100 },
-      }),
-    enabled: Boolean(aVincular) && !cuenta.es_exclusiva,
-  });
+  // Al vincular un equipo detectado en esta Cuenta, el destinatario sólo puede
+  // ser un Cliente Final que YA pertenezca a esta Cuenta (no cualquiera de la
+  // Empresa): un equipo que aparece acá usó las credenciales de esta Cuenta.
+  const terminoBusqueda = busquedaCliente.trim().toLowerCase();
+  const clientesDeLaCuenta = (cuenta.clientes_finales ?? []).filter(
+    (cliente) =>
+      !terminoBusqueda ||
+      (cliente.nombre ?? "").toLowerCase().includes(terminoBusqueda) ||
+      String(cliente.numero_cliente).includes(terminoBusqueda),
+  );
 
   const sincronizar = useMutation({
     mutationFn: () =>
@@ -159,7 +158,6 @@ export const AccountDevicesTab = ({
     setClienteFinalId(clienteExclusivo?.id ?? "");
   };
 
-  const clientesDisponibles = clientes.data?.data ?? [];
   const puedeCorregir =
     !esOperador &&
     cuenta.dispositivos.some(
@@ -486,43 +484,43 @@ export const AccountDevicesTab = ({
                 Esta Cuenta exclusiva pertenece a {clienteExclusivo.nombre} (cliente
                 N° {clienteExclusivo.numero_cliente}).
               </Alert>
+            ) : (cuenta.clientes_finales ?? []).length === 0 ? (
+              <Alert tone="warning">
+                Esta Cuenta todavía no tiene clientes cargados. Agregue un cliente a la
+                cuenta antes de vincular este dispositivo.
+              </Alert>
             ) : (
-              <Field
-                label="Buscar Cliente Final"
-                htmlFor="buscar-cliente-incidencia"
-              >
-                <Input
-                  id="buscar-cliente-incidencia"
-                  value={busquedaCliente}
-                  onChange={(evento) => setBusquedaCliente(evento.target.value)}
-                  placeholder="Nombre, teléfono o ID de gestión"
-                />
-              </Field>
+              <>
+                <Field
+                  label="Buscar cliente de esta Cuenta"
+                  htmlFor="buscar-cliente-cuenta"
+                >
+                  <Input
+                    id="buscar-cliente-cuenta"
+                    value={busquedaCliente}
+                    onChange={(evento) => setBusquedaCliente(evento.target.value)}
+                    placeholder="Buscar por nombre o número de cliente"
+                  />
+                </Field>
+                <Field
+                  label="Cliente Final"
+                  htmlFor="cliente-incidencia"
+                  required
+                >
+                  <Select
+                    id="cliente-incidencia"
+                    value={clienteFinalId || undefined}
+                    onChange={setClienteFinalId}
+                    opciones={clientesDeLaCuenta.map((cliente) => ({
+                      value: cliente.id,
+                      label: cliente.nombre,
+                      help: `Cliente N° ${cliente.numero_cliente} · ${cliente.dispositivos} dispositivos`,
+                    }))}
+                    placeholder="Seleccione el cliente de esta Cuenta"
+                  />
+                </Field>
+              </>
             )}
-
-            {!clienteExclusivo && clientes.isPending ? (
-              <Skeleton className="h-9" />
-            ) : !clienteExclusivo && clientes.isError ? (
-              <Alert tone="danger">No se pudo cargar el listado de clientes.</Alert>
-            ) : !clienteExclusivo ? (
-              <Field
-                label="Cliente Final"
-                htmlFor="cliente-incidencia"
-                required
-              >
-                <Select
-                  id="cliente-incidencia"
-                  value={clienteFinalId || undefined}
-                  onChange={setClienteFinalId}
-                  opciones={clientesDisponibles.map((cliente) => ({
-                    value: cliente.id,
-                    label: cliente.nombre_completo,
-                    help: `Cliente N° ${cliente.numero_cliente}`,
-                  }))}
-                  placeholder="Seleccione un cliente activo"
-                />
-              </Field>
-            ) : null}
 
             <div className="flex justify-end gap-2">
               <Button
