@@ -16,6 +16,6 @@ import { ConfiguracionPlantillaController } from './configuracion-plantilla.cont
     ProveedoresController,
   ],
   providers: [ConfiguracionService, ProveedoresService],
-  exports: [ConfiguracionService],
+  exports: [ConfiguracionService, ProveedoresService],
 })
 export class ConfiguracionModule {}
