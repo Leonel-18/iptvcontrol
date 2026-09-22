@@ -28,6 +28,7 @@ import { TeamMembersModule } from './modules/team-members/team-members.module';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
+import { IntegracionWhatsappModule } from './modules/integracion-whatsapp/integracion-whatsapp.module';
 
 /**
  * Módulo raíz de IPTVControl.
@@ -83,6 +84,7 @@ import { ReportesModule } from './modules/reportes/reportes.module';
     ConfiguracionModule,
     AuditoriaModule,
     ReportesModule,
+    IntegracionWhatsappModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

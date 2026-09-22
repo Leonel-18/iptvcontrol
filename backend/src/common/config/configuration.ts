@@ -47,6 +47,16 @@ export interface AppConfig {
     rootAuth0UserId?: string;
     dniInicialSensa: number;
   };
+  /**
+   * Integración del bot de WhatsApp: crea Clientes Finales de UNA Empresa
+   * Revendedora sin login de panel, autenticando con una API key.
+   */
+  whatsappBot: {
+    apiKey?: string;
+    empresaRevendedoraId?: string;
+    teamMemberId?: string;
+    ventanaMinutos: number;
+  };
 }
 
 const toInt = (value: string | undefined, fallback: number): number => {
@@ -97,6 +107,15 @@ export const configuration = (): AppConfig => ({
     rootEmail: process.env.SEED_ROOT_EMAIL || undefined,
     rootAuth0UserId: process.env.SEED_ROOT_AUTH0_USER_ID || undefined,
     dniInicialSensa: toInt(process.env.SEED_DNI_INICIAL_SENSA, 30000000),
+  },
+  whatsappBot: {
+    apiKey: process.env.WSP_BOT_API_KEY || undefined,
+    empresaRevendedoraId: process.env.WSP_BOT_EMPRESA_REVENDEDORA_ID || undefined,
+    // Opcional: si se informa, el Audit Log atribuye las altas a ese Team Member
+    // (pensado para un usuario "Bot WhatsApp" sin acceso real al panel).
+    teamMemberId: process.env.WSP_BOT_TEAM_MEMBER_ID || undefined,
+    // 96 h por defecto: toda venta compartida del bot nace en Cuenta nueva.
+    ventanaMinutos: toInt(process.env.WSP_BOT_VENTANA_MINUTOS, 5760),
   },
 });
 
