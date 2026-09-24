@@ -100,6 +100,48 @@ export class Auth0ManagementService {
     }
   }
 
+  /**
+   * Habilita de nuevo el login de un Team Member que había sido dado de baja.
+   * Complementa al bloqueo: sin esto, el usuario seguiría rechazado en Auth0
+   * aunque en IPTVControl vuelva a estar activo.
+   */
+  async desbloquearUsuario(auth0UserId: string): Promise<void> {
+    if (!this.habilitado) {
+      this.logger.warn(
+        `Auth0 Management API no configurada: no se pudo desbloquear ${auth0UserId}. ` +
+          'Hay que desbloquearlo manualmente desde el dashboard de Auth0.',
+      );
+      return;
+    }
+    try {
+      await this.obtenerCliente().users.update({ id: auth0UserId }, { blocked: false });
+    } catch (error) {
+      throw this.traducirError(error, `No se pudo desbloquear el usuario ${auth0UserId} en Auth0.`);
+    }
+  }
+
+  /**
+   * Elimina el usuario en Auth0. Es parte de la baja definitiva: mientras exista
+   * en Auth0, volver a invitar el mismo email fallaría con "user already exists".
+   * Un 404 se trata como éxito (ya no estaba).
+   */
+  async eliminarUsuario(auth0UserId: string): Promise<void> {
+    if (!this.habilitado) {
+      this.logger.warn(
+        `Auth0 Management API no configurada: no se pudo eliminar ${auth0UserId} en Auth0. ` +
+          'Hay que eliminarlo manualmente desde el dashboard de Auth0.',
+      );
+      return;
+    }
+    try {
+      await this.obtenerCliente().users.delete({ id: auth0UserId });
+    } catch (error) {
+      const status = (error as { statusCode?: number }).statusCode;
+      if (status === 404) return;
+      throw this.traducirError(error, `No se pudo eliminar el usuario ${auth0UserId} en Auth0.`);
+    }
+  }
+
   private async generarTicket(auth0UserId: string, ttlSec: number): Promise<string> {
     const client = this.obtenerCliente();
     const resultUrl = `${this.config.get<string>('appPublicUrl')}/welcome`;

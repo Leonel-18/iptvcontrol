@@ -148,6 +148,8 @@ enum AccionAuditoria {
   alta_team_member
   reenvio_invitacion_team_member
   baja_team_member
+  reactivacion_team_member
+  baja_definitiva_team_member
   apertura_vinculacion_dispositivo
   vinculacion_dispositivo
   vinculacion_ambigua

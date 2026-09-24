@@ -405,6 +405,15 @@ export interface InvitationResult {
   motivo?: string;
 }
 
+export interface ReactivationResult {
+  reactivado: boolean;
+  team_member_id: string;
+  estado: "invitado" | "activo";
+  url_invitacion?: string;
+  expira_en_segundos?: number;
+  motivo?: string;
+}
+
 export interface AuditEntry {
   id: string;
   accion: string;
