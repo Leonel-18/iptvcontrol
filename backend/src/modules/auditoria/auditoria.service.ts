@@ -29,6 +29,8 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   alta_team_member: 'Alta de miembro del equipo',
   reenvio_invitacion_team_member: 'Reenvío de invitación',
   baja_team_member: 'Baja de miembro del equipo',
+  reactivacion_team_member: 'Reactivación de miembro del equipo',
+  baja_definitiva_team_member: 'Baja definitiva de miembro del equipo',
   apertura_vinculacion_dispositivo: 'Apertura de vinculación de Dispositivo',
   vinculacion_dispositivo: 'Vinculación de Dispositivo',
   vinculacion_ambigua: 'Vinculación ambigua de Dispositivo',

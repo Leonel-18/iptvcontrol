@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, Plus, UserMinus, UsersRound } from 'lucide-react';
+import { Mail, Plus, RotateCcw, Trash2, UserMinus, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { api, ApiError, type Paginado } from '@/lib/api';
 import { useSesion } from '@/lib/session';
 import { formatearFecha, formatearFechaHora } from '@/lib/utils';
-import type { InvitationResult, TeamMember } from '@/lib/types';
+import type { InvitationResult, ReactivationResult, TeamMember } from '@/lib/types';
 import { roleLabels, traducir } from '@/i18n/entityLabels';
 import { CopyableId, PageHeader, TeamMemberStatusBadge } from '@/components/common';
 import { TeamMemberForm } from './TeamMemberForm';
@@ -35,6 +35,7 @@ export const TeamMemberList = () => {
   const queryClient = useQueryClient();
   const [alta, setAlta] = useState(false);
   const [aDesactivar, setADesactivar] = useState<TeamMember | null>(null);
+  const [aEliminar, setAEliminar] = useState<TeamMember | null>(null);
   const [invitacion, setInvitacion] = useState<InvitationResult | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -61,6 +62,39 @@ export const TeamMemberList = () => {
     onSuccess: () => {
       toast.success('Acceso dado de baja');
       setADesactivar(null);
+      void queryClient.invalidateQueries({ queryKey: ['team-members'] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const reactivar = useMutation({
+    mutationFn: (id: string) =>
+      api<ReactivationResult>(`/team-members/${id}/reactivate`, { metodo: 'POST' }),
+    onSuccess: (resultado) => {
+      void queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      if (resultado.url_invitacion) {
+        // La persona todavía no había aceptado: se le genera una invitación nueva.
+        setInvitacion({
+          enviada: true,
+          team_member_id: resultado.team_member_id,
+          url_invitacion: resultado.url_invitacion,
+          expira_en_segundos: resultado.expira_en_segundos,
+        });
+        toast.success('Acceso reactivado: se generó una invitación nueva');
+      } else if (resultado.motivo) {
+        toast.warning(resultado.motivo);
+      } else {
+        toast.success('Acceso reactivado');
+      }
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const eliminar = useMutation({
+    mutationFn: (id: string) => api(`/team-members/${id}/definitivo`, { metodo: 'DELETE' }),
+    onSuccess: () => {
+      toast.success('Acceso eliminado definitivamente');
+      setAEliminar(null);
       void queryClient.invalidateQueries({ queryKey: ['team-members'] });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
@@ -139,10 +173,27 @@ export const TeamMemberList = () => {
                           Reenviar
                         </Button>
                       ) : null}
+                      {miembro.estado === 'inactivo' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => reactivar.mutate(miembro.id)}
+                          disabled={reactivar.isPending}
+                        >
+                          <RotateCcw />
+                          Reactivar
+                        </Button>
+                      ) : null}
                       {miembro.estado !== 'inactivo' ? (
                         <Button variant="ghost" size="sm" onClick={() => setADesactivar(miembro)}>
                           <UserMinus />
                           Dar de baja
+                        </Button>
+                      ) : null}
+                      {miembro.estado !== 'activo' ? (
+                        <Button variant="ghost" size="sm" onClick={() => setAEliminar(miembro)}>
+                          <Trash2 />
+                          Eliminar
                         </Button>
                       ) : null}
                     </div>
@@ -188,6 +239,17 @@ export const TeamMemberList = () => {
         tono="danger"
         cargando={desactivar.isPending}
         onConfirmar={() => aDesactivar && desactivar.mutate(aDesactivar.id)}
+      />
+
+      <ConfirmDialog
+        abierto={Boolean(aEliminar)}
+        onCambio={(abierto) => !abierto && setAEliminar(null)}
+        titulo="Eliminar definitivamente"
+        descripcion={`Se borra el acceso de ${aEliminar?.email ?? ''} y su usuario en el proveedor de identidad. Después se puede volver a invitar con el mismo correo.`}
+        etiquetaConfirmar="Eliminar"
+        tono="danger"
+        cargando={eliminar.isPending}
+        onConfirmar={() => aEliminar && eliminar.mutate(aEliminar.id)}
       />
 
       {/* Enlace de invitación, para pasarlo a mano si el correo no llega */}

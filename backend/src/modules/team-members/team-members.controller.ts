@@ -58,4 +58,26 @@ export class TeamMembersController {
   async desactivar(@Param('id', ParseUUIDPipe) id: string) {
     return this.teamMembers.desactivar(id);
   }
+
+  @Post(':id/reactivate')
+  @ApiOperation({
+    summary: 'Reactiva un acceso dado de baja.',
+    description:
+      'Lo habilita de nuevo en IPTVControl y Auth0. Si la persona todavía no había aceptado la ' +
+      'invitación, devuelve además un link de un solo uso nuevo.',
+  })
+  async reactivar(@Param('id', ParseUUIDPipe) id: string) {
+    return this.teamMembers.reactivar(id);
+  }
+
+  @Delete(':id/definitivo')
+  @ApiOperation({
+    summary: 'Elimina definitivamente un Team Member invitado o inactivo.',
+    description:
+      'Borra el usuario en Auth0 y la fila local, para poder volver a invitar el mismo email. ' +
+      'Sobre un acceso activo primero hay que darlo de baja.',
+  })
+  async eliminarDefinitivamente(@Param('id', ParseUUIDPipe) id: string) {
+    return this.teamMembers.eliminarDefinitivamente(id);
+  }
 }

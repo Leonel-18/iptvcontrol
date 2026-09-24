@@ -132,7 +132,8 @@ export class CrearClienteDto {
     description:
       'Duración de la Ventana de Alta para esta venta, en minutos. Se precarga con la ' +
       'predeterminada de la Empresa Revendedora, pero en cada venta se puede elegir cualquier ' +
-      'duración (0 = la venta puede compartir Cuenta; mayor a 0 = se crea una Cuenta nueva propia).',
+      'duración (0 = no se bloquea la Cuenta para otros clientes). No decide dónde va la venta: ' +
+      'sólo define cuánto queda protegida la Cuenta elegida.',
   })
   @IsOptional()
   @Type(() => Number)

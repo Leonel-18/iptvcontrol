@@ -24,7 +24,10 @@ import {
   SinCapacidadEnCuentaError,
   SincronizacionContadoresPendienteError,
 } from '../cuentas/cuentas-provisioning.service';
-import { VentanasCuriosidadService } from '../cuentas/ventanas-curiosidad.service';
+import {
+  CuentaEnVentanaCuriosidadError,
+  VentanasCuriosidadService,
+} from '../cuentas/ventanas-curiosidad.service';
 import { calcularCapacidad, contarDispositivosCliente } from '../cuentas/capacidad.util';
 import { serviciosContratados } from '../../proveedor/servicios.util';
 
@@ -136,11 +139,12 @@ export class DispositivosService {
       }
     };
 
-    // Regla de negocio (demo 7/9): si el vendedor aplicó una Ventana de Alta de
-    // duración mayor a 0 a esta venta compartida, la venta NO se agrega a una
-    // Cuenta compartida existente: se crea una Cuenta nueva dedicada para no
-    // mezclarla con clientes que ya están usando las mismas credenciales.
-    if (!cuentaId && !params.cuentaExclusiva && !params.duracionVentanaCuriosidadMinutos) {
+    // Ubicación 100% automática: se busca la Cuenta compartida más antigua con
+    // la misma firma de servicios, lugar para los cupos pedidos y SIN una Ventana
+    // de Alta vigente. La duración que traiga la venta NO decide dónde va: sólo se
+    // usa después, al abrir la ventana (sea en una Cuenta existente o en una
+    // nueva). Así las Cuentas se van llenando en vez de crear una por venta.
+    if (!cuentaId && !params.cuentaExclusiva) {
       cuentaId = await this.provisioning.buscarCuentaConLugar(
         empresaRevendedora.id,
         umbral,
@@ -218,16 +222,23 @@ export class DispositivosService {
             );
           }
         } else {
-          await this.ventanasCuriosidad.asegurarClientePermitido(cuentaId, clienteFinal.id);
           try {
+            await this.ventanasCuriosidad.asegurarClientePermitido(cuentaId, clienteFinal.id);
             ventaReservada = await reservarVenta(cuentaId, !cuentaCreada);
           } catch (error) {
-            if (!(error instanceof SinCapacidadEnCuentaError) || params.cuentaIdForzada) {
+            // Sólo la ubicación automática puede caer a una Cuenta nueva. Si la
+            // Cuenta vino forzada (carga contextual desde /accounts/:id), el
+            // error se propaga tal cual.
+            const esFalloRecuperable =
+              error instanceof SinCapacidadEnCuentaError ||
+              error instanceof CuentaEnVentanaCuriosidadError;
+            if (!esFalloRecuperable || params.cuentaIdForzada) {
               throw error;
             }
-            // Otra alta tomó los últimos cupos después de la búsqueda. En vez de
-            // fallarle al vendedor, se crea la Cuenta nueva que habría elegido
-            // el flujo si hubiese observado ese estado actualizado.
+            // Otra alta se adelantó: tomó los últimos cupos o abrió una Ventana de
+            // Alta entre la búsqueda y la reserva. En vez de fallarle al vendedor,
+            // se crea la Cuenta nueva que habría elegido el flujo si hubiese
+            // observado ese estado actualizado.
             const cuentaNueva = await this.provisioning.crearCuenta({
               empresaRevendedora,
               clienteFinal,

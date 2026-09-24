@@ -144,9 +144,7 @@ export class VentanasCuriosidadService {
       const cuenta = await tx.cuenta.findUnique({ where: { id: cuentaId } });
       if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
       if (cuenta.esExclusiva) {
-        throw new BadRequestException(
-          'La Ventana de Alta sólo aplica a Cuentas compartidas.',
-        );
+        throw new BadRequestException('La Ventana de Alta sólo aplica a Cuentas compartidas.');
       }
       await this.cerrarVencidasEnTx(tx, cuentaId, ahora);
       const activa = await tx.ventanaCuriosidad.findFirst({

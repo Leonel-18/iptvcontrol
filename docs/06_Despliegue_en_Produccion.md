@@ -160,9 +160,10 @@ Reglas que impone el servidor (el bot no las elige):
 - **Servicios:** se aplican los 7 del catálogo para ambos tipos de Cuenta. Requiere que el Operador
   Principal tenga los 7 contratados en SENSA; si falta uno, el alta falla con "los servicios X no
   están contratados".
-- **Ventana de Alta:** fija en `WSP_BOT_VENTANA_MINUTOS` (96 h por defecto). Como es mayor a 0, por
-  la regla 15 de `docs/03_Reglas_de_Negocio.md` **toda venta compartida nace en una Cuenta nueva
-  dedicada** (1+1 o 2+2), nunca reutiliza una compartida existente.
+- **Ventana de Alta:** fija en `WSP_BOT_VENTANA_MINUTOS` (96 h por defecto). La ubicación es
+  automática (regla 15 de `docs/03_Reglas_de_Negocio.md`): la venta se suma a la Cuenta compartida
+  compatible **más antigua sin Ventana vigente** y la protege esas 96 h; si no hay ninguna, crea
+  una nueva.
 - **Cuenta exclusiva:** nace 3+3, sin `cupos_por_categoria`.
 
 **Configuración (una sola vez):**

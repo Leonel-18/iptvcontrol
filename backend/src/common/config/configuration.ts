@@ -114,7 +114,7 @@ export const configuration = (): AppConfig => ({
     // Opcional: si se informa, el Audit Log atribuye las altas a ese Team Member
     // (pensado para un usuario "Bot WhatsApp" sin acceso real al panel).
     teamMemberId: process.env.WSP_BOT_TEAM_MEMBER_ID || undefined,
-    // 96 h por defecto: toda venta compartida del bot nace en Cuenta nueva.
+    // 96 h por defecto: duración de la Ventana que el bot aplica a la Cuenta elegida.
     ventanaMinutos: toInt(process.env.WSP_BOT_VENTANA_MINUTOS, 5760),
   },
 });

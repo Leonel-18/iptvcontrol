@@ -30,7 +30,7 @@ Final **nuevo** después de cada venta que entra a una Cuenta compartida.
 
 ```mermaid
 flowchart TD
-    A["Venta nueva confirmada<br/>en una Cuenta compartida"] --> B["Abrir Ventana de curiosidad<br/>(duración ≤ predeterminado del Revendedor)"]
+    A["Venta nueva confirmada<br/>en una Cuenta compartida"] --> B["Ubicar la venta y abrir la Ventana<br/>(Cuenta sin ventana vigente, o nueva)"]
     B --> C{"¿Se consulta/usa<br/>la Cuenta de nuevo?"}
     C -->|"Antes del vencimiento"| D["Sigue bloqueada<br/>para clientes nuevos"]
     C -->|"Después del vencimiento"| E["Se recalcula al vuelo:<br/>vencida (sin job en segundo plano)"]
@@ -44,10 +44,14 @@ flowchart TD
     class D alerta
 ```
 
+- **Ubicación automática:** la duración **no** decide dónde va la venta. El sistema la ubica en la
+  Cuenta compartida compatible más antigua **sin ventana vigente** y le abre la ventana; si no hay
+  ninguna, crea una Cuenta nueva.
 - **Duración predeterminada:** cada Empresa Revendedora la define en `/settings` (días/horas/
-  minutos; puede ser `0` = no usar la funcionalidad).
-- **Override por venta:** el vendedor puede reducirla en el wizard de alta, nunca superarla. El
-  backend valida el tope, no sólo el selector.
+  minutos; puede ser `0` = no se bloquea la Cuenta para clientes nuevos).
+- **Override por venta:** la predeterminada **sólo precarga el formulario, no es un tope**. El
+  vendedor puede elegir en cada venta la duración que quiera, incluso `0`. El backend sólo exige un
+  entero de minutos ≥ 0.
 - **No retroactiva:** la duración que queda guardada es la vigente al momento de esa venta puntual.
   Cambiar el predeterminado después no afecta ventanas ya abiertas.
 - **Vencimiento al vuelo:** no hay job en segundo plano. Cada consulta relevante (búsqueda de
@@ -67,7 +71,8 @@ vista de Cuenta.
 Todos pasan por `VentanasCuriosidadService`, bajo el mismo advisory lock por Cuenta que ya usa
 `CuentasProvisioningService` (ver [[Consistencia con el Proveedor]]):
 
-- `buscarCuentaConLugar()` — excluye Cuentas con ventana activa de la búsqueda automática.
+- `buscarCuentaConLugar()` — busca la Cuenta compatible más antigua **sin** ventana vigente. Es la
+  única vía de ubicación automática, sin importar la duración que traiga la venta.
 - `reservarCapacidadPorNuevaVenta()` — abre la ventana en la misma transacción que crea la venta.
 - `reasignar()` de un Dispositivo liberado — llamada "otra forma de alta" (regla de negocio 6):
   si el cliente destino no tiene venta previa en esa Cuenta, se valida el mismo bloqueo

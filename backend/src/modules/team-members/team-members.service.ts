@@ -28,6 +28,17 @@ export interface ResultadoInvitacion {
   motivo?: string;
 }
 
+export interface ResultadoReactivacion {
+  reactivado: boolean;
+  team_member_id: string;
+  estado: EstadoTeamMember;
+  /** Ticket nuevo si la persona todavía no había aceptado la invitación. */
+  url_invitacion?: string;
+  expira_en_segundos?: number;
+  /** Aviso cuando la integración con Auth0 no está configurada. */
+  motivo?: string;
+}
+
 /**
  * =============================================================================
  * Team Members — logins con permisos sobre los paneles
@@ -238,6 +249,129 @@ export class TeamMembersService {
       url_invitacion: invitacion.urlInvitacion,
       expira_en_segundos: invitacion.expiraEnSegundos,
     };
+  }
+
+  /**
+   * Reactiva un acceso dado de baja.
+   *
+   * Dos casos, según si la persona llegó a entrar alguna vez:
+   *  - Nunca accedió (fue una baja accidental sobre una invitación pendiente):
+   *    vuelve a `invitado` y se genera un link de un solo uso nuevo.
+   *  - Ya había accedido: vuelve a `activo` y conserva la contraseña que eligió.
+   *
+   * En ambos casos se desbloquea el login en Auth0. No hace falta re-invitar ni
+   * borrar nada: por eso resuelve el caso de la baja por error.
+   */
+  async reactivar(id: string): Promise<ResultadoReactivacion> {
+    const miembro = await this.prisma.db.teamMember.findUnique({ where: { id } });
+    if (!miembro) throw new NotFoundException('El Team Member no existe.');
+
+    if (miembro.estado !== EstadoTeamMember.inactivo) {
+      throw new BadRequestException('El Team Member no está dado de baja.');
+    }
+
+    const nuncaAccedio = miembro.ultimoAccesoEn === null;
+    const estadoDestino = nuncaAccedio ? EstadoTeamMember.invitado : EstadoTeamMember.activo;
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.teamMember.update({ where: { id }, data: { estado: estadoDestino } });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.reactivacion_team_member,
+        entidad: EntidadAuditada.TeamMember,
+        entidadId: id,
+        empresaRevendedoraId: miembro.empresaRevendedoraId,
+        detalle: { email: miembro.email, rol: miembro.rol, estado: estadoDestino },
+      });
+    });
+
+    if (miembro.auth0UserId && this.auth0.habilitado) {
+      await this.auth0.desbloquearUsuario(miembro.auth0UserId);
+    }
+
+    if (!nuncaAccedio) {
+      return { reactivado: true, team_member_id: id, estado: estadoDestino };
+    }
+
+    if (!miembro.auth0UserId || !this.auth0.habilitado) {
+      return {
+        reactivado: true,
+        team_member_id: id,
+        estado: estadoDestino,
+        motivo:
+          'El acceso quedó reactivado, pero la integración con Auth0 no está configurada: hay que ' +
+          'generar el link de invitación desde Auth0.',
+      };
+    }
+
+    const invitacion = await this.auth0.reenviarInvitacion(miembro.auth0UserId);
+    return {
+      reactivado: true,
+      team_member_id: id,
+      estado: estadoDestino,
+      url_invitacion: invitacion.urlInvitacion,
+      expira_en_segundos: invitacion.expiraEnSegundos,
+    };
+  }
+
+  /**
+   * Baja definitiva: elimina el usuario en Auth0 y la fila local, para poder
+   * volver a invitar el mismo email desde cero.
+   *
+   * Sólo aplica a un Team Member que no esté activo (invitado o inactivo):
+   * sobre un acceso vigente primero hay que dar de baja. Además de borrar la
+   * fila, elimina el usuario en Auth0 — si no, re-invitar el email fallaría con
+   * "user already exists".
+   */
+  async eliminarDefinitivamente(id: string) {
+    const miembro = await this.prisma.db.teamMember.findUnique({ where: { id } });
+    if (!miembro) throw new NotFoundException('El Team Member no existe.');
+
+    if (miembro.id === this.contexto.teamMemberId) {
+      throw new BadRequestException('No puede eliminar su propio acceso.');
+    }
+
+    if (miembro.estado === EstadoTeamMember.activo) {
+      throw new BadRequestException(
+        'Primero dé de baja el acceso: sólo se puede eliminar definitivamente a un Team Member ' +
+          'invitado o inactivo.',
+      );
+    }
+
+    // Misma salvaguarda que en la baja: nunca dejar al Operador Principal sin
+    // administradores.
+    if (miembro.rol === RolTeamMember.operator_admin) {
+      const activos = await this.prisma.db.teamMember.count({
+        where: {
+          operadorPrincipalId: miembro.operadorPrincipalId,
+          rol: RolTeamMember.operator_admin,
+          estado: { in: [EstadoTeamMember.activo, EstadoTeamMember.invitado] },
+        },
+      });
+      if (activos <= 1) {
+        throw new BadRequestException(
+          'No se puede eliminar al último administrador del Operador Principal.',
+        );
+      }
+    }
+
+    // Se elimina en Auth0 ANTES de borrar la fila local: si falla, no queda una
+    // fila borrada con el email todavía tomado en Auth0.
+    if (miembro.auth0UserId && this.auth0.habilitado) {
+      await this.auth0.eliminarUsuario(miembro.auth0UserId);
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.baja_definitiva_team_member,
+        entidad: EntidadAuditada.TeamMember,
+        entidadId: id,
+        empresaRevendedoraId: miembro.empresaRevendedoraId,
+        detalle: { email: miembro.email, rol: miembro.rol, estado_previo: miembro.estado },
+      });
+      await tx.teamMember.delete({ where: { id } });
+    });
+
+    return { id, eliminado: true };
   }
 
   /** Baja de acceso: se desactiva localmente y se bloquea el login en Auth0. */

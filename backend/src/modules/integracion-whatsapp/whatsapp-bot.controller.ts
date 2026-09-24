@@ -31,9 +31,10 @@ export class WhatsappBotController {
     description:
       'Crea el Cliente Final y su Cuenta en el Proveedor para la Empresa Revendedora configurada ' +
       'en el servidor. Los servicios no se eligen: se aplican todos los del catálogo (los 7). ' +
-      'La Ventana de Alta la fija el sistema (96 h por defecto): una venta ' +
-      'compartida siempre nace en una Cuenta nueva con 1+1 o 2+2 reservado. Devuelve las ' +
-      'credenciales y el mensaje de WhatsApp ya renderizado con la plantilla de la empresa.',
+      'La ubicación es automática: la venta se suma a la Cuenta compatible más antigua sin Ventana ' +
+      'vigente con 1+1 o 2+2 reservado y la protege 96 h por defecto; si no hay ninguna, crea una ' +
+      'nueva. Devuelve las credenciales y el mensaje de WhatsApp ya renderizado con la plantilla ' +
+      'de la empresa.',
   })
   crear(@Body() dto: CrearClienteBotDto) {
     return this.bot.crearCliente(dto);
