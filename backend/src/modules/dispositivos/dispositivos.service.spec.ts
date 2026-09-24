@@ -501,3 +501,130 @@ describe('DispositivosService — reserva contextual sin Dispositivo pendiente',
     expect(proveedor.listarDispositivos).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * =============================================================================
+ * Ubicación automática de una venta compartida
+ * =============================================================================
+ * La duración de la Ventana de Alta NO decide dónde va la venta: se busca la
+ * Cuenta compatible más antigua sin Ventana vigente y, si no hay, se crea una
+ * nueva. Este bloque cubre esa decisión (antes, una duración > 0 forzaba una
+ * Cuenta dedicada y nunca se llenaban las compartidas).
+ * =============================================================================
+ */
+describe('DispositivosService — ubicación automática de una venta compartida', () => {
+  const empresa = { id: 'empresa-1', duracionVentanaCuriosidadMinutos: 1440 };
+  const clienteFinal = { id: 'cliente-nuevo', empresaRevendedoraId: 'empresa-1' } as never;
+  const cuentaCompartida = {
+    id: 'cuenta-compartida-1',
+    proveedorCuentaId: '30000001',
+    esExclusiva: false,
+    servicios: '1',
+    dispositivos: [],
+    ventasCompartidas: [],
+  };
+
+  const crearServicio = (opciones: { cuentaDestino: string | null; errorEnVentana?: Error }) => {
+    const buscarCuentaConLugar = jest.fn().mockResolvedValue(opciones.cuentaDestino);
+    const crearCuenta = jest.fn().mockResolvedValue({ id: 'cuenta-nueva-1' });
+    const reservarCapacidadPorNuevaVenta = jest.fn().mockResolvedValue(true);
+    const provisioning = {
+      buscarCuentaConLugar,
+      crearCuenta,
+      reservarCapacidadPorNuevaVenta,
+    } as unknown as CuentasProvisioningService;
+
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
+      ventaCompartida: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'venta-1' }) },
+      solicitudVinculacionDispositivo: {
+        create: jest.fn().mockResolvedValue({ id: 'solicitud-1' }),
+      },
+    };
+    const prisma = {
+      db: {
+        empresaRevendedora: { findUniqueOrThrow: jest.fn().mockResolvedValue(empresa) },
+        cuenta: { findUniqueOrThrow: jest.fn().mockResolvedValue(cuentaCompartida) },
+      },
+      operadorPrincipal: { findUnique: jest.fn().mockResolvedValue({ umbralAlertaCapacidad: 2 }) },
+      transaction: jest.fn().mockImplementation((fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const proveedor = {
+      listarDispositivos: jest.fn().mockResolvedValue([]),
+    } as unknown as ProveedorService;
+    const audit = { registrar: jest.fn(), registrarEnTx: jest.fn() } as unknown as AuditService;
+    const cola = { encolarSondeoVinculacion: jest.fn() } as unknown as ColaProveedorService;
+    const asegurarClientePermitido = opciones.errorEnVentana
+      ? jest.fn().mockRejectedValueOnce(opciones.errorEnVentana).mockResolvedValue(undefined)
+      : jest.fn().mockResolvedValue(undefined);
+    const ventanasCuriosidad = {
+      asegurarClientePermitido,
+    } as unknown as VentanasCuriosidadService;
+
+    const servicio = new DispositivosService(
+      prisma,
+      audit,
+      {} as RequestContextService,
+      proveedor,
+      provisioning,
+      cola,
+      ventanasCuriosidad,
+    );
+    return { servicio, buscarCuentaConLugar, crearCuenta, reservarCapacidadPorNuevaVenta };
+  };
+
+  const altaCompartida = (servicio: DispositivosService, duracionMinutos: number) =>
+    servicio.alta({
+      clienteFinal,
+      operadorPrincipalId: 'operador-1',
+      servicios: '1',
+      cuposPorCategoria: 1,
+      duracionVentanaCuriosidadMinutos: duracionMinutos,
+      abrirVentanaSinFila: true,
+    });
+
+  it('con ventana > 0 busca y se une a una Cuenta sin ventana vigente (no crea otra)', async () => {
+    const { servicio, buscarCuentaConLugar, crearCuenta } = crearServicio({
+      cuentaDestino: 'cuenta-compartida-1',
+    });
+
+    const resultado = await altaCompartida(servicio, 1440);
+
+    expect(buscarCuentaConLugar).toHaveBeenCalled();
+    expect(crearCuenta).not.toHaveBeenCalled();
+    expect(resultado.cuentaCreada).toBe(false);
+  });
+
+  it('con ventana 0 también busca y reutiliza (misma regla)', async () => {
+    const { servicio, buscarCuentaConLugar, crearCuenta } = crearServicio({
+      cuentaDestino: 'cuenta-compartida-1',
+    });
+
+    await altaCompartida(servicio, 0);
+
+    expect(buscarCuentaConLugar).toHaveBeenCalled();
+    expect(crearCuenta).not.toHaveBeenCalled();
+  });
+
+  it('si no hay Cuenta compatible, crea una nueva', async () => {
+    const { servicio, crearCuenta } = crearServicio({ cuentaDestino: null });
+
+    const resultado = await altaCompartida(servicio, 1440);
+
+    expect(crearCuenta).toHaveBeenCalled();
+    expect(resultado.cuentaCreada).toBe(true);
+  });
+
+  it('si otra venta abre la ventana en el medio, cae a una Cuenta nueva', async () => {
+    const { servicio, crearCuenta } = crearServicio({
+      cuentaDestino: 'cuenta-compartida-1',
+      errorEnVentana: new CuentaEnVentanaCuriosidadError('cuenta-compartida-1', new Date()),
+    });
+
+    const resultado = await altaCompartida(servicio, 1440);
+
+    expect(crearCuenta).toHaveBeenCalled();
+    expect(resultado.cuentaCreada).toBe(true);
+  });
+});

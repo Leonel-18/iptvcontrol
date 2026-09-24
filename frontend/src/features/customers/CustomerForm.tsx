@@ -635,7 +635,7 @@ export const CustomerForm = () => {
                         onChange={(duration) =>
                           actualizar('duracionVentanaCuriosidadMinutos', duration)
                         }
-                        help="Arranca con la duración predeterminada de su empresa, pero puede poner la que quiera en cada venta. Con 0 la venta puede sumarse a una Cuenta compartida; con una duración mayor a 0 se crea una Cuenta nueva propia."
+                        help="Arranca con la duración predeterminada de su empresa, pero puede poner la que quiera en cada venta. La venta se suma a una Cuenta compartida compatible sin Ventana vigente; si no hay ninguna, se crea una nueva. Con 0 no se bloquea la Cuenta para otros clientes; con una duración mayor a 0, esta Cuenta queda protegida ese plazo."
                       />
                     </div>
                   )}
@@ -825,10 +825,12 @@ export const CustomerForm = () => {
                   <p>
                     La venta reserva {sharedCapacityLabels[valores.cuposPorCategoria]} para este
                     cliente, en una Cuenta compartida sólo con otras ventas de exactamente la misma
-                    selección de servicios y con cupos suficientes.{' '}
+                    selección de servicios y con cupos suficientes. Se ubicará en la Cuenta
+                    compatible más antigua que no tenga una Ventana de Alta vigente; si no hay
+                    ninguna, se crea una nueva.{' '}
                     {valores.duracionVentanaCuriosidadMinutos > 0
-                      ? `La Ventana de Alta durará ${formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}: esta venta se crea en una Cuenta nueva propia y no se comparte con otros clientes durante ese plazo.`
-                      : 'No se aplicará una Ventana de Alta: la venta puede reutilizar una Cuenta compartida compatible.'}
+                      ? `La Ventana de Alta durará ${formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}: esa Cuenta queda protegida y no recibe otros clientes nuevos durante ese plazo.`
+                      : 'No se aplicará una Ventana de Alta: la Cuenta queda disponible de inmediato para otro cliente nuevo.'}
                   </p>
                 )}
               </Alert>

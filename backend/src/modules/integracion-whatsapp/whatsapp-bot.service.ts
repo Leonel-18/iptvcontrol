@@ -74,9 +74,10 @@ export class WhatsappBotService {
     // Principal, `ClientesService.crear` lo rechaza — la validación sigue viva.
     const servicios = this.proveedores.catalogoServicios().map((servicio) => servicio.codigo);
 
-    // Se arma el mismo contrato que consume el wizard. La duración NO se toma
-    // del bot: con ventana > 0 la regla de negocio 15 hace que toda venta
-    // compartida nazca en una Cuenta nueva dedicada.
+    // Se arma el mismo contrato que consume el wizard. La ubicación es
+    // automática: la venta se suma a una Cuenta compatible sin Ventana vigente o,
+    // si no hay ninguna, crea una nueva; la duración del bot sólo se usa para
+    // abrir la Ventana de Alta en la Cuenta elegida.
     const resultado = (await this.clientes.crear({
       nombre: dto.nombre,
       apellido: dto.apellido,

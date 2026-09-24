@@ -84,7 +84,8 @@ export class CrearClienteBotDto {
     enum: TipoAltaClienteFinal,
     description:
       '`cuenta_exclusiva`: Cuenta nueva 3+3 para ese cliente. ' +
-      '`dispositivo_compartido`: Cuenta nueva con 1+1 o 2+2 reservado y Ventana de Alta.',
+      '`dispositivo_compartido`: 1+1 o 2+2 reservado; se ubica en una Cuenta compatible sin ' +
+      'Ventana vigente o crea una nueva, y le aplica la Ventana de Alta.',
   })
   @IsEnum(TipoAltaClienteFinal)
   tipo_alta!: TipoAltaClienteFinal;

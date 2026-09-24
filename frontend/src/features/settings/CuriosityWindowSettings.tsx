@@ -55,9 +55,9 @@ export const CuriosityWindowSettings = () => {
       <CardContent className="space-y-5">
         <Alert tone="info">
           Esta es la duración que viene por defecto en cada alta compartida. No es un límite: en
-          cada venta el vendedor puede poner la duración que quiera. Con 0 la venta puede sumarse
-          a una Cuenta compartida existente; con una duración mayor a 0 se crea una Cuenta nueva
-          propia para esa venta.
+          cada venta el vendedor puede poner la duración que quiera. La ubicación es automática
+          (la Cuenta compatible más antigua sin Ventana vigente, o una nueva); la duración sólo
+          define cuánto queda protegida esa Cuenta. Con 0 no se bloquea para otros clientes.
         </Alert>
 
         <CuriosityDurationInput value={duration} onChange={setDuration} />
