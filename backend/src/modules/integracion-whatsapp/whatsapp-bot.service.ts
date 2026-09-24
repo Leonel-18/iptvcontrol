@@ -103,6 +103,7 @@ export class WhatsappBotService {
     );
 
     return {
+      success: true,
       cliente: {
         id: resultado.cliente.id,
         numero_cliente: resultado.cliente.numero_cliente,

@@ -1,7 +1,8 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseFilters, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/auth/decorators';
 import { BotApiKeyGuard } from './bot-api-key.guard';
+import { BotErrorFilter } from './bot-error.filter';
 import { CrearClienteBotDto } from './dto/crear-cliente-bot.dto';
 import { WhatsappBotService } from './whatsapp-bot.service';
 
@@ -16,6 +17,7 @@ import { WhatsappBotService } from './whatsapp-bot.service';
 @ApiTags('integration')
 @Controller('integration/whatsapp')
 @UseGuards(BotApiKeyGuard)
+@UseFilters(BotErrorFilter)
 export class WhatsappBotController {
   constructor(private readonly bot: WhatsappBotService) {}
 
@@ -34,7 +36,10 @@ export class WhatsappBotController {
       'La ubicación es automática: la venta se suma a la Cuenta compatible más antigua sin Ventana ' +
       'vigente con 1+1 o 2+2 reservado y la protege 96 h por defecto; si no hay ninguna, crea una ' +
       'nueva. Devuelve las credenciales y el mensaje de WhatsApp ya renderizado con la plantilla ' +
-      'de la empresa.',
+      'de la empresa.\n\n' +
+      'Errores: la respuesta sigue siendo HTTP 200 pero con `success: false`, `whatsapp.mensaje` ' +
+      'con un texto entendible para el Cliente Final y `error.code` para diagnóstico. Así el bot ' +
+      'siempre puede mostrar el motivo sin depender de la salida "Error".',
   })
   crear(@Body() dto: CrearClienteBotDto) {
     return this.bot.crearCliente(dto);

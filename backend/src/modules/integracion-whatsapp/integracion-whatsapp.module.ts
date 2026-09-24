@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientesModule } from '../clientes/clientes.module';
 import { ConfiguracionModule } from '../configuracion/configuracion.module';
 import { BotApiKeyGuard } from './bot-api-key.guard';
+import { BotErrorFilter } from './bot-error.filter';
 import { WhatsappBotController } from './whatsapp-bot.controller';
 import { WhatsappBotService } from './whatsapp-bot.service';
 
@@ -15,6 +16,6 @@ import { WhatsappBotService } from './whatsapp-bot.service';
 @Module({
   imports: [ClientesModule, ConfiguracionModule],
   controllers: [WhatsappBotController],
-  providers: [WhatsappBotService, BotApiKeyGuard],
+  providers: [WhatsappBotService, BotApiKeyGuard, BotErrorFilter],
 })
 export class IntegracionWhatsappModule {}
