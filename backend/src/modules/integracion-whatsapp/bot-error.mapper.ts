@@ -33,8 +33,8 @@ export interface ErrorBotMapeado {
 export const MENSAJES_ERROR_BOT: Record<CodigoErrorBot, string> = {
   ACCOUNT_ALREADY_EXISTS: 'Ya existe una cuenta registrada para este servicio.',
   INVALID_DATA: 'Los datos enviados no son válidos o están incompletos.',
-  PROVIDER_AUTH: 'No pudimos conectarnos con el servicio de IPTV.',
-  PROVIDER_UNAVAILABLE: 'El servicio de IPTV está demorando más de lo normal.',
+  PROVIDER_AUTH: 'Tenemos un error al conectarnos con nuestros servicios.',
+  PROVIDER_UNAVAILABLE: 'Tenemos un error al conectarnos con nuestros servicios.',
   RATE_LIMITED: 'Estamos recibiendo muchas solicitudes en este momento.',
   INTERNAL_ERROR: 'No pudimos procesar la solicitud.',
 };
