@@ -22,6 +22,7 @@ import { ProveedorTelemetryService } from '../proveedor-telemetry.service';
 import {
   DniRepetidoError,
   EmailRepetidoError,
+  ProveedorAutenticacionError,
   ProveedorNoDisponibleError,
   ProveedorValidacionError,
 } from '../../common/errors/proveedor.errors';
@@ -503,6 +504,7 @@ export class SensaAdapter implements ProveedorAdapter {
         error instanceof DniRepetidoError ||
         error instanceof EmailRepetidoError ||
         error instanceof ProveedorValidacionError ||
+        error instanceof ProveedorAutenticacionError ||
         error instanceof ProveedorNoDisponibleError
       ) {
         throw error;
@@ -586,14 +588,25 @@ export class SensaAdapter implements ProveedorAdapter {
       );
     }
 
-    // Autenticación, indisponibilidad y errores críticos del middleware: el
-    // usuario no puede hacer nada, así que se muestra el mensaje de negocio y
-    // el detalle queda para el panel de salud del Operador Principal.
+    // Credenciales de Basic Auth rechazadas: es un problema de configuración de
+    // la conexión, no una caída. Se distingue para el panel de salud y para el
+    // mensaje del bot.
+    if (codigo === SENSA_CODIGOS.UNAUTHORIZED || codigo === SENSA_CODIGOS.FORBIDDEN) {
+      return new ProveedorAutenticacionError(detalle, opciones.operacion, codigo);
+    }
+
+    // Indisponibilidad y errores críticos del middleware: el usuario no puede
+    // hacer nada, así que se muestra el mensaje de negocio y el detalle queda
+    // para el panel de salud del Operador Principal.
     return new ProveedorNoDisponibleError(detalle, opciones.operacion, codigo);
   }
 
   private mensajeUsuarioDeError(error: unknown): string {
-    if (error instanceof ProveedorValidacionError || error instanceof ProveedorNoDisponibleError) {
+    if (
+      error instanceof ProveedorValidacionError ||
+      error instanceof ProveedorAutenticacionError ||
+      error instanceof ProveedorNoDisponibleError
+    ) {
       const payload = error.getResponse() as { message?: string };
       return payload.message ?? error.message;
     }

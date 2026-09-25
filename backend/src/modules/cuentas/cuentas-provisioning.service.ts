@@ -298,10 +298,13 @@ export class CuentasProvisioningService {
             // El DNI real del cliente ya está registrado en SENSA: no se puede
             // elegir otro al azar. Se corta el alta y se avisa al vendedor.
             await this.eliminarReserva(cuentaActual.id);
-            throw new BadRequestException(
-              `El DNI ${cuentaActual.dniAltaSensa} ya está registrado en el proveedor. ` +
+            throw new BadRequestException({
+              statusCode: 400,
+              error: 'CuentaDuplicadaEnProveedor',
+              message:
+                `El DNI ${cuentaActual.dniAltaSensa} ya está registrado en el proveedor. ` +
                 'Verifique el DNI del cliente antes de volver a intentar.',
-            );
+            });
           }
           // Compartida: se elige otro DNI aleatorio y se reintenta.
           cuentaActual = await this.prisma.transaction(async (tx) => {
@@ -319,10 +322,13 @@ export class CuentasProvisioningService {
           if (emailDelFormulario) {
             // Es el correo del formulario (exclusiva): no se puede inventar otro.
             await this.eliminarReserva(cuentaActual.id);
-            throw new BadRequestException(
-              `El correo ${cuentaActual.emailContacto} ya está registrado en el proveedor. ` +
+            throw new BadRequestException({
+              statusCode: 400,
+              error: 'CuentaDuplicadaEnProveedor',
+              message:
+                `El correo ${cuentaActual.emailContacto} ya está registrado en el proveedor. ` +
                 'Verifique el correo del cliente antes de volver a intentar.',
-            );
+            });
           }
           // Compartida (o exclusiva sin correo del formulario): se avanza el
           // correo derivado de la Empresa Revendedora.

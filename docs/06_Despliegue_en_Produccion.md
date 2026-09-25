@@ -196,8 +196,26 @@ Content-Type: application/json
 }
 ```
 
-La respuesta trae el número de cliente, las credenciales (`usuario`, `password`, `pin`) y el campo
-`whatsapp.mensaje` con el texto ya renderizado con la plantilla de la empresa, listo para enviar.
+La respuesta exitosa trae `success: true`, el número de cliente, las credenciales (`usuario`,
+`password`, `pin`) y el campo `whatsapp.mensaje` con el texto ya renderizado con la plantilla de la
+empresa, listo para enviar.
+
+**Errores (respuesta consistente para ManyChat):** ante un error de negocio/controlado el endpoint
+responde **HTTP 200** con `success: false`, `whatsapp.mensaje` (texto entendible para el Cliente
+Final), `cuenta` en null y `error.code`. Se hace así porque ManyChat sólo mapea los "Campos de
+respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. Códigos posibles:
+
+| `error.code` | Qué significa | Mensaje al Cliente Final |
+|---|---|---|
+| `ACCOUNT_ALREADY_EXISTS` | La Cuenta o el ID de gestión ya existen | "No pudimos generar el acceso porque ya existe una cuenta registrada para este servicio…" |
+| `INVALID_DATA` | Datos inválidos o faltantes | "Los datos enviados no son válidos o están incompletos…" |
+| `PROVIDER_AUTH` | Credenciales de SENSA rechazadas | "No pudimos conectarnos con el servicio de IPTV…" |
+| `PROVIDER_UNAVAILABLE` | SENSA caída, timeout o sin conexión | "El servicio de IPTV está demorando más de lo normal…" |
+| `RATE_LIMITED` | Muchas solicitudes | "Estamos recibiendo muchas solicitudes…" |
+| `INTERNAL_ERROR` | Error inesperado | "No pudimos procesar la solicitud…" |
+
+El mensaje nunca expone stack traces, credenciales ni respuestas crudas de SENSA; el detalle queda
+en los logs del backend (con `requestId` y código interno).
 
 **Pendiente:** definir si conviene validar en el guard que el `WSP_BOT_TEAM_MEMBER_ID` pertenezca a
 la Empresa Revendedora configurada (hoy sólo se usa para firmar el Audit Log).

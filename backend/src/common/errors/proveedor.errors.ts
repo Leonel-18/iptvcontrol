@@ -74,6 +74,29 @@ export class ReintentosDniAgotadosError extends HttpException {
   }
 }
 
+/**
+ * El Proveedor rechazó la autenticación (Basic Auth inválido, credenciales
+ * vencidas). A diferencia de una caída, es un problema de configuración de la
+ * conexión: el usuario no puede resolverlo y se lo distingue para el panel de
+ * salud y para el mensaje del bot de WhatsApp.
+ */
+export class ProveedorAutenticacionError extends HttpException {
+  constructor(
+    readonly detalleTecnico: string,
+    readonly operacion?: string,
+    readonly codigoProveedor?: number,
+  ) {
+    super(
+      {
+        statusCode: HttpStatus.BAD_GATEWAY,
+        message: 'No se pudo autenticar contra el proveedor. Revise las credenciales de conexión.',
+        error: 'ProveedorAutenticacion',
+      },
+      HttpStatus.BAD_GATEWAY,
+    );
+  }
+}
+
 /** Error de validación devuelto por el Proveedor (dato mal formado, etc.). */
 export class ProveedorValidacionError extends HttpException {
   constructor(
