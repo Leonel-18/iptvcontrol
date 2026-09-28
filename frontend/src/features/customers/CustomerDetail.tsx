@@ -333,8 +333,11 @@ export const CustomerDetail = () => {
           {/* Credenciales de la Cuenta del cliente + salto a la vista de Cuenta */}
           {!esOperador && data.cuenta ? (
             <Card>
-              <CardHeader>
+              <CardHeader className="flex-row items-center justify-between gap-3">
                 <CardTitle>Su cuenta en el proveedor</CardTitle>
+                {data.cuenta.aislada ? (
+                  <Badge tone="warning">Cuenta de prueba</Badge>
+                ) : null}
               </CardHeader>
               <CardContent className="space-y-3">
                 <dl className="space-y-2.5">

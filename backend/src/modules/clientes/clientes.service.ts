@@ -222,6 +222,10 @@ export class ClientesService {
         })
       : null;
 
+    const ventaDelCliente = cuentaPrincipal
+      ? cliente.ventasCompartidas.find((venta) => venta.cuentaId === cuentaPrincipal.id)
+      : undefined;
+
     return {
       ...this.mapCliente(cliente),
       // Credenciales de la Cuenta del cliente: es lo que la Empresa Revendedora
@@ -237,6 +241,8 @@ export class ClientesService {
             servicios: cuentaPrincipal.servicios,
             servicios_nombres: nombresDeServicios(cuentaPrincipal.servicios),
             es_exclusiva: cuentaPrincipal.esExclusiva,
+            // true si la venta de este cliente se creó con "Aislar Cuenta".
+            aislada: ventaDelCliente?.aislada ?? false,
             capacidad: capacidad
               ? capacidad.esExclusiva
                 ? `${capacidad.ocupados} de ${capacidad.limite}`
@@ -371,6 +377,30 @@ export class ClientesService {
       throw new BadRequestException(
         'Los cupos y la Ventana de Alta sólo corresponden a una venta compartida.',
       );
+    }
+
+    // "Aislar Cuenta": crea una Cuenta compartida nueva y dedicada. La Ventana de
+    // Alta es obligatoria y mayor a 0: sin ella, la Cuenta no queda aislada.
+    const aislarCuenta = dto.aislar_cuenta === true;
+    if (aislarCuenta) {
+      if (dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
+        throw new BadRequestException(
+          'Aislar Cuenta sólo aplica a una venta compartida: una Cuenta exclusiva ya es única.',
+        );
+      }
+      if (dto.cuenta_id) {
+        throw new BadRequestException(
+          'No se puede Aislar una Cuenta cuando el cliente se carga en una Cuenta existente.',
+        );
+      }
+      if (
+        !dto.duracion_ventana_curiosidad_minutos ||
+        dto.duracion_ventana_curiosidad_minutos <= 0
+      ) {
+        throw new BadRequestException(
+          'Para Aislar la Cuenta, la Ventana de Alta es obligatoria y debe ser mayor a 0.',
+        );
+      }
     }
 
     let servicios: string;
@@ -540,6 +570,8 @@ export class ClientesService {
         servicios,
         cuposPorCategoria: dto.cupos_por_categoria,
         duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
+        forzarCuentaNueva: aislarCuenta,
+        ventaAislada: aislarCuenta,
         // Pieza 4: la venta compartida NO crea una fila de Dispositivo previa.
         abrirVentanaSinFila: dto.tipo_alta === TipoAltaClienteFinal.dispositivo_compartido,
       });
@@ -558,6 +590,7 @@ export class ClientesService {
           cuenta_creada: resultado.cuentaCreada,
           cargado_manualmente_en_cuenta: Boolean(cuentaForzadaId),
           duplicado_confirmado: Boolean(dto.confirmar_duplicado),
+          aislada: aislarCuenta,
         },
       });
 

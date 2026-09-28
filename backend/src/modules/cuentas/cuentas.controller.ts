@@ -17,6 +17,7 @@ import { ActualizarCuentaDto } from './dto/actualizar-cuenta.dto';
 import { AjustarSlotVentaDto } from './dto/ajustar-slot.dto';
 import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
 import { CambiarPinCuentaDto } from './dto/cambiar-pin-cuenta.dto';
+import { AbrirVentanaCuriosidadDto } from './dto/abrir-ventana.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
 import { InventarioProveedorService } from './inventario-proveedor.service';
@@ -157,6 +158,22 @@ export class CuentasController {
   })
   async cambiarPin(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CambiarPinCuentaDto) {
     return this.cuentas.cambiarPin(id, dto.pin);
+  }
+
+  @Post(':id/curiosity-window')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Abre manualmente una Ventana de Alta en una Cuenta compartida.',
+    description:
+      'Para volver a proteger una Cuenta que quedó sin ventana vigente. Requiere que la Cuenta ' +
+      'tenga al menos un Cliente Final. La duración debe ser mayor a 0; si no se envía, se usa la ' +
+      'predeterminada de la Empresa Revendedora.',
+  })
+  abrirVentanaCuriosidad(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AbrirVentanaCuriosidadDto,
+  ) {
+    return this.ventanasCuriosidad.abrirManualmente(id, dto.duracion_minutos);
   }
 
   @Post(':id/curiosity-window/release')

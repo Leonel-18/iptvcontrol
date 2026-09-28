@@ -142,6 +142,16 @@ export class CrearClienteDto {
   @Max(2147483647)
   duracion_ventana_curiosidad_minutos?: number;
 
+  @ApiPropertyOptional({
+    description:
+      'Aislar Cuenta: obliga a crear una Cuenta compartida NUEVA con Ventana de Alta ' +
+      '(obligatoria y mayor a 0) para que este Cliente Final pruebe solo. Sólo aplica a una ' +
+      'venta `dispositivo_compartido`.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  aislar_cuenta?: boolean;
+
   @ApiProperty({ type: DispositivoAltaDto })
   @ValidateNested()
   @Type(() => DispositivoAltaDto)

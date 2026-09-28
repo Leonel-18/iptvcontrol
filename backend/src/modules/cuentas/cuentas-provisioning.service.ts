@@ -368,6 +368,8 @@ export class CuentasProvisioningService {
     operadorPrincipalId: string;
     actualizarProveedor: boolean;
     duracionVentanaCuriosidadMinutos?: number;
+    /** "Aislar Cuenta": marca la venta como creada en una Cuenta dedicada. */
+    aislada?: boolean;
     teamMemberId?: string;
   }): Promise<boolean> {
     const { cuentaId, clienteFinalId, empresaRevendedoraId, cuposPorCategoria } = params;
@@ -400,6 +402,7 @@ export class CuentasProvisioningService {
           clienteFinalId,
           empresaRevendedoraId,
           cuposPorCategoria,
+          aislada: params.aislada === true,
         },
       });
       await this.ventanasCuriosidad.abrirPorNuevaVentaEnTx(tx, {

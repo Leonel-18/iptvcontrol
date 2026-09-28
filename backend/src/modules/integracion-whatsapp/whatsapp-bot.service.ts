@@ -90,6 +90,7 @@ export class WhatsappBotService {
       servicios,
       cupos_por_categoria: esCompartida ? dto.cupos_por_categoria : undefined,
       duracion_ventana_curiosidad_minutos: esCompartida ? ventanaMinutos : undefined,
+      aislar_cuenta: esCompartida ? dto.aislar_cuenta : undefined,
       dispositivo: { nota_descriptiva: dto.dispositivo?.nota_descriptiva },
       confirmar_duplicado: dto.confirmar_duplicado,
     })) as unknown as ResultadoAltaBot;

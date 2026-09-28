@@ -140,6 +140,7 @@ export class CuentasService {
           select: {
             id: true,
             cuposPorCategoria: true,
+            aislada: true,
             clienteFinalId: true,
             clienteFinal: {
               select: { id: true, numeroCliente: true, nombre: true, apellido: true },
@@ -208,6 +209,7 @@ export class CuentasService {
             .join(' '),
         },
         cupos_por_categoria: venta.cuposPorCategoria,
+        aislada: venta.aislada,
         ocupacion: {
           fijos: contarDispositivosCliente(
             cuenta.dispositivos,

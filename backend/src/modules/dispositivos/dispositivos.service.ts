@@ -46,6 +46,10 @@ export interface AltaDispositivoParams {
   /** Cupos reservados por categoría para una venta compartida nueva. */
   cuposPorCategoria?: 1 | 2;
   duracionVentanaCuriosidadMinutos?: number;
+  /** "Aislar Cuenta": fuerza una Cuenta compartida nueva, sin buscar compatible. */
+  forzarCuentaNueva?: boolean;
+  /** Marca la venta compartida como aislada (Cuenta de prueba). */
+  ventaAislada?: boolean;
   /** true sólo en el alta wizard de una venta COMPARTIDA: no se crea la fila de
    *  Dispositivo previa (Pieza 4); la ventana de detección queda asociada al
    *  Cliente Final y el equipo se materializa al primer login. */
@@ -127,6 +131,7 @@ export class DispositivosService {
           operadorPrincipalId,
           actualizarProveedor,
           duracionVentanaCuriosidadMinutos: params.duracionVentanaCuriosidadMinutos,
+          aislada: params.ventaAislada === true,
           teamMemberId: this.contexto.teamMemberId,
         });
       } catch (error) {
@@ -144,7 +149,10 @@ export class DispositivosService {
     // de Alta vigente. La duración que traiga la venta NO decide dónde va: sólo se
     // usa después, al abrir la ventana (sea en una Cuenta existente o en una
     // nueva). Así las Cuentas se van llenando en vez de crear una por venta.
-    if (!cuentaId && !params.cuentaExclusiva) {
+    //
+    // Excepción: "Aislar Cuenta" (forzarCuentaNueva) saltea la búsqueda a
+    // propósito, para crear una Cuenta nueva dedicada a esa venta.
+    if (!cuentaId && !params.cuentaExclusiva && !params.forzarCuentaNueva) {
       cuentaId = await this.provisioning.buscarCuentaConLugar(
         empresaRevendedora.id,
         umbral,

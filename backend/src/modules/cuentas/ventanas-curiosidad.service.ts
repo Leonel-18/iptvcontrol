@@ -175,6 +175,99 @@ export class VentanasCuriosidadService {
     return this.mapear(ventana);
   }
 
+  /**
+   * Abre una Ventana de Alta "a mano" en una Cuenta compartida que no tiene una
+   * activa (ej. para volver a proteger una Cuenta que quedó disponible).
+   *
+   * El dueño es un Cliente Final que ya tiene una venta en la Cuenta: la ventana
+   * nunca bloquea a su dueño, y no hay una venta nueva que la origine. Por eso no
+   * se asocia a una `VentaCompartida` (esa relación es 1:1 y ya puede existir).
+   */
+  async abrirManualmente(cuentaId: string, duracionMinutos?: number) {
+    if (this.contexto.esOperador || !this.contexto.empresaRevendedoraId) {
+      throw new ForbiddenException(
+        'Sólo la Empresa Revendedora dueña puede abrir la Ventana de Alta.',
+      );
+    }
+    const teamMemberId = this.contexto.teamMemberId;
+    const ahora = new Date();
+
+    const ventana = await this.prisma.transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
+      const cuenta = await tx.cuenta.findUnique({ where: { id: cuentaId } });
+      if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
+      if (cuenta.esExclusiva) {
+        throw new BadRequestException('La Ventana de Alta sólo aplica a Cuentas compartidas.');
+      }
+
+      await this.cerrarVencidasEnTx(tx, cuentaId, ahora);
+      const activa = await tx.ventanaCuriosidad.findFirst({
+        where: { cuentaId, finRealEn: null, finPrevistoEn: { gt: ahora } },
+      });
+      if (activa) {
+        throw new BadRequestException('La Cuenta ya tiene una Ventana de Alta activa.');
+      }
+
+      const venta = await tx.ventaCompartida.findFirst({
+        where: { cuentaId },
+        orderBy: { creadoEn: 'desc' },
+        select: { clienteFinalId: true },
+      });
+      if (!venta) {
+        throw new BadRequestException(
+          'Para abrir la Ventana de Alta manualmente, la Cuenta debe tener al menos un ' +
+            'Cliente Final cargado.',
+        );
+      }
+
+      const empresa = await tx.empresaRevendedora.findUniqueOrThrow({
+        where: { id: cuenta.empresaRevendedoraId },
+        select: { duracionVentanaCuriosidadMinutos: true },
+      });
+      const predeterminada = empresa.duracionVentanaCuriosidadMinutos;
+      const aplicada = duracionMinutos ?? predeterminada;
+      if (!Number.isInteger(aplicada) || aplicada <= 0) {
+        throw new BadRequestException(
+          'La duración de la Ventana de Alta debe ser un número entero mayor a 0.',
+        );
+      }
+
+      const finPrevistoEn = new Date(ahora.getTime() + aplicada * 60_000);
+      const creada = await tx.ventanaCuriosidad.create({
+        data: {
+          cuentaId,
+          clienteFinalId: venta.clienteFinalId,
+          empresaRevendedoraId: cuenta.empresaRevendedoraId,
+          ventaCompartidaId: null,
+          inicioEn: ahora,
+          duracionPredeterminadaMinutos: predeterminada,
+          duracionAplicadaMinutos: aplicada,
+          finPrevistoEn,
+          finRealEn: null,
+          motivoFin: null,
+          iniciadaPorTeamMemberId: teamMemberId ?? null,
+        },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.apertura_ventana_curiosidad,
+        entidad: EntidadAuditada.VentanaCuriosidad,
+        entidadId: creada.id,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        detalle: {
+          cuenta_id: cuentaId,
+          cliente_final_id: venta.clienteFinalId,
+          apertura_manual: true,
+          inicio_en: ahora.toISOString(),
+          fin_previsto_en: finPrevistoEn.toISOString(),
+          duracion_aplicada_minutos: aplicada,
+        },
+      });
+      return creada;
+    });
+
+    return this.mapear(ventana);
+  }
+
   async obtenerEstadoEHistorial(cuentaId: string) {
     const ahora = new Date();
     await this.prisma.transaction(async (tx) => {

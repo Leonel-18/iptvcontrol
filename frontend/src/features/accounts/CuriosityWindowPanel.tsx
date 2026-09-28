@@ -1,4 +1,4 @@
-import { Clock3, History, Unlock } from 'lucide-react';
+import { Clock3, History, Plus, Unlock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   formatCuriosityAvailability,
@@ -8,6 +8,7 @@ import {
 import { formatearFechaHora } from '@/lib/utils';
 import type { CuriosityWindow, CuriosityWindowActor } from '@/lib/types';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui/primitives';
+import { CuriosityDurationInput } from '@/components/CuriosityDurationInput';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
 const actorLabel = (actor: CuriosityWindowActor): string => {
@@ -30,13 +31,18 @@ export const CuriosityWindowPanel = ({
   history,
   onRelease,
   releasing,
+  onOpen,
+  opening,
 }: {
   currentWindow?: CuriosityWindow | null;
   history: CuriosityWindow[];
   onRelease: () => void;
   releasing: boolean;
+  onOpen: (duracionMinutos: number) => void;
+  opening: boolean;
 }) => {
   const [, forceExpiryRender] = useState(0);
+  const [duracion, setDuracion] = useState(1440);
   const active = isCuriosityWindowActive(currentWindow);
 
   useEffect(() => {
@@ -98,11 +104,32 @@ export const CuriosityWindowPanel = ({
             </Button>
           </div>
         ) : (
-          <div>
-            <p className="font-medium">La Cuenta puede recibir una venta nueva.</p>
-            <p className="mt-1 text-sm texto-suave">
-              No hay una Ventana de Alta activa que la bloquee para otro cliente nuevo.
-            </p>
+          <div className="space-y-3">
+            <div>
+              <p className="font-medium">La Cuenta puede recibir una venta nueva.</p>
+              <p className="mt-1 text-sm texto-suave">
+                No hay una Ventana de Alta activa que la bloquee para otro cliente nuevo.
+              </p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <CuriosityDurationInput
+                value={duracion}
+                onChange={setDuracion}
+                label="Bloquear la Cuenta durante"
+                help="Mientras esté activa, la Cuenta no recibe clientes nuevos."
+              />
+              <div className="mt-3 flex justify-end">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onOpen(duracion)}
+                  disabled={opening || duracion <= 0}
+                >
+                  <Plus />
+                  Agregar Ventana de Alta
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 

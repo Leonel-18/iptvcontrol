@@ -104,6 +104,7 @@ interface EstadoFormulario {
   servicios: string[];
   notaDescriptiva: string;
   duracionVentanaCuriosidadMinutos: number;
+  aislarCuenta: boolean;
 }
 
 const INICIAL: EstadoFormulario = {
@@ -119,6 +120,7 @@ const INICIAL: EstadoFormulario = {
   servicios: ['1'],
   notaDescriptiva: '',
   duracionVentanaCuriosidadMinutos: 0,
+  aislarCuenta: false,
 };
 
 const PASOS = ['Cliente', 'Método de alta', 'Servicios', 'Confirmar'] as const;
@@ -225,6 +227,7 @@ export const CustomerForm = () => {
                   cupos_por_categoria: valores.cuposPorCategoria,
                   duracion_ventana_curiosidad_minutos:
                     valores.duracionVentanaCuriosidadMinutos,
+                  aislar_cuenta: valores.aislarCuenta ? true : undefined,
                 }
               : {}),
             dispositivo: {
@@ -296,12 +299,15 @@ export const CustomerForm = () => {
       return false;
     }
 
-    if (
-      paso === 1 &&
-      valores.metodoAlta === 'dispositivo_compartido' &&
-      !configuracionVentana.isSuccess
-    ) {
-      return false;
+    if (paso === 1 && valores.metodoAlta === 'dispositivo_compartido') {
+      if (!configuracionVentana.isSuccess) return false;
+      if (valores.aislarCuenta && valores.duracionVentanaCuriosidadMinutos <= 0) {
+        setErrores((actual) => ({
+          ...actual,
+          aislarCuenta: 'Para Aislar la Cuenta, la Ventana de Alta debe ser mayor a 0.',
+        }));
+        return false;
+      }
     }
 
     return true;
@@ -639,6 +645,44 @@ export const CustomerForm = () => {
                       />
                     </div>
                   )}
+
+                  <label
+                    className={cn(
+                      'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                      valores.aislarCuenta
+                        ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
+                        : 'hover:bg-navy-50 dark:hover:bg-navy-800',
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={valores.aislarCuenta}
+                      onChange={(evento) => {
+                        const marcado = evento.target.checked;
+                        setValores((actual) => ({
+                          ...actual,
+                          aislarCuenta: marcado,
+                          // Aislar Cuenta exige una ventana > 0: si estaba en 0, arranca en 24 h.
+                          duracionVentanaCuriosidadMinutos:
+                            marcado && actual.duracionVentanaCuriosidadMinutos <= 0
+                              ? 1440
+                              : actual.duracionVentanaCuriosidadMinutos,
+                        }));
+                        setErrores((actual) => ({ ...actual, aislarCuenta: undefined }));
+                      }}
+                      className="mt-0.5 size-4 shrink-0 accent-azure-500"
+                    />
+                    <span>
+                      <span className="block font-medium">Aislar Cuenta</span>
+                      <span className="mt-0.5 block text-sm texto-suave">
+                        Crea una Cuenta compartida nueva con Ventana de Alta para que este cliente
+                        pruebe solo: no se comparte con otros clientes durante el plazo.
+                      </span>
+                    </span>
+                  </label>
+                  {errores.aislarCuenta ? (
+                    <Alert tone="danger">{errores.aislarCuenta}</Alert>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -820,6 +864,13 @@ export const CustomerForm = () => {
                   <p>
                     La Cuenta completa incluye los servicios seleccionados y permite hasta 3 fijos
                     + 3 móviles para este cliente.
+                  </p>
+                ) : valores.aislarCuenta ? (
+                  <p>
+                    La venta reserva {sharedCapacityLabels[valores.cuposPorCategoria]} en una{' '}
+                    <strong>Cuenta nueva aislada</strong>, sólo para este cliente. No se comparte con
+                    otros clientes y la Ventana de Alta durará{' '}
+                    {formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}.
                   </p>
                 ) : (
                   <p>
