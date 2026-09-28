@@ -131,3 +131,94 @@ describe('VentanasCuriosidadService', () => {
     ).rejects.toBeInstanceOf(CuentaEnVentanaCuriosidadError);
   });
 });
+
+describe('VentanasCuriosidadService — apertura manual', () => {
+  const crear = (
+    opciones: { esExclusiva?: boolean; ventaActiva?: boolean; hayCliente?: boolean } = {},
+  ) => {
+    const ventanaCreate = jest
+      .fn()
+      .mockImplementation(({ data }) => ({ id: 'ventana-manual', ...data }));
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(0),
+      cuenta: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'cuenta-1',
+          esExclusiva: opciones.esExclusiva ?? false,
+          empresaRevendedoraId: 'empresa-1',
+        }),
+      },
+      ventanaCuriosidad: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue(
+            opciones.ventaActiva ? { finPrevistoEn: new Date(Date.now() + 60_000) } : null,
+          ),
+        create: ventanaCreate,
+      },
+      ventaCompartida: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue(
+            opciones.hayCliente === false ? null : { clienteFinalId: 'cliente-1' },
+          ),
+      },
+      empresaRevendedora: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ duracionVentanaCuriosidadMinutos: 1440 }),
+      },
+    } as unknown as TransactionClient;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+    const prisma = {
+      transaction: jest.fn().mockImplementation((fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const contexto = {
+      esOperador: false,
+      empresaRevendedoraId: 'empresa-1',
+      teamMemberId: 'team-1',
+    } as unknown as RequestContextService;
+
+    const servicio = new VentanasCuriosidadService(prisma, contexto, audit);
+    return { servicio, ventanaCreate };
+  };
+
+  it('abre una ventana manual atada a un cliente existente', async () => {
+    const { servicio, ventanaCreate } = crear();
+
+    await servicio.abrirManualmente('cuenta-1', 1440);
+
+    expect(ventanaCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        cuentaId: 'cuenta-1',
+        clienteFinalId: 'cliente-1',
+        ventaCompartidaId: null,
+        duracionAplicadaMinutos: 1440,
+      }),
+    });
+  });
+
+  it('rechaza si la Cuenta ya tiene una ventana activa', async () => {
+    const { servicio, ventanaCreate } = crear({ ventaActiva: true });
+
+    await expect(servicio.abrirManualmente('cuenta-1', 1440)).rejects.toThrow(
+      'ya tiene una Ventana',
+    );
+    expect(ventanaCreate).not.toHaveBeenCalled();
+  });
+
+  it('rechaza si la Cuenta no tiene clientes', async () => {
+    const { servicio } = crear({ hayCliente: false });
+
+    await expect(servicio.abrirManualmente('cuenta-1', 1440)).rejects.toThrow(
+      'al menos un Cliente',
+    );
+  });
+
+  it('rechaza una duración de 0', async () => {
+    const { servicio, ventanaCreate } = crear();
+
+    await expect(servicio.abrirManualmente('cuenta-1', 0)).rejects.toThrow('mayor a 0');
+    expect(ventanaCreate).not.toHaveBeenCalled();
+  });
+});

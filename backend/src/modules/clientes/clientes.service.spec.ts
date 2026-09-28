@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import {
   EstadoClienteFinal,
   EstadoCuenta,
@@ -452,5 +453,80 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
         detalle: expect.objectContaining({ cargado_manualmente_en_cuenta: true }),
       }),
     );
+  });
+});
+
+/**
+ * "Aislar Cuenta": crea una Cuenta compartida nueva con Ventana obligatoria.
+ * Estas validaciones corren antes de tocar el Proveedor, así que se prueban con
+ * un servicio mínimo (sólo contexto + operador).
+ */
+describe('ClientesService — validación de Aislar Cuenta', () => {
+  const crearServicio = () => {
+    const contexto = {
+      esOperador: false,
+      empresaRevendedoraId: 'empresa-1',
+    } as unknown as RequestContextService;
+    const dispositivos = {
+      operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
+    } as unknown as DispositivosService;
+
+    const servicio = new ClientesService(
+      {} as PrismaService,
+      {} as AuditService,
+      {} as CryptoService,
+      contexto,
+      dispositivos,
+      {} as IdentificadoresService,
+      {} as ProveedorService,
+    );
+    return { servicio };
+  };
+
+  it('rechaza Aislar Cuenta en una venta exclusiva', async () => {
+    const { servicio } = crearServicio();
+
+    await expect(
+      servicio.crear({
+        nombre: 'Juan',
+        dni: '30123456',
+        tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
+        aislar_cuenta: true,
+        dispositivo: {},
+      } as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('exige una Ventana de Alta mayor a 0', async () => {
+    const { servicio } = crearServicio();
+
+    await expect(
+      servicio.crear({
+        nombre: 'Juan',
+        dni: '30123456',
+        tipo_alta: TipoAltaClienteFinal.dispositivo_compartido,
+        cupos_por_categoria: 1,
+        aislar_cuenta: true,
+        duracion_ventana_curiosidad_minutos: 0,
+        dispositivo: {},
+      } as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rechaza Aislar Cuenta sobre una Cuenta existente (cuenta_id)', async () => {
+    const { servicio } = crearServicio();
+
+    await expect(
+      servicio.crear({
+        nombre: 'Juan',
+        dni: '30123456',
+        tipo_alta: TipoAltaClienteFinal.dispositivo_compartido,
+        cupos_por_categoria: 1,
+        aislar_cuenta: true,
+        duracion_ventana_curiosidad_minutos: 1440,
+        cuenta_id: '11111111-1111-1111-1111-111111111111',
+        dispositivo: {},
+      } as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

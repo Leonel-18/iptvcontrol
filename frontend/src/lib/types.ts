@@ -118,6 +118,8 @@ export interface AccountDetail extends Account {
     id: string;
     cliente_final: { id: string; numero_cliente: number; nombre: string };
     cupos_por_categoria: 1 | 2;
+    /** true si la venta se creó con "Aislar Cuenta". */
+    aislada: boolean;
     ocupacion: { fijos: number; moviles: number };
   }[];
   /** Sólo llega al panel revendedor para Cuentas compartidas. */
@@ -226,6 +228,8 @@ export interface CustomerDetail extends Customer {
     servicios: string;
     servicios_nombres: string[];
     es_exclusiva: boolean;
+    /** true si la venta de este cliente se creó con "Aislar Cuenta". */
+    aislada: boolean;
     capacidad: string | null;
     fijos: string | null;
     moviles: string | null;

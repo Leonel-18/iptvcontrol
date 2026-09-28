@@ -528,6 +528,10 @@ model VentaCompartida {
   /// Únicos valores comerciales válidos: 1 (1+1) o 2 (2+2).
   cuposPorCategoria Int @map("cupos_por_categoria")
 
+  /// "Aislar Cuenta": la venta se creó en una Cuenta nueva dedicada, con
+  /// Ventana de Alta obligatoria, para que el Cliente Final pruebe solo.
+  aislada Boolean @default(false)
+
   creadoEn DateTime @default(now()) @map("creado_en")
 
   ventanaCuriosidad VentanaCuriosidad?

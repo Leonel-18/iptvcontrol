@@ -142,6 +142,20 @@ export const AccountDetail = () => {
     onError: (causa: ApiError) => toast.error(causa.message),
   });
 
+  const abrirVentanaCuriosidad = useMutation({
+    mutationFn: (duracionMinutos: number) =>
+      api(`/accounts/${id}/curiosity-window`, {
+        metodo: "POST",
+        body: { duracion_minutos: duracionMinutos },
+      }),
+    onSuccess: () => {
+      toast.success("Ventana de Alta agregada.");
+      void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
   const ajustarSlot = useMutation({
     mutationFn: ({
       customerId,
@@ -441,6 +455,8 @@ export const AccountDetail = () => {
               history={data.historial_ventanas_curiosidad ?? []}
               onRelease={() => setConfirmarLiberacion(true)}
               releasing={liberarVentanaCuriosidad.isPending}
+              onOpen={(duracionMinutos) => abrirVentanaCuriosidad.mutate(duracionMinutos)}
+              opening={abrirVentanaCuriosidad.isPending}
             />
           ) : null}
 
@@ -517,6 +533,11 @@ export const AccountDetail = () => {
                                     >
                                       {venta.cliente_final.nombre}
                                     </Link>
+                                    {venta.aislada ? (
+                                      <Badge tone="warning" className="ml-2">
+                                        Cuenta de prueba
+                                      </Badge>
+                                    ) : null}
                                   </TD>
                                   <TD align="right">
                                     <span className="tabular-nums">

@@ -383,6 +383,7 @@ describe('CuentasProvisioningService — contadores de venta', () => {
         clienteFinalId: 'cliente-2',
         empresaRevendedoraId: 'empresa-1',
         cuposPorCategoria: 2,
+        aislada: false,
       },
     });
 

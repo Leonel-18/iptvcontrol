@@ -101,6 +101,15 @@ export class CrearClienteBotDto {
   @IsIn([1, 2])
   cupos_por_categoria?: 1 | 2;
 
+  @ApiPropertyOptional({
+    description:
+      'Aislar Cuenta: crea una Cuenta compartida NUEVA con Ventana de Alta (obligatoria) para ' +
+      'que este cliente pruebe solo, sin compartir con otros. Sólo para `dispositivo_compartido`.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  aislar_cuenta?: boolean;
+
   @ApiPropertyOptional({ type: DispositivoBotDto })
   @IsOptional()
   @ValidateNested()

@@ -457,3 +457,27 @@ sólo en las ventas que se quieran aislar.
 **Historial:** cada Cuenta compartida conserva el historial completo de sus ventanas anteriores
 (inicio, fin previsto, fin real, si se acortó manualmente y quién la abrió/levantó), visible desde
 la vista de Cuenta.
+
+### 15.1. Aislar Cuenta (venta compartida dedicada)
+
+Opción **explícita** del wizard (y del bot) para una venta compartida: **saltea la ubicación
+automática** y crea una **Cuenta compartida nueva**, dedicada a ese Cliente Final, con **Ventana de
+Alta obligatoria**. Pensada para un prospecto que quiere probar solo, sin compartir credenciales
+con otros clientes.
+
+- Sólo aplica a `dispositivo_compartido` (una Cuenta exclusiva ya es única) y no se puede combinar
+  con `cuenta_id`.
+- La **Ventana de Alta es obligatoria y mayor a 0**: sin ella, la Cuenta no queda aislada. Si no se
+  indica duración, se usa la predeterminada de la Empresa Revendedora (y debe ser > 0).
+- La venta queda marcada como **aislada** (`VentaCompartida.aislada`), para poder identificarla
+  después. La Cuenta deja de estar aislada cuando la ventana vence: a partir de ahí es una Cuenta
+  compartida normal y puede recibir otras ventas.
+- El aislamiento es temporal (el plazo de la ventana), no un tipo de Cuenta nuevo.
+
+### 15.2. Apertura manual de una Ventana de Alta
+
+La Empresa Revendedora puede **abrir una Ventana de Alta a mano** en una Cuenta compartida que no
+tiene una vigente (ej. para volver a protegerla), desde la vista de Cuenta
+(`POST /accounts/:id/curiosity-window`). Como no hay una venta que la origine, la ventana se asocia
+al Cliente Final más reciente de la Cuenta (su dueño no queda bloqueado); por eso **la Cuenta debe
+tener al menos un Cliente Final**. Duración mayor a 0; si no se indica, usa la predeterminada.
