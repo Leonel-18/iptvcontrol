@@ -31,21 +31,12 @@ export interface ErrorBotMapeado {
  * no exponen códigos de SENSA, SQL, credenciales ni stack traces.
  */
 export const MENSAJES_ERROR_BOT: Record<CodigoErrorBot, string> = {
-  ACCOUNT_ALREADY_EXISTS:
-    'No pudimos generar el acceso porque ya existe una cuenta registrada para este servicio. ' +
-    'Por favor, comunicate con nosotros para que podamos verificarla.',
-  INVALID_DATA:
-    'Los datos enviados no son válidos o están incompletos. Revisalos e intentá nuevamente.',
-  PROVIDER_AUTH:
-    'No pudimos conectarnos con el servicio de IPTV. Comunicate con nosotros para que lo revisemos.',
-  PROVIDER_UNAVAILABLE:
-    'El servicio de IPTV está demorando más de lo normal. Intentá nuevamente en unos minutos o ' +
-    'comunicate con nosotros.',
-  RATE_LIMITED:
-    'Estamos recibiendo muchas solicitudes en este momento. Intentá nuevamente en unos minutos.',
-  INTERNAL_ERROR:
-    'No pudimos procesar la solicitud. Intentá nuevamente en unos minutos o comunicate con ' +
-    'nosotros.',
+  ACCOUNT_ALREADY_EXISTS: 'Ya existe una cuenta registrada para este servicio.',
+  INVALID_DATA: 'Los datos enviados no son válidos o están incompletos.',
+  PROVIDER_AUTH: 'Tenemos un error al conectarnos con nuestros servicios.',
+  PROVIDER_UNAVAILABLE: 'Tenemos un error al conectarnos con nuestros servicios.',
+  RATE_LIMITED: 'Estamos recibiendo muchas solicitudes en este momento.',
+  INTERNAL_ERROR: 'No pudimos procesar la solicitud.',
 };
 
 /**

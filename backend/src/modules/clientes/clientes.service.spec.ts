@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import {
   EstadoClienteFinal,
   EstadoCuenta,
@@ -528,5 +528,74 @@ describe('ClientesService — validación de Aislar Cuenta', () => {
         dispositivo: {},
       } as never),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+/**
+ * Editar los datos de contacto no puede dejar que un Cliente Final tome el DNI o
+ * el teléfono de otro. Sólo se valida cuando el valor cambia, para no rechazar un
+ * guardado sin cambios.
+ */
+describe('ClientesService — validación de DNI y teléfono al editar', () => {
+  const actual = { idGestionExterno: null, dni: '11111111', telefono: '2615550000' };
+
+  const crearServicio = (findFirst = jest.fn().mockResolvedValue(null)) => {
+    const update = jest.fn().mockResolvedValue({ id: 'cliente-1' });
+    const prisma = {
+      db: {
+        clienteFinal: {
+          findUnique: jest.fn().mockResolvedValue(actual),
+          findFirst,
+          update,
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+      },
+    } as unknown as PrismaService;
+    const contexto = {
+      esOperador: false,
+      empresaRevendedoraId: 'empresa-1',
+    } as unknown as RequestContextService;
+
+    const servicio = new ClientesService(
+      prisma,
+      {} as AuditService,
+      {} as CryptoService,
+      contexto,
+      {} as DispositivosService,
+      {} as IdentificadoresService,
+      {} as ProveedorService,
+    );
+    return { servicio, findFirst, update };
+  };
+
+  it('rechaza editar con un DNI que ya tiene otro Cliente Final', async () => {
+    const { servicio } = crearServicio(jest.fn().mockResolvedValue({ id: 'otro' }));
+
+    const error = await servicio.actualizar('cliente-1', { dni: '22222222' }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({ error: 'DniDuplicado' });
+  });
+
+  it('rechaza editar con un teléfono que ya tiene otro Cliente Final', async () => {
+    const { servicio } = crearServicio(jest.fn().mockResolvedValue({ id: 'otro' }));
+
+    const error = await servicio
+      .actualizar('cliente-1', { telefono: '2615559999' })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({
+      error: 'TelefonoDuplicado',
+    });
+  });
+
+  it('no valida duplicados si el DNI y el teléfono no cambian', async () => {
+    const { servicio, findFirst, update } = crearServicio();
+
+    await servicio.actualizar('cliente-1', { dni: '11111111', telefono: '2615550000' });
+
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalled();
   });
 });

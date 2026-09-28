@@ -15,6 +15,15 @@ import {
 } from 'class-validator';
 
 /**
+ * Los flujos de WhatsApp/mensajería suelen mandar las variables vacías como
+ * string vacío (`""`). Para los campos OPCIONALES eso equivale a "no enviado":
+ * se transforma a `undefined` para que `@IsOptional` lo saltee y no falle la
+ * validación (ej. `email: ""` rompía el alta con "email no es válido").
+ */
+const vacioComoUndefined = ({ value }: { value: unknown }): unknown =>
+  value === '' ? undefined : value;
+
+/**
  * Las plataformas de mensajería suelen mandar los booleanos como texto
  * (`"true"` / `"false"`). Se normalizan para que `@IsBoolean` los acepte.
  */
@@ -51,6 +60,7 @@ export class CrearClienteBotDto {
   nombre!: string;
 
   @ApiPropertyOptional()
+  @Transform(vacioComoUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(120)
@@ -64,18 +74,21 @@ export class CrearClienteBotDto {
   dni!: string;
 
   @ApiPropertyOptional()
+  @Transform(vacioComoUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(30)
   telefono?: string;
 
   @ApiPropertyOptional()
+  @Transform(vacioComoUndefined)
   @IsOptional()
   @IsEmail({}, { message: 'El email del cliente no es válido.' })
   @MaxLength(160)
   email?: string;
 
   @ApiPropertyOptional()
+  @Transform(vacioComoUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -85,6 +98,7 @@ export class CrearClienteBotDto {
     description:
       'ID del cliente en el sistema de gestión de la Empresa Revendedora (ISP BRAIN). Opcional.',
   })
+  @Transform(vacioComoUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(40)
