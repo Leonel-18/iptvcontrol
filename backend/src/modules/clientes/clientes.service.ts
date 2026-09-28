@@ -590,26 +590,65 @@ export class ClientesService {
 
     const idGestionExterno =
       dto.id_gestion_externo === undefined ? undefined : dto.id_gestion_externo.trim() || null;
+    const dni = dto.dni?.trim() || undefined;
+    const telefono = dto.telefono?.trim() || undefined;
+
+    // Sólo se valida lo que efectivamente cambió: un guardado sin cambios no
+    // debe rechazarse por datos que ya estaban cargados. El alcance es la propia
+    // Empresa Revendedora (RLS) y se excluye al mismo cliente.
+    const actual = await this.prisma.db.clienteFinal.findUnique({
+      where: { id },
+      select: { idGestionExterno: true, dni: true, telefono: true },
+    });
 
     // Validación de ID de gestión externo al editar (regla 2.4): mismo criterio
-    // que en el alta. Sólo se chequea si el valor cambió, para no rechazar un
-    // guardado sin cambios.
-    if (idGestionExterno) {
-      const actual = await this.prisma.db.clienteFinal.findUnique({
-        where: { id },
-        select: { idGestionExterno: true },
+    // que en el alta.
+    if (idGestionExterno && actual && actual.idGestionExterno !== idGestionExterno) {
+      const coincidencias = await this.buscarCoincidenciasGestionExterna(idGestionExterno);
+      if (coincidencias.length > 0) {
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'IdGestionExternoDuplicado',
+          message:
+            'Ya existe otro Cliente Final con ese ID de gestión. Elíjalo distinto o déjelo vacío.',
+          coincidencias,
+        });
+      }
+    }
+
+    if (dni && actual && actual.dni !== dni) {
+      const duplicado = await this.prisma.db.clienteFinal.findFirst({
+        where: {
+          dni,
+          id: { not: id },
+          estado: { in: [EstadoClienteFinal.activo, EstadoClienteFinal.suspendido] },
+        },
+        select: { id: true },
       });
-      if (actual && actual.idGestionExterno !== idGestionExterno) {
-        const coincidencias = await this.buscarCoincidenciasGestionExterna(idGestionExterno);
-        if (coincidencias.length > 0) {
-          throw new ConflictException({
-            statusCode: 409,
-            error: 'IdGestionExternoDuplicado',
-            message:
-              'Ya existe otro Cliente Final con ese ID de gestión. Elíjalo distinto o déjelo vacío.',
-            coincidencias,
-          });
-        }
+      if (duplicado) {
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'DniDuplicado',
+          message: 'Ya existe otro Cliente Final con ese DNI.',
+        });
+      }
+    }
+
+    if (telefono && actual && actual.telefono !== telefono) {
+      const duplicado = await this.prisma.db.clienteFinal.findFirst({
+        where: {
+          telefono,
+          id: { not: id },
+          estado: { in: [EstadoClienteFinal.activo, EstadoClienteFinal.suspendido] },
+        },
+        select: { id: true },
+      });
+      if (duplicado) {
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'TelefonoDuplicado',
+          message: 'Ya existe otro Cliente Final con ese teléfono.',
+        });
       }
     }
 
