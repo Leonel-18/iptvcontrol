@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TipoAltaClienteFinal } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
@@ -13,6 +13,16 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+
+/**
+ * Las plataformas de mensajería suelen mandar los booleanos como texto
+ * (`"true"` / `"false"`). Se normalizan para que `@IsBoolean` los acepte.
+ */
+const booleanoDeTexto = ({ value }: { value: unknown }): unknown => {
+  if (value === 'true' || value === true) return true;
+  if (value === 'false' || value === false) return false;
+  return value;
+};
 
 /** Dispositivo con el que arranca el Cliente Final. No se pide tipo ni MAC. */
 export class DispositivoBotDto {
@@ -106,6 +116,7 @@ export class CrearClienteBotDto {
       'Aislar Cuenta: crea una Cuenta compartida NUEVA con Ventana de Alta (obligatoria) para ' +
       'que este cliente pruebe solo, sin compartir con otros. Sólo para `dispositivo_compartido`.',
   })
+  @Transform(booleanoDeTexto)
   @IsOptional()
   @IsBoolean()
   aislar_cuenta?: boolean;
@@ -119,6 +130,7 @@ export class CrearClienteBotDto {
   @ApiPropertyOptional({
     description: 'Continúa el alta aunque exista otro cliente con el mismo `id_gestion_externo`.',
   })
+  @Transform(booleanoDeTexto)
   @IsOptional()
   @IsBoolean()
   confirmar_duplicado?: boolean;
