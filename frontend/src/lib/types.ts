@@ -57,6 +57,11 @@ export interface Account {
   email_contacto?: string;
   servicios?: string;
   servicios_nombres?: string[];
+  // Aislamiento de Cuenta compartida existente (HU-A02).
+  aislada?: boolean;
+  aislamiento_fin_en?: string | null;
+  /** Clientes Finales activos de la Cuenta (undefined en exclusivas). */
+  clientes_activos?: number | null;
 }
 
 export interface AccountDevice {

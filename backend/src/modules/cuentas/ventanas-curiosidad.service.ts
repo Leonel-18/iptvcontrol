@@ -22,6 +22,19 @@ export class CuentaEnVentanaCuriosidadError extends ConflictException {
   }
 }
 
+/** La Cuenta está aislada (HU-A02): no admite Clientes Finales nuevos. */
+export class CuentaAisladaError extends ConflictException {
+  constructor(cuentaId: string, aislamientoFinEn: Date) {
+    super({
+      statusCode: 409,
+      error: 'CuentaAislada',
+      message: 'La Cuenta está aislada y no admite Clientes Finales nuevos por ahora.',
+      cuenta_id: cuentaId,
+      aislamiento_fin_en: aislamientoFinEn.toISOString(),
+    });
+  }
+}
+
 interface AbrirVentanaParams {
   cuentaId: string;
   clienteFinalId: string;
@@ -109,6 +122,15 @@ export class VentanasCuriosidadService {
     await this.prisma.transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${cuentaId}))`;
       await this.cerrarVencidasEnTx(tx, cuentaId, ahora);
+      // Aislamiento de Cuenta (HU-A02): bloquea a cualquier cliente nuevo.
+      const cuenta = await tx.cuenta.findUnique({
+        where: { id: cuentaId },
+        select: { aislada: true, aislamientoFinEn: true },
+      });
+      if (cuenta?.aislada && cuenta.aislamientoFinEn && cuenta.aislamientoFinEn > ahora) {
+        throw new CuentaAisladaError(cuentaId, cuenta.aislamientoFinEn);
+      }
+
       const activa = await tx.ventanaCuriosidad.findFirst({
         where: { cuentaId, finRealEn: null, finPrevistoEn: { gt: ahora } },
       });

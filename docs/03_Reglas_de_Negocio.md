@@ -485,3 +485,21 @@ tiene una vigente (ej. para volver a protegerla), desde la vista de Cuenta
 (`POST /accounts/:id/curiosity-window`). Como no hay una venta que la origine, la ventana se asocia
 al Cliente Final más reciente de la Cuenta (su dueño no queda bloqueado); por eso **la Cuenta debe
 tener al menos un Cliente Final**. Duración mayor a 0; si no se indica, usa la predeterminada.
+
+### 15.3. Aislamiento de una Cuenta compartida existente
+
+La Empresa Revendedora puede **aislar una Cuenta compartida ya creada** (HU-A02) para que deje de
+recibir Clientes Finales nuevos durante un plazo, sin importar que le queden cupos libres. Se hace
+desde la vista de Cuenta (`POST /accounts/:id/isolation`) con una cantidad de **días entero mayor a
+0**.
+
+- Sólo aplica a Cuentas **compartidas**.
+- Requiere **exactamente un Cliente Final activo** en la Cuenta (los suspendidos y dados de baja no
+  cuentan). Con 0 o con 2 o más, se rechaza.
+- El aislamiento **reemplaza a la Ventana de Alta**: si había una vigente, se revoca y se cierra con
+  el motivo `reemplazo_por_aislamiento`.
+- Mientras el aislamiento esté **vigente** (fecha de fin futura), la Cuenta no recibe Clientes
+  Finales nuevos ni por ubicación automática ni por carga contextual ni por reasignación.
+- El estado se persiste a nivel Cuenta (`aislada` + `aislamiento_fin_en`) y la operación queda
+  auditada (`apertura_aislamiento_cuenta`). El vencimiento y la revocación se documentan aparte
+  (HU-A03).

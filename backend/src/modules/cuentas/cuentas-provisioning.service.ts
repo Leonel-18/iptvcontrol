@@ -610,6 +610,11 @@ export class CuentasProvisioningService {
               },
             ],
           },
+          {
+            // Una Cuenta aislada (HU-A02) queda fuera de la ubicación automática
+            // mientras el aislamiento esté vigente.
+            NOT: { aislada: true, aislamientoFinEn: { gt: new Date() } },
+          },
         ],
         ventanasCuriosidad: {
           none: { finRealEn: null, finPrevistoEn: { gt: new Date() } },

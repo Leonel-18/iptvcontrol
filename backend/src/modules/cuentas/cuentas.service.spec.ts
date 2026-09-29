@@ -1,4 +1,5 @@
-import { EstadoCuenta, EstadoDispositivo } from '@prisma/client';
+import { BadRequestException } from '@nestjs/common';
+import { EstadoCuenta, EstadoDispositivo, MotivoFinVentanaCuriosidad } from '@prisma/client';
 import { CuentasService } from './cuentas.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
@@ -313,7 +314,10 @@ describe('CuentasService — actualizarPropiedades', () => {
       cuenta: { update: cuentaUpdate },
     };
     const prisma = {
-      db: { cuenta: { findUnique: cuentaFindUnique } },
+      db: {
+        cuenta: { findUnique: cuentaFindUnique },
+        clienteFinal: { count: jest.fn().mockResolvedValue(1) },
+      },
       operadorPrincipal: { findUnique: jest.fn().mockResolvedValue({ umbralAlertaCapacidad: 2 }) },
       transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
     } as unknown as PrismaService;
@@ -722,5 +726,113 @@ describe('CuentasService — ajustarSlotVentaCompartida', () => {
         cupos_por_categoria: 1,
       }),
     ).rejects.toThrow('no tiene una venta en esta Cuenta');
+  });
+});
+
+/**
+ * HU-A02 — Aislamiento de una Cuenta compartida existente.
+ *
+ * Sólo se puede aislar una Cuenta compartida con exactamente un Cliente Final
+ * ACTIVO. El aislamiento reemplaza a la Ventana de Alta (la revoca) y bloquea el
+ * ingreso de clientes nuevos durante los días indicados.
+ */
+describe('CuentasService — aislarCuenta (HU-A02)', () => {
+  const crearServicio = (
+    opciones: { esExclusiva?: boolean; activos?: number; ventanaVigente?: boolean } = {},
+  ) => {
+    const clienteFinalFindMany = jest
+      .fn()
+      .mockResolvedValue(
+        Array.from({ length: opciones.activos ?? 1 }, (_, indice) => ({ id: `cliente-${indice}` })),
+      );
+    const ventanaUpdateMany = jest
+      .fn()
+      .mockResolvedValue({ count: opciones.ventanaVigente ? 1 : 0 });
+    const cuentaUpdate = jest.fn().mockResolvedValue(undefined);
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      cuenta: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'cuenta-1',
+          esExclusiva: opciones.esExclusiva ?? false,
+          empresaRevendedoraId: 'empresa-1',
+        }),
+        update: cuentaUpdate,
+      },
+      clienteFinal: { findMany: clienteFinalFindMany },
+      ventanaCuriosidad: { updateMany: ventanaUpdateMany },
+    };
+    const prisma = {
+      transaction: jest.fn().mockImplementation((fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+    const contexto = {
+      esOperador: false,
+      empresaRevendedoraId: 'empresa-1',
+      teamMemberId: 'team-1',
+    } as unknown as RequestContextService;
+
+    const servicio = new CuentasService(
+      prisma,
+      {} as CryptoService,
+      contexto,
+      {} as ProveedorService,
+      audit,
+      {} as VentanasCuriosidadService,
+      {} as CuentasProvisioningService,
+      {} as ColaProveedorService,
+    );
+    jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: 'cuenta-1' } as never);
+    return { servicio, ventanaUpdateMany, cuentaUpdate, audit };
+  };
+
+  it('rechaza aislar una Cuenta exclusiva', async () => {
+    const { servicio } = crearServicio({ esExclusiva: true });
+
+    await expect(servicio.aislarCuenta('cuenta-1', 30)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rechaza aislar una Cuenta sin Clientes Finales activos', async () => {
+    const { servicio } = crearServicio({ activos: 0 });
+
+    await expect(servicio.aislarCuenta('cuenta-1', 30)).rejects.toThrow(
+      'no tiene Clientes Finales activos',
+    );
+  });
+
+  it('rechaza aislar una Cuenta con más de un Cliente Final activo', async () => {
+    const { servicio } = crearServicio({ activos: 2 });
+
+    await expect(servicio.aislarCuenta('cuenta-1', 30)).rejects.toThrow(
+      'exactamente un Cliente Final activo',
+    );
+  });
+
+  it('rechaza días inválidos', async () => {
+    const { servicio } = crearServicio();
+
+    await expect(servicio.aislarCuenta('cuenta-1', 0)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('aísla la Cuenta: revoca la ventana, marca el estado y audita', async () => {
+    const { servicio, ventanaUpdateMany, cuentaUpdate, audit } = crearServicio({
+      ventanaVigente: true,
+    });
+
+    await servicio.aislarCuenta('cuenta-1', 30);
+
+    expect(ventanaUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          motivoFin: MotivoFinVentanaCuriosidad.reemplazo_por_aislamiento,
+        }),
+      }),
+    );
+    expect(cuentaUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ aislada: true }) }),
+    );
+    expect(audit.registrarEnTx).toHaveBeenCalled();
   });
 });

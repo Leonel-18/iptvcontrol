@@ -185,6 +185,21 @@ export class CuentasService {
     const ventanas = cuenta.esExclusiva
       ? { activa: null, historial: [] }
       : await this.ventanasCuriosidad.obtenerEstadoEHistorial(cuenta.id);
+
+    // Clientes Finales ACTIVOS de la Cuenta (los suspendidos y dados de baja no
+    // cuentan): la Empresa Revendedora sólo puede aislar con exactamente uno.
+    const clientesActivos = cuenta.esExclusiva
+      ? null
+      : await this.prisma.db.clienteFinal.count({
+          where: {
+            estado: EstadoClienteFinal.activo,
+            OR: [
+              { ventasCompartidas: { some: { cuentaId: cuenta.id } } },
+              { dispositivos: { some: { cuentaId: cuenta.id } } },
+            ],
+          },
+        });
+
     return {
       ...mapCuentaParaRevendedora(cuenta, capacidad, credenciales, cuenta.proveedor?.nombre),
       dispositivos: cuenta.dispositivos.map(mapDispositivoParaRevendedora),
@@ -229,7 +244,90 @@ export class CuentasService {
       ]),
       ventana_curiosidad: ventanas.activa,
       historial_ventanas_curiosidad: ventanas.historial,
+      // Aislamiento de Cuenta existente (HU-A02).
+      aislada: cuenta.aislada,
+      aislamiento_fin_en: cuenta.aislamientoFinEn,
+      clientes_activos: clientesActivos,
     };
+  }
+
+  /**
+   * Aisla una Cuenta compartida existente (HU-A02): mientras el aislamiento esté
+   * vigente, la Cuenta no recibe Clientes Finales nuevos. Se exige exactamente un
+   * Cliente Final activo (los suspendidos y dados de baja no cuentan). Si había
+   * una Ventana de Alta vigente, se revoca y el aislamiento la reemplaza.
+   */
+  async aislarCuenta(id: string, dias: number) {
+    if (this.contexto.esOperador || !this.contexto.empresaRevendedoraId) {
+      throw new ForbiddenException('Sólo la Empresa Revendedora dueña puede aislar la Cuenta.');
+    }
+    const teamMemberId = this.contexto.teamMemberId;
+    const ahora = new Date();
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+      const cuenta = await tx.cuenta.findUnique({ where: { id } });
+      if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
+      if (cuenta.esExclusiva) {
+        throw new BadRequestException('Sólo se puede aislar una Cuenta compartida.');
+      }
+
+      if (!Number.isInteger(dias) || dias <= 0) {
+        throw new BadRequestException('Los días de aislamiento deben ser un entero mayor a 0.');
+      }
+
+      // Clientes Finales ACTIVOS asociados a la Cuenta (venta compartida o
+      // Dispositivos). Se excluyen los suspendidos y dados de baja.
+      const activos = await tx.clienteFinal.findMany({
+        where: {
+          estado: EstadoClienteFinal.activo,
+          OR: [
+            { ventasCompartidas: { some: { cuentaId: id } } },
+            { dispositivos: { some: { cuentaId: id } } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (activos.length === 0) {
+        throw new BadRequestException('La Cuenta no tiene Clientes Finales activos para aislar.');
+      }
+      if (activos.length > 1) {
+        throw new BadRequestException(
+          'Sólo se puede aislar una Cuenta con exactamente un Cliente Final activo.',
+        );
+      }
+
+      // El aislamiento reemplaza a la Ventana de Alta: si hay una vigente, se revoca.
+      const revocadas = await tx.ventanaCuriosidad.updateMany({
+        where: { cuentaId: id, finRealEn: null, finPrevistoEn: { gt: ahora } },
+        data: {
+          finRealEn: ahora,
+          motivoFin: MotivoFinVentanaCuriosidad.reemplazo_por_aislamiento,
+          finalizadaPorTeamMemberId: teamMemberId ?? null,
+        },
+      });
+
+      const fin = new Date(ahora.getTime() + dias * 24 * 60 * 60_000);
+      await tx.cuenta.update({
+        where: { id },
+        data: { aislada: true, aislamientoFinEn: fin },
+      });
+
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.apertura_aislamiento_cuenta,
+        entidad: EntidadAuditada.Cuenta,
+        entidadId: id,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        detalle: {
+          cuenta_id: id,
+          dias,
+          aislamiento_fin_en: fin.toISOString(),
+          ventana_revocada: revocadas.count > 0,
+        },
+      });
+    });
+
+    return this.obtener(id);
   }
 
   /**

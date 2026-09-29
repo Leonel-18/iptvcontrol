@@ -115,6 +115,7 @@ enum MotivoFinVentanaCuriosidad {
   vencimiento
   levantamiento_manual
   cancelacion_venta
+  reemplazo_por_aislamiento
 }
 
 /// Origen de una Cuenta. Distingue las creadas por IPTVControl (consumen cupo
@@ -166,6 +167,7 @@ enum AccionAuditoria {
   reactivacion_empresa_revendedora
   cambio_slots_cuenta
   cambio_plantilla_whatsapp
+  apertura_aislamiento_cuenta
 }
 
 enum EntidadAuditada {
@@ -484,6 +486,12 @@ model Cuenta {
   dispositivosMovilesHabilitados Int @default(1) @map("dispositivos_moviles_habilitados")
 
   estado EstadoCuenta @default(activa)
+
+  /// Aislamiento de una Cuenta compartida existente (HU-A02): mientras
+  /// `aislada` esté en true y `aislamientoFinEn` sea futuro, la Cuenta no recibe
+  /// Clientes Finales nuevos. No confundir con la Ventana de Alta.
+  aislada          Boolean   @default(false) @map("aislada")
+  aislamientoFinEn DateTime? @map("aislamiento_fin_en")
 
   /// Origen de la Cuenta en IPTVControl. Las importadas no consumen el cupo de
   /// creación mensual de la Empresa Revendedora y arrancan como compartidas,
