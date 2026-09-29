@@ -105,6 +105,7 @@ interface EstadoFormulario {
   notaDescriptiva: string;
   duracionVentanaCuriosidadMinutos: number;
   aislarCuenta: boolean;
+  aislamientoDias: number;
 }
 
 const INICIAL: EstadoFormulario = {
@@ -121,6 +122,7 @@ const INICIAL: EstadoFormulario = {
   notaDescriptiva: '',
   duracionVentanaCuriosidadMinutos: 0,
   aislarCuenta: false,
+  aislamientoDias: 30,
 };
 
 const PASOS = ['Cliente', 'Método de alta', 'Servicios', 'Confirmar'] as const;
@@ -223,12 +225,17 @@ export const CustomerForm = () => {
               : {}),
             ...(decisionDuplicado?.tipo !== 'agrupar' &&
             valores.metodoAlta === 'dispositivo_compartido'
-              ? {
-                  cupos_por_categoria: valores.cuposPorCategoria,
-                  duracion_ventana_curiosidad_minutos:
-                    valores.duracionVentanaCuriosidadMinutos,
-                  aislar_cuenta: valores.aislarCuenta ? true : undefined,
-                }
+              ? valores.aislarCuenta
+                ? {
+                    cupos_por_categoria: valores.cuposPorCategoria,
+                    aislar_cuenta: true,
+                    aislamiento_dias: valores.aislamientoDias,
+                  }
+                : {
+                    cupos_por_categoria: valores.cuposPorCategoria,
+                    duracion_ventana_curiosidad_minutos:
+                      valores.duracionVentanaCuriosidadMinutos,
+                  }
               : {}),
             dispositivo: {
               nota_descriptiva: valores.notaDescriptiva.trim() || undefined,
@@ -300,12 +307,15 @@ export const CustomerForm = () => {
     }
 
     if (paso === 1 && valores.metodoAlta === 'dispositivo_compartido') {
-      if (!configuracionVentana.isSuccess) return false;
-      if (valores.aislarCuenta && valores.duracionVentanaCuriosidadMinutos <= 0) {
-        setErrores((actual) => ({
-          ...actual,
-          aislarCuenta: 'Para Aislar la Cuenta, la Ventana de Alta debe ser mayor a 0.',
-        }));
+      if (valores.aislarCuenta) {
+        if (!Number.isInteger(valores.aislamientoDias) || valores.aislamientoDias < 1) {
+          setErrores((actual) => ({
+            ...actual,
+            aislarCuenta: 'Indique los días de aislamiento: un número entero mayor a 0.',
+          }));
+          return false;
+        }
+      } else if (!configuracionVentana.isSuccess) {
         return false;
       }
     }
@@ -621,7 +631,63 @@ export const CustomerForm = () => {
                     </div>
                   </fieldset>
 
-                  {configuracionVentana.isPending ? (
+                  <label
+                    className={cn(
+                      'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                      valores.aislarCuenta
+                        ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
+                        : 'hover:bg-navy-50 dark:hover:bg-navy-800',
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={valores.aislarCuenta}
+                      onChange={(evento) => {
+                        setValores((actual) => ({
+                          ...actual,
+                          aislarCuenta: evento.target.checked,
+                        }));
+                        setErrores((actual) => ({ ...actual, aislarCuenta: undefined }));
+                      }}
+                      className="mt-0.5 size-4 shrink-0 accent-azure-500"
+                    />
+                    <span>
+                      <span className="block font-medium">Aislar Cuenta</span>
+                      <span className="mt-0.5 block text-sm texto-suave">
+                        Crea una Cuenta compartida nueva y aislada por un plazo en días: no se
+                        comparte con otros clientes mientras dure.
+                      </span>
+                    </span>
+                  </label>
+                  {errores.aislarCuenta ? (
+                    <Alert tone="danger">{errores.aislarCuenta}</Alert>
+                  ) : null}
+
+                  {valores.aislarCuenta ? (
+                    <div className="rounded-lg border p-4">
+                      <Field
+                        label="Días de aislamiento"
+                        htmlFor="aislamiento-dias"
+                        required
+                        help="Durante estos días la Cuenta no recibe otros clientes nuevos."
+                      >
+                        <Input
+                          id="aislamiento-dias"
+                          type="number"
+                          min="1"
+                          inputMode="numeric"
+                          value={valores.aislamientoDias}
+                          onChange={(evento) =>
+                            actualizar(
+                              'aislamientoDias',
+                              Number(evento.target.value.replace(/[^\d]/g, '')),
+                            )
+                          }
+                          className="tabular-nums"
+                        />
+                      </Field>
+                    </div>
+                  ) : configuracionVentana.isPending ? (
                     <Skeleton className="h-28" />
                   ) : configuracionVentana.isError ? (
                     <Alert tone="danger" titulo="No se pudo cargar la duración predeterminada">
@@ -645,44 +711,6 @@ export const CustomerForm = () => {
                       />
                     </div>
                   )}
-
-                  <label
-                    className={cn(
-                      'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
-                      valores.aislarCuenta
-                        ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
-                        : 'hover:bg-navy-50 dark:hover:bg-navy-800',
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={valores.aislarCuenta}
-                      onChange={(evento) => {
-                        const marcado = evento.target.checked;
-                        setValores((actual) => ({
-                          ...actual,
-                          aislarCuenta: marcado,
-                          // Aislar Cuenta exige una ventana > 0: si estaba en 0, arranca en 24 h.
-                          duracionVentanaCuriosidadMinutos:
-                            marcado && actual.duracionVentanaCuriosidadMinutos <= 0
-                              ? 1440
-                              : actual.duracionVentanaCuriosidadMinutos,
-                        }));
-                        setErrores((actual) => ({ ...actual, aislarCuenta: undefined }));
-                      }}
-                      className="mt-0.5 size-4 shrink-0 accent-azure-500"
-                    />
-                    <span>
-                      <span className="block font-medium">Aislar Cuenta</span>
-                      <span className="mt-0.5 block text-sm texto-suave">
-                        Crea una Cuenta compartida nueva con Ventana de Alta para que este cliente
-                        pruebe solo: no se comparte con otros clientes durante el plazo.
-                      </span>
-                    </span>
-                  </label>
-                  {errores.aislarCuenta ? (
-                    <Alert tone="danger">{errores.aislarCuenta}</Alert>
-                  ) : null}
                 </div>
               ) : null}
 
@@ -868,9 +896,9 @@ export const CustomerForm = () => {
                 ) : valores.aislarCuenta ? (
                   <p>
                     La venta reserva {sharedCapacityLabels[valores.cuposPorCategoria]} en una{' '}
-                    <strong>Cuenta nueva aislada</strong>, sólo para este cliente. No se comparte con
-                    otros clientes y la Ventana de Alta durará{' '}
-                    {formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos).toLowerCase()}.
+                    <strong>Cuenta compartida nueva aislada</strong>, sólo para este cliente, por{' '}
+                    {valores.aislamientoDias} día(s). No se comparte con otros clientes mientras el
+                    aislamiento esté vigente.
                   </p>
                 ) : (
                   <p>
@@ -910,6 +938,7 @@ export const CustomerForm = () => {
                 disabled={
                   (paso === 1 &&
                     valores.metodoAlta === 'dispositivo_compartido' &&
+                    !valores.aislarCuenta &&
                     !configuracionVentana.isSuccess) ||
                   (paso === 2 && decisionDuplicado?.tipo !== 'agrupar' && !catalogoDisponible)
                 }
