@@ -181,8 +181,20 @@ export const CustomerList = () => {
                       <CustomerStatusBadge estado={cliente.estado} />
                     </TD>
                     <TD>
-                      <Badge tone={cliente.tipo_alta === 'cuenta_exclusiva' ? 'info' : 'neutral'}>
-                        {cliente.tipo_alta === 'cuenta_exclusiva' ? 'Exclusiva' : 'Compartida'}
+                      <Badge
+                        tone={
+                          cliente.tipo_alta === 'cuenta_exclusiva'
+                            ? 'info'
+                            : cliente.cuenta_aislada
+                              ? 'warning'
+                              : 'neutral'
+                        }
+                      >
+                        {cliente.tipo_alta === 'cuenta_exclusiva'
+                          ? 'Exclusiva'
+                          : cliente.cuenta_aislada
+                            ? 'Compartida - Aislada'
+                            : 'Compartida'}
                       </Badge>
                     </TD>
                     <TD align="right">

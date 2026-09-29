@@ -514,3 +514,8 @@ Clientes Finales nuevos:
   del usuario (`detalle.origen = "manual"`).
 
 Ambas vías registran `fin_aislamiento_cuenta` en el Audit Log.
+
+**Visualización (HU-A04):** la condición de aislamiento se muestra de forma consistente como
+**`Compartida - Aislada`** (no un estado aparte) en la tabla de Cuentas y en el listado de Clientes
+Finales, además de la vista de Cuenta. Al terminar o revocar el aislamiento vuelve a mostrarse
+`Compartida`; las Cuentas exclusivas no se ven afectadas.

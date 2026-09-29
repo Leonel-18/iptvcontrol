@@ -30,7 +30,7 @@ import { normalizarServicios, validarServiciosContratados } from '../../proveedo
 import { CrearClienteDto } from './dto/crear-cliente.dto';
 import { ActualizarClienteDto, ListarClientesQueryDto } from './dto/listar-clientes.query';
 import { calcularCapacidad, ESTADOS_QUE_OCUPAN } from '../cuentas/capacidad.util';
-import { nombresDeServicios } from '../cuentas/cuentas.mapper';
+import { esAislamientoVigente, nombresDeServicios } from '../cuentas/cuentas.mapper';
 
 /** Minutos de un día: el aislamiento se expresa en días y el mecanismo en minutos. */
 const MINUTOS_POR_DIA = 24 * 60;
@@ -123,6 +123,7 @@ export class ClientesService {
           dispositivos: {
             select: { id: true, tipo: true, estado: true, cuentaId: true },
           },
+          ventasCompartidas: { select: { cuentaId: true } },
           cuentasExclusivas: { select: { id: true } },
         },
         orderBy: { numeroCliente: 'desc' },
@@ -131,11 +132,46 @@ export class ClientesService {
       }),
     ]);
 
+    // Condición "Compartida - Aislada" de las Cuentas de esta página (HU-A04):
+    // una sola consulta para las Cuentas involucradas, en vez de anidar la
+    // relación completa dentro de cada Cliente.
+    const cuentaIds = [
+      ...new Set([
+        ...clientes.flatMap((cliente) => cliente.dispositivos.map((d) => d.cuentaId)),
+        ...clientes.flatMap((cliente) => (cliente.ventasCompartidas ?? []).map((v) => v.cuentaId)),
+      ]),
+    ];
+    const cuentasDeLaPagina = cuentaIds.length
+      ? await this.prisma.db.cuenta.findMany({
+          where: { id: { in: cuentaIds } },
+          select: {
+            id: true,
+            aislada: true,
+            aislamientoFinEn: true,
+            ventasCompartidas: { select: { id: true, aislada: true } },
+            ventanasCuriosidad: {
+              where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
+              select: { ventaCompartidaId: true },
+            },
+          },
+        })
+      : [];
+    const aisladas = new Map(
+      cuentasDeLaPagina.map((cuenta) => [cuenta.id, esAislamientoVigente(cuenta)]),
+    );
+
     // Para el Operador Principal se serializa la versión por ID, igual que en el
     // detalle: nombre y datos de contacto no llegan al frontend (regla 4.2).
-    const data = clientes.map((cliente) =>
-      esOperador ? this.mapClienteParaOperador(cliente) : this.mapCliente(cliente),
-    );
+    const data = clientes.map((cliente) => {
+      const idsCliente = [
+        ...cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId),
+        ...(cliente.ventasCompartidas ?? []).map((venta) => venta.cuentaId),
+      ];
+      const cuentaAislada = idsCliente.some((id) => aisladas.get(id) === true);
+      return esOperador
+        ? this.mapClienteParaOperador(cliente, cuentaAislada)
+        : this.mapCliente(cliente, cuentaAislada);
+    });
     return PaginatedResponse.build(data, total, query.page ?? 1, query.per_page ?? 25);
   }
 
@@ -225,12 +261,11 @@ export class ClientesService {
         })
       : null;
 
-    const ventaDelCliente = cuentaPrincipal
-      ? cliente.ventasCompartidas.find((venta) => venta.cuentaId === cuentaPrincipal.id)
-      : undefined;
+    // Condición de aislamiento vigente de la Cuenta del cliente (HU-A04).
+    const cuentaAislada = cuentaPrincipal ? await this.esCuentaAislada(cuentaPrincipal.id) : false;
 
     return {
-      ...this.mapCliente(cliente),
+      ...this.mapCliente(cliente, cuentaAislada),
       // Credenciales de la Cuenta del cliente: es lo que la Empresa Revendedora
       // le pasa al Cliente Final para que use el servicio.
       cuenta: cuentaPrincipal
@@ -244,8 +279,9 @@ export class ClientesService {
             servicios: cuentaPrincipal.servicios,
             servicios_nombres: nombresDeServicios(cuentaPrincipal.servicios),
             es_exclusiva: cuentaPrincipal.esExclusiva,
-            // true si la venta de este cliente se creó con "Aislar Cuenta".
-            aislada: ventaDelCliente?.aislada ?? false,
+            // true si la Cuenta del cliente está aislada (HU-A02) o su venta se
+            // creó con "Aislar Cuenta" y la Ventana sigue vigente (HU-A01).
+            aislada: cuentaAislada,
             capacidad: capacidad
               ? capacidad.esExclusiva
                 ? `${capacidad.ocupados} de ${capacidad.limite}`
@@ -930,6 +966,7 @@ export class ClientesService {
       dispositivos: { id: string; tipo: string | null; estado: string; cuentaId: string }[];
       cuentasExclusivas?: { id: string }[];
     },
+    cuentaAislada = false,
   ) {
     return {
       id: cliente.id,
@@ -937,6 +974,7 @@ export class ClientesService {
       empresa_revendedora_id: cliente.empresaRevendedoraId,
       estado: cliente.estado,
       tipo_alta: cliente.tipoAlta,
+      cuenta_aislada: cuentaAislada,
       cantidad_dispositivos: this.contarDispositivosOcupados(cliente.dispositivos),
       cuenta_ids: [
         ...new Set([
@@ -948,6 +986,23 @@ export class ClientesService {
       dado_de_baja_en: cliente.dadoDeBajaEn,
       creado_en: cliente.creadoEn,
     };
+  }
+
+  /** Condición de aislamiento vigente de una Cuenta (HU-A01 + HU-A04). */
+  private async esCuentaAislada(cuentaId: string): Promise<boolean> {
+    const cuenta = await this.prisma.db.cuenta.findUnique({
+      where: { id: cuentaId },
+      select: {
+        aislada: true,
+        aislamientoFinEn: true,
+        ventasCompartidas: { select: { id: true, aislada: true } },
+        ventanasCuriosidad: {
+          where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
+          select: { ventaCompartidaId: true },
+        },
+      },
+    });
+    return cuenta ? esAislamientoVigente(cuenta) : false;
   }
 
   private contarDispositivosOcupados(dispositivos: { estado: string }[]): number {
@@ -963,6 +1018,7 @@ export class ClientesService {
       dispositivos: { id: string; tipo: string | null; estado: string; cuentaId: string }[];
       cuentasExclusivas?: { id: string }[];
     },
+    cuentaAislada = false,
   ) {
     return {
       id: cliente.id,
@@ -976,6 +1032,7 @@ export class ClientesService {
       email: cliente.email,
       direccion: cliente.direccion,
       tipo_alta: cliente.tipoAlta,
+      cuenta_aislada: cuentaAislada,
       estado: cliente.estado,
       empresa_revendedora_id: cliente.empresaRevendedoraId,
       cantidad_dispositivos: cliente.dispositivos.filter(
