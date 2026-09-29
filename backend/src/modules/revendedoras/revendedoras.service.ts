@@ -25,7 +25,11 @@ import { CryptoService } from '../../common/crypto/crypto.service';
 import { InventarioProveedorService } from '../cuentas/inventario-proveedor.service';
 import { normalizarServicios } from '../../proveedor/servicios.util';
 import { ImportarCuentasExternasDto } from './dto/cuenta-externa.dto';
-import { inicioMesArgentina, finMesArgentina } from '../../common/time/calendario-comercial';
+import {
+  finMesArgentina,
+  inicioMesArgentina,
+  periodoMesArgentina,
+} from '../../common/time/calendario-comercial';
 import {
   ActualizarRevendedoraDto,
   CambiarModalidadDto,
@@ -276,12 +280,16 @@ export class RevendedorasService {
       sitio_web: empresa.sitioWeb,
       estado: empresa.estado,
       cuentas_max_crear_mensual: empresa.cuentasMaxCrearMensual,
-      // Módulo de cuentas de prueba (HU-P01): configuración por empresa.
+      // Módulo de cuentas de prueba (HU-P01/P02): configuración por empresa. Los
+      // extras sólo se informan si corresponden al período vigente.
       pruebas: {
         habilitadas: empresa.pruebasHabilitadas,
         cupo_mensual: empresa.pruebasCupoMensual,
         duracion_dias: empresa.pruebasDuracionDias,
-        extras_periodo: empresa.pruebasExtrasPeriodo,
+        extras_periodo:
+          empresa.pruebasExtrasPeriodoRef === periodoMesArgentina(new Date())
+            ? empresa.pruebasExtrasPeriodo
+            : 0,
         avisos_dias: empresa.pruebasAvisosDias,
       },
       modalidad_asignada_en: empresa.modalidadAsignadaEn ?? null,
@@ -735,6 +743,10 @@ export class RevendedorasService {
           pruebasCupoMensual: dto.pruebas_cupo_mensual,
           pruebasDuracionDias: dto.pruebas_duracion_dias,
           pruebasExtrasPeriodo: dto.pruebas_extras_periodo,
+          // Los extras se cargan "para el período actual": se estampa el mes AR
+          // vigente para que dejen de aplicar solos al cambiar de mes (HU-P02).
+          pruebasExtrasPeriodoRef:
+            dto.pruebas_extras_periodo !== undefined ? periodoMesArgentina(new Date()) : undefined,
           pruebasAvisosDias: dto.pruebas_avisos_dias,
         },
       });

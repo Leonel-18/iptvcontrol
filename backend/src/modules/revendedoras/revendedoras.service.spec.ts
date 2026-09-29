@@ -1,4 +1,5 @@
 import { RevendedorasService } from './revendedoras.service';
+import { periodoMesArgentina } from '../../common/time/calendario-comercial';
 
 describe('RevendedorasService', () => {
   it('devuelve sólo las Cuentas del Proveedor que no existen en IPTVControl', async () => {
@@ -329,6 +330,8 @@ describe('RevendedorasService', () => {
         pruebasCupoMensual: 5,
         pruebasDuracionDias: 30,
         pruebasExtrasPeriodo: 2,
+        // Los extras se estampan con el período vigente (HU-P02).
+        pruebasExtrasPeriodoRef: periodoMesArgentina(new Date()),
         pruebasAvisosDias: [7, 3, 1],
       }),
     });
