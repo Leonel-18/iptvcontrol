@@ -336,6 +336,15 @@ model EmpresaRevendedora {
   /// existentes después de una venta nueva. La Empresa puede reducirlo en cada alta.
   duracionVentanaCuriosidadMinutos Int @default(0) @map("duracion_ventana_curiosidad_minutos")
 
+  /// Cuentas de prueba (Épica B). El Operador Principal habilita y parametriza el
+  /// módulo por Empresa Revendedora. La duración aplica sólo a pruebas nuevas.
+  pruebasHabilitadas   Boolean @default(false) @map("pruebas_habilitadas")
+  pruebasCupoMensual   Int     @default(0) @map("pruebas_cupo_mensual")
+  pruebasDuracionDias  Int     @default(0) @map("pruebas_duracion_dias")
+  pruebasExtrasPeriodo Int     @default(0) @map("pruebas_extras_periodo")
+  /// Múltiples días de aviso previo al vencimiento (ej. [7, 3, 1]).
+  pruebasAvisosDias    Int[]   @default([]) @map("pruebas_avisos_dias")
+
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
