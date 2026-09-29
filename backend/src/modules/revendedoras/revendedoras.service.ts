@@ -276,6 +276,14 @@ export class RevendedorasService {
       sitio_web: empresa.sitioWeb,
       estado: empresa.estado,
       cuentas_max_crear_mensual: empresa.cuentasMaxCrearMensual,
+      // Módulo de cuentas de prueba (HU-P01): configuración por empresa.
+      pruebas: {
+        habilitadas: empresa.pruebasHabilitadas,
+        cupo_mensual: empresa.pruebasCupoMensual,
+        duracion_dias: empresa.pruebasDuracionDias,
+        extras_periodo: empresa.pruebasExtrasPeriodo,
+        avisos_dias: empresa.pruebasAvisosDias,
+      },
       modalidad_asignada_en: empresa.modalidadAsignadaEn ?? null,
       modalidad_comercial: empresa.modalidadComercial
         ? {
@@ -667,12 +675,25 @@ export class RevendedorasService {
     const esOperador = this.contexto.esOperador;
 
     // La Empresa Revendedora puede mantener sus datos de contacto, pero no su
-    // estado (activa/suspendida), ni su CUIT ni su límite mensual: eso lo
-    // administra el Operador Principal.
+    // estado (activa/suspendida), ni su CUIT, ni su límite mensual, ni la
+    // configuración del módulo de cuentas de prueba: eso lo administra el
+    // Operador Principal (HU-P01).
+    const tocaConfiguracionDePruebas =
+      dto.pruebas_habilitadas !== undefined ||
+      dto.pruebas_cupo_mensual !== undefined ||
+      dto.pruebas_duracion_dias !== undefined ||
+      dto.pruebas_extras_periodo !== undefined ||
+      dto.pruebas_avisos_dias !== undefined;
     if (!esOperador) {
-      if (dto.estado || dto.cuit || dto.cuentas_max_crear_mensual !== undefined) {
+      if (
+        dto.estado ||
+        dto.cuit ||
+        dto.cuentas_max_crear_mensual !== undefined ||
+        tocaConfiguracionDePruebas
+      ) {
         throw new ForbiddenException(
-          'Solo el Operador Principal puede cambiar estado, CUIT o límite mensual.',
+          'Solo el Operador Principal puede cambiar el estado, el CUIT, el límite mensual o la ' +
+            'configuración de cuentas de prueba.',
         );
       }
       if (this.contexto.empresaRevendedoraId !== id) {
@@ -710,6 +731,11 @@ export class RevendedorasService {
           sitioWeb: dto.sitio_web?.trim(),
           cuentasMaxCrearMensual: dto.cuentas_max_crear_mensual,
           estado: dto.estado,
+          pruebasHabilitadas: dto.pruebas_habilitadas,
+          pruebasCupoMensual: dto.pruebas_cupo_mensual,
+          pruebasDuracionDias: dto.pruebas_duracion_dias,
+          pruebasExtrasPeriodo: dto.pruebas_extras_periodo,
+          pruebasAvisosDias: dto.pruebas_avisos_dias,
         },
       });
 
@@ -760,13 +786,21 @@ export class RevendedorasService {
       emailContacto: string;
       sitioWeb: string | null;
       cuentasMaxCrearMensual: number;
+      pruebasHabilitadas: boolean;
+      pruebasCupoMensual: number;
+      pruebasDuracionDias: number;
+      pruebasExtrasPeriodo: number;
+      pruebasAvisosDias: number[];
     },
     dto: ActualizarRevendedoraDto,
-  ): Record<string, { anterior: string | number | null; nuevo: string | number | null }> {
+  ): Record<
+    string,
+    { anterior: string | number | boolean | null; nuevo: string | number | boolean | null }
+  > {
     const mapeo: Array<{
       campo: string;
-      previo: string | number | null;
-      nuevo: string | number | null | undefined;
+      previo: string | number | boolean | null;
+      nuevo: string | number | boolean | null | undefined;
     }> = [
       { campo: 'razon_social', nuevo: dto.razon_social?.trim(), previo: anterior.razonSocial },
       { campo: 'cuit', nuevo: dto.cuit, previo: anterior.cuit },
@@ -796,11 +830,36 @@ export class RevendedorasService {
         nuevo: dto.cuentas_max_crear_mensual,
         previo: anterior.cuentasMaxCrearMensual,
       },
+      {
+        campo: 'pruebas_habilitadas',
+        nuevo: dto.pruebas_habilitadas,
+        previo: anterior.pruebasHabilitadas,
+      },
+      {
+        campo: 'pruebas_cupo_mensual',
+        nuevo: dto.pruebas_cupo_mensual,
+        previo: anterior.pruebasCupoMensual,
+      },
+      {
+        campo: 'pruebas_duracion_dias',
+        nuevo: dto.pruebas_duracion_dias,
+        previo: anterior.pruebasDuracionDias,
+      },
+      {
+        campo: 'pruebas_extras_periodo',
+        nuevo: dto.pruebas_extras_periodo,
+        previo: anterior.pruebasExtrasPeriodo,
+      },
+      {
+        campo: 'pruebas_avisos_dias',
+        nuevo: dto.pruebas_avisos_dias ? dto.pruebas_avisos_dias.join(',') : undefined,
+        previo: anterior.pruebasAvisosDias.join(','),
+      },
     ];
 
     const cambios: Record<
       string,
-      { anterior: string | number | null; nuevo: string | number | null }
+      { anterior: string | number | boolean | null; nuevo: string | number | boolean | null }
     > = {};
     for (const item of mapeo) {
       if (item.nuevo !== undefined && item.nuevo !== item.previo) {

@@ -342,6 +342,14 @@ export interface ResellerDetail {
   sitio_web: string | null;
   estado: "activa" | "suspendida";
   cuentas_max_crear_mensual: number;
+  /** Módulo de cuentas de prueba (HU-P01). */
+  pruebas: {
+    habilitadas: boolean;
+    cupo_mensual: number;
+    duracion_dias: number;
+    extras_periodo: number;
+    avisos_dias: number[];
+  };
   modalidad_asignada_en: string | null;
   /** Límites visibles antes de crear una Cuenta (TAREA 1). */
   comerciales: {

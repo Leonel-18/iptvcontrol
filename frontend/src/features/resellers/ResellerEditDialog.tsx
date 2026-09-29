@@ -2,8 +2,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
-import { Alert, Button, Field, Input } from "@/components/ui/primitives";
+import { Alert, Button, Field, Input, Separator } from "@/components/ui/primitives";
 import { Dialog, DialogContent } from "@/components/ui/overlays";
+
+/** Convierte "7, 3 1" en [7, 3, 1]: enteros únicos, sin negativos, de mayor a menor. */
+const parsearAvisos = (valor: string): number[] =>
+  Array.from(
+    new Set(
+      valor
+        .split(/[\s,;]+/)
+        .map((parte) => Number(parte))
+        .filter((numero) => Number.isInteger(numero) && numero >= 0),
+    ),
+  ).sort((a, b) => b - a);
 
 /**
  * Edición de los datos administrativos de una Empresa Revendedora (Operador
@@ -28,6 +39,13 @@ export const ResellerEditDialog = ({
     email_contacto: string;
     sitio_web: string | null;
     cuentas_max_crear_mensual: number;
+    pruebas: {
+      habilitadas: boolean;
+      cupo_mensual: number;
+      duracion_dias: number;
+      extras_periodo: number;
+      avisos_dias: number[];
+    };
   };
   abierto: boolean;
   onCambio: (abierto: boolean) => void;
@@ -43,10 +61,15 @@ export const ResellerEditDialog = ({
     email_contacto: valoresIniciales.email_contacto,
     sitio_web: valoresIniciales.sitio_web ?? "",
     cuentas_max_crear_mensual: String(valoresIniciales.cuentas_max_crear_mensual),
+    pruebas_habilitadas: valoresIniciales.pruebas.habilitadas,
+    pruebas_cupo_mensual: String(valoresIniciales.pruebas.cupo_mensual),
+    pruebas_duracion_dias: String(valoresIniciales.pruebas.duracion_dias),
+    pruebas_extras_periodo: String(valoresIniciales.pruebas.extras_periodo),
+    pruebas_avisos_dias: valoresIniciales.pruebas.avisos_dias.join(", "),
   });
   const [errores, setErrores] = useState<Record<string, string>>({});
 
-  const actualizar = (clave: keyof typeof valores, valor: string) => {
+  const actualizar = (clave: keyof typeof valores, valor: string | boolean) => {
     setValores((actual) => ({ ...actual, [clave]: valor }));
     setErrores((actual) => ({ ...actual, [clave]: "" }));
   };
@@ -65,6 +88,11 @@ export const ResellerEditDialog = ({
           email_contacto: valores.email_contacto.trim().toLowerCase(),
           sitio_web: valores.sitio_web.trim() || undefined,
           cuentas_max_crear_mensual: Number(valores.cuentas_max_crear_mensual),
+          pruebas_habilitadas: valores.pruebas_habilitadas,
+          pruebas_cupo_mensual: Number(valores.pruebas_cupo_mensual),
+          pruebas_duracion_dias: Number(valores.pruebas_duracion_dias),
+          pruebas_extras_periodo: Number(valores.pruebas_extras_periodo),
+          pruebas_avisos_dias: parsearAvisos(valores.pruebas_avisos_dias),
         },
       }),
     onSuccess: () => {
@@ -97,6 +125,28 @@ export const ResellerEditDialog = ({
     const limite = Number(valores.cuentas_max_crear_mensual);
     if (!Number.isInteger(limite) || limite < 0) {
       nuevos.cuentas_max_crear_mensual = "Ingrese un número entero mayor o igual a 0.";
+    }
+    const enteroNoNegativo = (valor: string) => {
+      const numero = Number(valor);
+      return Number.isInteger(numero) && numero >= 0;
+    };
+    if (!enteroNoNegativo(valores.pruebas_cupo_mensual)) {
+      nuevos.pruebas_cupo_mensual = "Ingrese un número entero mayor o igual a 0.";
+    }
+    if (!enteroNoNegativo(valores.pruebas_duracion_dias)) {
+      nuevos.pruebas_duracion_dias = "Ingrese un número entero mayor o igual a 0.";
+    }
+    if (!enteroNoNegativo(valores.pruebas_extras_periodo)) {
+      nuevos.pruebas_extras_periodo = "Ingrese un número entero mayor o igual a 0.";
+    }
+    const avisos = valores.pruebas_avisos_dias.trim();
+    if (
+      avisos &&
+      avisos
+        .split(/[\s,;]+/)
+        .some((parte) => !enteroNoNegativo(parte))
+    ) {
+      nuevos.pruebas_avisos_dias = "Separe los días con comas (ej. 7, 3, 1).";
     }
     setErrores(nuevos);
     return Object.keys(nuevos).length === 0;
@@ -231,6 +281,85 @@ export const ResellerEditDialog = ({
               />
             </Field>
           </div>
+
+          <Separator />
+
+          <section className="space-y-3">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={valores.pruebas_habilitadas}
+                onChange={(evento) => actualizar("pruebas_habilitadas", evento.target.checked)}
+                className="size-4 shrink-0 accent-azure-500"
+              />
+              <span className="text-sm font-semibold">Habilitar cuentas de prueba</span>
+            </label>
+            <p className="text-xs text-navy-500 dark:text-navy-400">
+              Mientras esté deshabilitado, la Empresa Revendedora verá la opción pero no podrá
+              crear pruebas. La duración aplica sólo a las pruebas nuevas.
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Cupo mensual"
+                htmlFor="editar-pruebas-cupo"
+                error={errores.pruebas_cupo_mensual}
+                help="Cuentas de prueba que la empresa puede crear por mes."
+              >
+                <Input
+                  id="editar-pruebas-cupo"
+                  type="number"
+                  min={0}
+                  value={valores.pruebas_cupo_mensual}
+                  onChange={(evento) => actualizar("pruebas_cupo_mensual", evento.target.value)}
+                />
+              </Field>
+
+              <Field
+                label="Duración de nuevas pruebas (días)"
+                htmlFor="editar-pruebas-duracion"
+                error={errores.pruebas_duracion_dias}
+                help="No recalcula los vencimientos ya generados."
+              >
+                <Input
+                  id="editar-pruebas-duracion"
+                  type="number"
+                  min={0}
+                  value={valores.pruebas_duracion_dias}
+                  onChange={(evento) => actualizar("pruebas_duracion_dias", evento.target.value)}
+                />
+              </Field>
+
+              <Field
+                label="Extras del período actual"
+                htmlFor="editar-pruebas-extras"
+                error={errores.pruebas_extras_periodo}
+                help="Cuentas de prueba adicionales habilitadas en el período en curso."
+              >
+                <Input
+                  id="editar-pruebas-extras"
+                  type="number"
+                  min={0}
+                  value={valores.pruebas_extras_periodo}
+                  onChange={(evento) => actualizar("pruebas_extras_periodo", evento.target.value)}
+                />
+              </Field>
+
+              <Field
+                label="Avisos previos al vencimiento (días)"
+                htmlFor="editar-pruebas-avisos"
+                error={errores.pruebas_avisos_dias}
+                help="Separe varios valores con comas, ej. 7, 3, 1."
+              >
+                <Input
+                  id="editar-pruebas-avisos"
+                  value={valores.pruebas_avisos_dias}
+                  placeholder="7, 3, 1"
+                  onChange={(evento) => actualizar("pruebas_avisos_dias", evento.target.value)}
+                />
+              </Field>
+            </div>
+          </section>
 
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => onCambio(false)} disabled={guardar.isPending}>

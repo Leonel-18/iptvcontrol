@@ -270,4 +270,96 @@ describe('RevendedorasService', () => {
     );
     expect(proveedor.cerrarCuenta).not.toHaveBeenCalled();
   });
+
+  it('guarda y audita la parametrización de cuentas de prueba (HU-P01)', async () => {
+    const anterior = {
+      id: 'empresa-1',
+      operadorPrincipalId: 'operador-1',
+      razonSocial: 'ISP Demo',
+      cuit: '30716009226',
+      direccion: 'Calle 1',
+      nombreContacto: 'Ana',
+      apellidoContacto: 'Perez',
+      telefonoContacto: '2611234567',
+      emailContacto: 'contacto@isp.com',
+      sitioWeb: null,
+      cuentasMaxCrearMensual: 10,
+      estado: 'activa',
+      pruebasHabilitadas: false,
+      pruebasCupoMensual: 0,
+      pruebasDuracionDias: 0,
+      pruebasExtrasPeriodo: 0,
+      pruebasAvisosDias: [] as number[],
+    };
+    const update = jest.fn().mockResolvedValue(anterior);
+    const tx = { empresaRevendedora: { update } };
+    const prisma = {
+      db: {
+        empresaRevendedora: {
+          findUnique: jest.fn().mockResolvedValue(anterior),
+          findFirst: jest.fn(),
+        },
+      },
+      transaction: jest.fn((callback: (cliente: unknown) => unknown) => callback(tx)),
+    };
+    const registrarEnTx = jest.fn().mockResolvedValue(undefined);
+    const service = new RevendedorasService(
+      prisma as never,
+      { registrarEnTx } as never,
+      { operadorPrincipalId: 'operador-1', esOperador: true } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    jest.spyOn(service, 'obtener').mockResolvedValue({ id: 'empresa-1' } as never);
+
+    await service.actualizar('empresa-1', {
+      pruebas_habilitadas: true,
+      pruebas_cupo_mensual: 5,
+      pruebas_duracion_dias: 30,
+      pruebas_extras_periodo: 2,
+      pruebas_avisos_dias: [7, 3, 1],
+    });
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'empresa-1' },
+      data: expect.objectContaining({
+        pruebasHabilitadas: true,
+        pruebasCupoMensual: 5,
+        pruebasDuracionDias: 30,
+        pruebasExtrasPeriodo: 2,
+        pruebasAvisosDias: [7, 3, 1],
+      }),
+    });
+    expect(registrarEnTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        accion: 'actualizacion_empresa_revendedora',
+        detalle: expect.objectContaining({
+          cambios: expect.objectContaining({
+            pruebas_habilitadas: { anterior: false, nuevo: true },
+            pruebas_cupo_mensual: { anterior: 0, nuevo: 5 },
+            pruebas_avisos_dias: { anterior: '', nuevo: '7,3,1' },
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('impide a la Empresa Revendedora cambiar la configuración de cuentas de prueba (HU-P01)', async () => {
+    const service = new RevendedorasService(
+      {} as never,
+      {} as never,
+      { esOperador: false, empresaRevendedoraId: 'empresa-1' } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(service.actualizar('empresa-1', { pruebas_habilitadas: true })).rejects.toThrow(
+      'Solo el Operador Principal',
+    );
+  });
 });

@@ -1,6 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EstadoEmpresaRevendedora } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsInt,
@@ -108,6 +112,48 @@ export class ActualizarRevendedoraDto {
   @IsOptional()
   @IsEnum(EstadoEmpresaRevendedora)
   estado?: EstadoEmpresaRevendedora;
+
+  // --- Cuentas de prueba (HU-P01) — sólo Operador Principal ---
+  @ApiPropertyOptional({ description: 'Habilita el módulo de cuentas de prueba para la empresa.' })
+  @IsOptional()
+  @IsBoolean()
+  pruebas_habilitadas?: boolean;
+
+  @ApiPropertyOptional({ description: 'Cupo mensual de cuentas de prueba.' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  pruebas_cupo_mensual?: number;
+
+  @ApiPropertyOptional({ description: 'Duración de las pruebas nuevas, en días.' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(3650)
+  pruebas_duracion_dias?: number;
+
+  @ApiPropertyOptional({ description: 'Cuentas de prueba extra del período actual.' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  pruebas_extras_periodo?: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description: 'Días de aviso previos al vencimiento (múltiples, ej. [7, 3, 1]).',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(3650, { each: true })
+  pruebas_avisos_dias?: number[];
 }
 
 /**

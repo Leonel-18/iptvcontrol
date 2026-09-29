@@ -328,6 +328,7 @@ export const ResellerDetail = () => {
             email_contacto: data.email_contacto,
             sitio_web: data.sitio_web,
             cuentas_max_crear_mensual: data.cuentas_max_crear_mensual,
+            pruebas: data.pruebas,
           }}
           abierto
           onCambio={setEditarDatos}
