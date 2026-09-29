@@ -153,3 +153,75 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
     expect(provisioning.sincronizarContadoresVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
   });
 });
+
+/**
+ * HU-A03 — Fin automático del aislamiento de Cuenta por vencimiento. El job sólo
+ * cierra las Cuentas que siguen aisladas y vencidas; si otra corrida ya lo hizo,
+ * no repite el efecto ni la auditoría (idempotente).
+ */
+describe('ColaProveedorProcessor — fin automático de aislamiento (HU-A03)', () => {
+  const crearProcesador = (
+    vencidas: { id: string; empresaRevendedoraId: string }[],
+    updateCount = 1,
+  ) => {
+    const cuentaUpdateMany = jest.fn().mockResolvedValue({ count: updateCount });
+    const tx = {
+      cuenta: {
+        findMany: jest.fn().mockResolvedValue(vencidas),
+        updateMany: cuentaUpdateMany,
+      },
+    };
+    const prisma = {
+      operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_op: string, fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      {} as ProveedorService,
+      audit,
+      {} as ColaProveedorService,
+      {} as CuentasProvisioningService,
+    );
+    return { procesador, cuentaUpdateMany, audit };
+  };
+
+  const disparar = (procesador: ColaProveedorProcessor) =>
+    procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_AISLAMIENTOS } as never);
+
+  it('cierra los aislamientos vencidos y audita como automático', async () => {
+    const { procesador, cuentaUpdateMany, audit } = crearProcesador([
+      { id: 'cuenta-1', empresaRevendedoraId: 'empresa-1' },
+    ]);
+
+    const resultado = await disparar(procesador);
+
+    expect(cuentaUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { aislada: false, aislamientoFinEn: null } }),
+    );
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'fin_aislamiento_cuenta',
+        detalle: expect.objectContaining({ origen: 'automatico' }),
+      }),
+    );
+    expect(resultado).toEqual({ cerrados: 1 });
+  });
+
+  it('es idempotente: si otra corrida ya lo cerró, no repite el efecto', async () => {
+    const { procesador, audit } = crearProcesador(
+      [{ id: 'cuenta-1', empresaRevendedoraId: 'empresa-1' }],
+      0,
+    );
+
+    const resultado = await disparar(procesador);
+
+    expect(audit.registrarEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ cerrados: 0 });
+  });
+});

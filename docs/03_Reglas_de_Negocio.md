@@ -501,5 +501,16 @@ desde la vista de Cuenta (`POST /accounts/:id/isolation`) con una cantidad de **
 - Mientras el aislamiento esté **vigente** (fecha de fin futura), la Cuenta no recibe Clientes
   Finales nuevos ni por ubicación automática ni por carga contextual ni por reasignación.
 - El estado se persiste a nivel Cuenta (`aislada` + `aislamiento_fin_en`) y la operación queda
-  auditada (`apertura_aislamiento_cuenta`). El vencimiento y la revocación se documentan aparte
-  (HU-A03).
+  auditada (`apertura_aislamiento_cuenta`).
+
+**Fin del aislamiento (HU-A03):** termina de dos formas y el resultado es el mismo — la Cuenta
+vuelve a `Compartida`, **sin crear ni restaurar una Ventana de Alta**, y queda elegible para
+Clientes Finales nuevos:
+- **Automático (vencimiento):** un job periódico (`barrer_aislamientos_cuenta`, cada 5 min) cierra
+  las Cuentas aisladas cuya fecha de fin ya venció. Es **idempotente** (una segunda corrida no
+  repite el efecto) y audita como acción del sistema (`detalle.origen = "automatico"`).
+- **Manual (revocación):** la Empresa Revendedora puede quitarlo antes del vencimiento desde la
+  vista de Cuenta (`POST /accounts/:id/isolation/revoke`), con confirmación. Se audita como acción
+  del usuario (`detalle.origen = "manual"`).
+
+Ambas vías registran `fin_aislamiento_cuenta` en el Audit Log.

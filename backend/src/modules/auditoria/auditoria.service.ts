@@ -48,6 +48,7 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   cambio_slots_cuenta: 'Cambio de cupos (slots) de una Cuenta',
   cambio_plantilla_whatsapp: 'Cambio de plantilla de WhatsApp',
   apertura_aislamiento_cuenta: 'Aislamiento de Cuenta',
+  fin_aislamiento_cuenta: 'Fin de aislamiento de Cuenta',
 };
 
 /**

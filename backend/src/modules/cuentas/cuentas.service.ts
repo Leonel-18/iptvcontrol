@@ -331,6 +331,43 @@ export class CuentasService {
   }
 
   /**
+   * Revoca manualmente el aislamiento de una Cuenta (HU-A03): vuelve a
+   * `Compartida` de inmediato, sin crear ni restaurar una Ventana de Alta. El
+   * fin automático por vencimiento lo resuelve el job `barrer_aislamientos_cuenta`.
+   */
+  async revocarAislamiento(id: string) {
+    if (this.contexto.esOperador || !this.contexto.empresaRevendedoraId) {
+      throw new ForbiddenException(
+        'Sólo la Empresa Revendedora dueña puede quitar el aislamiento de la Cuenta.',
+      );
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+      const cuenta = await tx.cuenta.findUnique({ where: { id } });
+      if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
+      if (!cuenta.aislada) {
+        throw new BadRequestException('La Cuenta no está aislada.');
+      }
+
+      await tx.cuenta.update({
+        where: { id },
+        data: { aislada: false, aislamientoFinEn: null },
+      });
+
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.fin_aislamiento_cuenta,
+        entidad: EntidadAuditada.Cuenta,
+        entidadId: id,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        detalle: { cuenta_id: id, origen: 'manual' },
+      });
+    });
+
+    return this.obtener(id);
+  }
+
+  /**
    * Credenciales en claro de una Cuenta.
    *
    * Sólo para el panel de la Empresa Revendedora dueña: el Operador Principal no

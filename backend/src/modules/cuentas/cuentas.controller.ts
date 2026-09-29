@@ -173,6 +173,18 @@ export class CuentasController {
     return this.cuentas.aislarCuenta(id, dto.dias);
   }
 
+  @Post(':id/isolation/revoke')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Quita manualmente el aislamiento de una Cuenta compartida.',
+    description:
+      'Devuelve la Cuenta a la operatoria compartida normal de inmediato, sin crear ni ' +
+      'restaurar una Ventana de Alta. Queda registrado en auditoría como acción del usuario.',
+  })
+  async revocarAislamiento(@Param('id', ParseUUIDPipe) id: string) {
+    return this.cuentas.revocarAislamiento(id);
+  }
+
   @Post(':id/curiosity-window')
   @SoloRevendedor()
   @ApiOperation({
