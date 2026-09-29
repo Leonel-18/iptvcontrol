@@ -168,6 +168,7 @@ enum AccionAuditoria {
   cambio_slots_cuenta
   cambio_plantilla_whatsapp
   apertura_aislamiento_cuenta
+  fin_aislamiento_cuenta
 }
 
 enum EntidadAuditada {

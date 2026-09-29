@@ -836,3 +836,73 @@ describe('CuentasService — aislarCuenta (HU-A02)', () => {
     expect(audit.registrarEnTx).toHaveBeenCalled();
   });
 });
+
+/**
+ * HU-A03 — Fin del aislamiento por revocación manual. Vuelve la Cuenta a
+ * `Compartida` sin tocar ventanas ni capacidad y audita como acción del usuario.
+ */
+describe('CuentasService — revocarAislamiento (HU-A03)', () => {
+  const crearServicio = (aislada: boolean) => {
+    const cuentaUpdate = jest.fn().mockResolvedValue(undefined);
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      cuenta: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'cuenta-1',
+          aislada,
+          empresaRevendedoraId: 'empresa-1',
+        }),
+        update: cuentaUpdate,
+      },
+    };
+    const prisma = {
+      transaction: jest.fn().mockImplementation((fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+    const contexto = {
+      esOperador: false,
+      empresaRevendedoraId: 'empresa-1',
+      teamMemberId: 'team-1',
+    } as unknown as RequestContextService;
+
+    const servicio = new CuentasService(
+      prisma,
+      {} as CryptoService,
+      contexto,
+      {} as ProveedorService,
+      audit,
+      {} as VentanasCuriosidadService,
+      {} as CuentasProvisioningService,
+      {} as ColaProveedorService,
+    );
+    jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: 'cuenta-1' } as never);
+    return { servicio, cuentaUpdate, audit };
+  };
+
+  it('quita el aislamiento y lo audita como acción manual', async () => {
+    const { servicio, cuentaUpdate, audit } = crearServicio(true);
+
+    await servicio.revocarAislamiento('cuenta-1');
+
+    expect(cuentaUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { aislada: false, aislamientoFinEn: null } }),
+    );
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'fin_aislamiento_cuenta',
+        detalle: expect.objectContaining({ origen: 'manual' }),
+      }),
+    );
+  });
+
+  it('rechaza si la Cuenta no está aislada', async () => {
+    const { servicio } = crearServicio(false);
+
+    await expect(servicio.revocarAislamiento('cuenta-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+});

@@ -36,6 +36,11 @@ export const TRABAJOS_PROVEEDOR = {
   BARRER_INVENTARIO_CUENTAS: 'barrer_inventario_cuentas',
   /** Reintenta el cierre de una Cuenta en el Proveedor. */
   CERRAR_CUENTA: 'cerrar_cuenta',
+  /**
+   * Cierra los aislamientos de Cuenta vencidos (HU-A03): devuelve la Cuenta a
+   * `Compartida` sin tocar ventanas ni capacidad. Idempotente.
+   */
+  BARRER_AISLAMIENTOS: 'barrer_aislamientos_cuenta',
 } as const;
 
 export interface DatosEliminarDispositivo {

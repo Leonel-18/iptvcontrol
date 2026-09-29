@@ -6,6 +6,7 @@ import {
   Pencil,
   RefreshCw,
   Trash2,
+  Unlock,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -81,6 +82,8 @@ export const AccountDetail = () => {
   const [aislarAbierto, setAislarAbierto] = useState(false);
   const [diasAislamiento, setDiasAislamiento] = useState(30);
   const [errorDias, setErrorDias] = useState("");
+  const [confirmarRevocarAislamiento, setConfirmarRevocarAislamiento] =
+    useState(false);
   const navegar = useNavigate();
 
   const { data, isLoading, error } = useQuery({
@@ -165,6 +168,17 @@ export const AccountDetail = () => {
     onSuccess: () => {
       toast.success("Cuenta aislada.");
       setAislarAbierto(false);
+      void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const revocarAislamiento = useMutation({
+    mutationFn: () => api(`/accounts/${id}/isolation/revoke`, { metodo: "POST" }),
+    onSuccess: () => {
+      toast.success("Aislamiento quitado. La Cuenta vuelve a compartirse.");
+      setConfirmarRevocarAislamiento(false);
       void queryClient.invalidateQueries({ queryKey: ["account", id] });
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
@@ -305,6 +319,16 @@ export const AccountDetail = () => {
                 Aislar
               </Button>
             ) : null}
+            {!esOperador && data.aislada ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setConfirmarRevocarAislamiento(true)}
+              >
+                <Unlock />
+                Quitar aislamiento
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -345,6 +369,21 @@ export const AccountDetail = () => {
         <Alert tone="warning">
           Confirme sólo si ya no necesita mantener esta Cuenta bloqueada para
           clientes nuevos durante el plazo indicado.
+        </Alert>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        abierto={confirmarRevocarAislamiento}
+        onCambio={setConfirmarRevocarAislamiento}
+        titulo="Quitar el aislamiento"
+        descripcion="La Cuenta vuelve a la operatoria compartida normal de inmediato y puede recibir clientes nuevos."
+        etiquetaConfirmar="Quitar aislamiento"
+        cargando={revocarAislamiento.isPending}
+        onConfirmar={() => revocarAislamiento.mutate()}
+      >
+        <Alert tone="warning">
+          No se crea ninguna Ventana de Alta: desde ahora la Cuenta es elegible
+          para otros clientes nuevos.
         </Alert>
       </ConfirmDialog>
 

@@ -67,6 +67,8 @@ export class ColaProveedorProcessor extends WorkerHost {
         return this.barrerInventarioCuentas();
       case TRABAJOS_PROVEEDOR.CERRAR_CUENTA:
         return this.cerrarCuenta(job.data as DatosCerrarCuenta);
+      case TRABAJOS_PROVEEDOR.BARRER_AISLAMIENTOS:
+        return this.barrerAislamientos();
       default:
         this.logger.warn(`Trabajo desconocido en la cola: ${job.name}`);
         return null;
@@ -402,6 +404,49 @@ export class ColaProveedorProcessor extends WorkerHost {
       );
     }
     return { cuentasRevisadas, incidenciasNuevas };
+  }
+
+  /**
+   * Cierra los aislamientos de Cuenta vencidos (HU-A03): devuelve la Cuenta a
+   * `Compartida`, sin crear ni restaurar una Ventana de Alta. Idempotente: sólo
+   * actualiza las Cuentas que siguen aisladas y vencidas, y audita como acción
+   * del sistema (sin Team Member, por eso el `detalle.origen = 'automatico'`).
+   */
+  private async barrerAislamientos(): Promise<{ cerrados: number }> {
+    const operadores = await this.prisma.operadorPrincipal.findMany({ select: { id: true } });
+    let cerrados = 0;
+
+    for (const operador of operadores) {
+      const vencidas = await this.prisma.transactionComoOperador(operador.id, (tx) =>
+        tx.cuenta.findMany({
+          where: { aislada: true, aislamientoFinEn: { lte: new Date() } },
+          select: { id: true, empresaRevendedoraId: true },
+        }),
+      );
+
+      for (const cuenta of vencidas) {
+        await this.prisma.transactionComoOperador(operador.id, async (tx) => {
+          // Actualización condicional: si otra corrida ya lo cerró, no se repite
+          // el efecto ni la auditoría.
+          const actualizadas = await tx.cuenta.updateMany({
+            where: { id: cuenta.id, aislada: true, aislamientoFinEn: { lte: new Date() } },
+            data: { aislada: false, aislamientoFinEn: null },
+          });
+          if (actualizadas.count !== 1) return;
+
+          await this.audit.registrarEnTx(tx, {
+            accion: AccionAuditoria.fin_aislamiento_cuenta,
+            entidad: EntidadAuditada.Cuenta,
+            entidadId: cuenta.id,
+            empresaRevendedoraId: cuenta.empresaRevendedoraId,
+            detalle: { cuenta_id: cuenta.id, origen: 'automatico' },
+          });
+          cerrados += 1;
+        });
+      }
+    }
+
+    return { cerrados };
   }
 
   /**
