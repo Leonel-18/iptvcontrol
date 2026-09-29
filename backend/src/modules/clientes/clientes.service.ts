@@ -32,6 +32,9 @@ import { ActualizarClienteDto, ListarClientesQueryDto } from './dto/listar-clien
 import { calcularCapacidad, ESTADOS_QUE_OCUPAN } from '../cuentas/capacidad.util';
 import { nombresDeServicios } from '../cuentas/cuentas.mapper';
 
+/** Minutos de un día: el aislamiento se expresa en días y el mecanismo en minutos. */
+const MINUTOS_POR_DIA = 24 * 60;
+
 /** Coincidencia de `id_gestion_externo` dentro de la misma Empresa Revendedora. */
 export interface CoincidenciaGestionExterna {
   id: string;
@@ -379,9 +382,13 @@ export class ClientesService {
       );
     }
 
-    // "Aislar Cuenta": crea una Cuenta compartida nueva y dedicada. La Ventana de
-    // Alta es obligatoria y mayor a 0: sin ella, la Cuenta no queda aislada.
+    // "Aislar Cuenta" (HU-A01): crea una Cuenta compartida NUEVA y aislada, que
+    // nunca reutiliza una existente. El aislamiento se expresa en DÍAS (entero
+    // mayor a 0) y reemplaza a la Ventana de Alta: internamente se apoya en el
+    // mismo mecanismo de bloqueo (`duracion_ventana_curiosidad_minutos`) para que
+    // ningún otro cliente ingrese mientras esté vigente.
     const aislarCuenta = dto.aislar_cuenta === true;
+    let duracionVentanaMinutos = dto.duracion_ventana_curiosidad_minutos;
     if (aislarCuenta) {
       if (dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
         throw new BadRequestException(
@@ -393,14 +400,17 @@ export class ClientesService {
           'No se puede Aislar una Cuenta cuando el cliente se carga en una Cuenta existente.',
         );
       }
-      if (
-        !dto.duracion_ventana_curiosidad_minutos ||
-        dto.duracion_ventana_curiosidad_minutos <= 0
-      ) {
+      const dias = dto.aislamiento_dias;
+      if (dias === undefined || !Number.isInteger(dias) || dias <= 0) {
         throw new BadRequestException(
-          'Para Aislar la Cuenta, la Ventana de Alta es obligatoria y debe ser mayor a 0.',
+          'Indique el aislamiento en días: un número entero mayor a 0.',
         );
       }
+      duracionVentanaMinutos = dias * MINUTOS_POR_DIA;
+    } else if (dto.aislamiento_dias !== undefined) {
+      throw new BadRequestException(
+        'La cantidad de días de aislamiento sólo aplica cuando se elige Aislar Cuenta.',
+      );
     }
 
     let servicios: string;
@@ -569,7 +579,7 @@ export class ClientesService {
         operadorPrincipalId,
         servicios,
         cuposPorCategoria: dto.cupos_por_categoria,
-        duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
+        duracionVentanaCuriosidadMinutos: duracionVentanaMinutos,
         forzarCuentaNueva: aislarCuenta,
         ventaAislada: aislarCuenta,
         // Pieza 4: la venta compartida NO crea una fila de Dispositivo previa.

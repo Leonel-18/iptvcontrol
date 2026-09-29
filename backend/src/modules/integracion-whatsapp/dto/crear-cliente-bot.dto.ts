@@ -6,11 +6,14 @@ import {
   IsEmail,
   IsEnum,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   Length,
   Matches,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 
@@ -134,6 +137,18 @@ export class CrearClienteBotDto {
   @IsOptional()
   @IsBoolean()
   aislar_cuenta?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Días de aislamiento (entero mayor a 0). Obligatorio cuando `aislar_cuenta` es true.',
+    example: 30,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  aislamiento_dias?: number;
 
   @ApiPropertyOptional({ type: DispositivoBotDto })
   @IsOptional()

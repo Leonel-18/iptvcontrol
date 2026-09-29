@@ -336,7 +336,7 @@ export const CustomerDetail = () => {
               <CardHeader className="flex-row items-center justify-between gap-3">
                 <CardTitle>Su cuenta en el proveedor</CardTitle>
                 {data.cuenta.aislada ? (
-                  <Badge tone="warning">Cuenta de prueba</Badge>
+                  <Badge tone="warning">Compartida - Aislada</Badge>
                 ) : null}
               </CardHeader>
               <CardContent className="space-y-3">

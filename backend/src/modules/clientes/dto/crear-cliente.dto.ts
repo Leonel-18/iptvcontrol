@@ -144,13 +144,26 @@ export class CrearClienteDto {
 
   @ApiPropertyOptional({
     description:
-      'Aislar Cuenta: obliga a crear una Cuenta compartida NUEVA con Ventana de Alta ' +
-      '(obligatoria y mayor a 0) para que este Cliente Final pruebe solo. Sólo aplica a una ' +
-      'venta `dispositivo_compartido`.',
+      'Aislar Cuenta: obliga a crear una Cuenta compartida NUEVA y aislada (nunca reutiliza una ' +
+      'existente), para que este Cliente Final quede solo mientras dure el aislamiento. Sólo ' +
+      'aplica a una venta `dispositivo_compartido`.',
   })
   @IsOptional()
   @IsBoolean()
   aislar_cuenta?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Días de aislamiento: entero mayor a 0. Obligatorio cuando `aislar_cuenta` es true. El ' +
+      'aislamiento reemplaza a la Ventana de Alta y define la fecha de fin.',
+    example: 30,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  aislamiento_dias?: number;
 
   @ApiProperty({ type: DispositivoAltaDto })
   @ValidateNested()

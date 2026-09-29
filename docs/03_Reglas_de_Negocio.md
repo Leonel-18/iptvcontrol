@@ -461,18 +461,22 @@ la vista de Cuenta.
 ### 15.1. Aislar Cuenta (venta compartida dedicada)
 
 Opción **explícita** del wizard (y del bot) para una venta compartida: **saltea la ubicación
-automática** y crea una **Cuenta compartida nueva**, dedicada a ese Cliente Final, con **Ventana de
-Alta obligatoria**. Pensada para un prospecto que quiere probar solo, sin compartir credenciales
-con otros clientes.
+automática** y crea una **Cuenta compartida nueva**, dedicada a ese Cliente Final, con un
+**período de aislamiento obligatorio**. Pensada para que un prospecto quede solo mientras prueba,
+sin compartir credenciales con otros clientes.
 
 - Sólo aplica a `dispositivo_compartido` (una Cuenta exclusiva ya es única) y no se puede combinar
   con `cuenta_id`.
-- La **Ventana de Alta es obligatoria y mayor a 0**: sin ella, la Cuenta no queda aislada. Si no se
-  indica duración, se usa la predeterminada de la Empresa Revendedora (y debe ser > 0).
-- La venta queda marcada como **aislada** (`VentaCompartida.aislada`), para poder identificarla
-  después. La Cuenta deja de estar aislada cuando la ventana vence: a partir de ahí es una Cuenta
-  compartida normal y puede recibir otras ventas.
-- El aislamiento es temporal (el plazo de la ventana), no un tipo de Cuenta nuevo.
+- El aislamiento se expresa **exclusivamente en días**: un número entero **mayor a 0**. No se
+  admiten horas ni minutos. Si falta, es 0, negativo o no entero, el alta se rechaza.
+- El aislamiento **reemplaza conceptualmente a la Ventana de Alta**: internamente se apoya en el
+  mismo mecanismo de bloqueo, con la fecha de fin = ahora + días.
+- La venta queda marcada como **aislada** (`VentaCompartida.aislada`) y la Cuenta se identifica
+  como **`Compartida - Aislada`** mientras el aislamiento esté vigente; ningún otro cliente puede
+  ingresar en ese plazo.
+- Al terminar o revocar el aislamiento, la Cuenta vuelve a `Compartida` sin ventana de alta.
+- El aislamiento es temporal, no un tipo de Cuenta nuevo, y no puede coexistir con una cuenta de
+  prueba.
 
 ### 15.2. Apertura manual de una Ventana de Alta
 

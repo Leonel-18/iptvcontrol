@@ -457,9 +457,9 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
 });
 
 /**
- * "Aislar Cuenta": crea una Cuenta compartida nueva con Ventana obligatoria.
- * Estas validaciones corren antes de tocar el Proveedor, así que se prueban con
- * un servicio mínimo (sólo contexto + operador).
+ * "Aislar Cuenta" (HU-A01): crea una Cuenta compartida nueva y aislada, con el
+ * aislamiento expresado en DÍAS. Estas validaciones corren antes de tocar el
+ * Proveedor, así que se prueban con un servicio mínimo (sólo contexto + operador).
  */
 describe('ClientesService — validación de Aislar Cuenta', () => {
   const crearServicio = () => {
@@ -483,33 +483,45 @@ describe('ClientesService — validación de Aislar Cuenta', () => {
     return { servicio };
   };
 
+  const dtoAislado = (extra: Record<string, unknown> = {}) => ({
+    nombre: 'Juan',
+    dni: '30123456',
+    tipo_alta: TipoAltaClienteFinal.dispositivo_compartido,
+    cupos_por_categoria: 1,
+    aislar_cuenta: true,
+    aislamiento_dias: 30,
+    dispositivo: {},
+    ...extra,
+  });
+
   it('rechaza Aislar Cuenta en una venta exclusiva', async () => {
     const { servicio } = crearServicio();
 
     await expect(
-      servicio.crear({
-        nombre: 'Juan',
-        dni: '30123456',
-        tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
-        aislar_cuenta: true,
-        dispositivo: {},
-      } as never),
+      servicio.crear(
+        dtoAislado({
+          tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
+          cupos_por_categoria: undefined,
+        }) as never,
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('exige una Ventana de Alta mayor a 0', async () => {
+  it('rechaza días de aislamiento inválidos: 0, negativos o no enteros', async () => {
+    const { servicio } = crearServicio();
+
+    for (const dias of [0, -5, 1.5]) {
+      await expect(
+        servicio.crear(dtoAislado({ aislamiento_dias: dias }) as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+  });
+
+  it('rechaza Aislar Cuenta sin indicar los días', async () => {
     const { servicio } = crearServicio();
 
     await expect(
-      servicio.crear({
-        nombre: 'Juan',
-        dni: '30123456',
-        tipo_alta: TipoAltaClienteFinal.dispositivo_compartido,
-        cupos_por_categoria: 1,
-        aislar_cuenta: true,
-        duracion_ventana_curiosidad_minutos: 0,
-        dispositivo: {},
-      } as never),
+      servicio.crear(dtoAislado({ aislamiento_dias: undefined }) as never),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -517,16 +529,7 @@ describe('ClientesService — validación de Aislar Cuenta', () => {
     const { servicio } = crearServicio();
 
     await expect(
-      servicio.crear({
-        nombre: 'Juan',
-        dni: '30123456',
-        tipo_alta: TipoAltaClienteFinal.dispositivo_compartido,
-        cupos_por_categoria: 1,
-        aislar_cuenta: true,
-        duracion_ventana_curiosidad_minutos: 1440,
-        cuenta_id: '11111111-1111-1111-1111-111111111111',
-        dispositivo: {},
-      } as never),
+      servicio.crear(dtoAislado({ cuenta_id: '11111111-1111-1111-1111-111111111111' }) as never),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

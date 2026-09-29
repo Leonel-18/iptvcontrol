@@ -67,6 +67,7 @@ export class WhatsappBotService {
   async crearCliente(dto: CrearClienteBotDto) {
     const esCompartida = dto.tipo_alta === TipoAltaClienteFinal.dispositivo_compartido;
     const ventanaMinutos = this.config.get<number>('whatsappBot.ventanaMinutos') ?? 5760;
+    const aislarCuenta = esCompartida && dto.aislar_cuenta === true;
 
     // Los servicios no los elige el cliente: van TODOS los del catálogo (los 7
     // códigos), sin importar el tipo de Cuenta. El básico código 1 ya viene
@@ -89,8 +90,10 @@ export class WhatsappBotService {
       tipo_alta: dto.tipo_alta,
       servicios,
       cupos_por_categoria: esCompartida ? dto.cupos_por_categoria : undefined,
-      duracion_ventana_curiosidad_minutos: esCompartida ? ventanaMinutos : undefined,
-      aislar_cuenta: esCompartida ? dto.aislar_cuenta : undefined,
+      duracion_ventana_curiosidad_minutos:
+        esCompartida && !aislarCuenta ? ventanaMinutos : undefined,
+      aislar_cuenta: aislarCuenta ? true : undefined,
+      aislamiento_dias: aislarCuenta ? dto.aislamiento_dias : undefined,
       dispositivo: { nota_descriptiva: dto.dispositivo?.nota_descriptiva },
       confirmar_duplicado: dto.confirmar_duplicado,
     })) as unknown as ResultadoAltaBot;

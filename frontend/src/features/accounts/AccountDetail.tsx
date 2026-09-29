@@ -535,7 +535,7 @@ export const AccountDetail = () => {
                                     </Link>
                                     {venta.aislada ? (
                                       <Badge tone="warning" className="ml-2">
-                                        Cuenta de prueba
+                                        Compartida - Aislada
                                       </Badge>
                                     ) : null}
                                   </TD>
