@@ -18,6 +18,7 @@ import { AjustarSlotVentaDto } from './dto/ajustar-slot.dto';
 import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
 import { CambiarPinCuentaDto } from './dto/cambiar-pin-cuenta.dto';
 import { AbrirVentanaCuriosidadDto } from './dto/abrir-ventana.dto';
+import { AislarCuentaDto } from './dto/aislar-cuenta.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
 import { InventarioProveedorService } from './inventario-proveedor.service';
@@ -158,6 +159,18 @@ export class CuentasController {
   })
   async cambiarPin(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CambiarPinCuentaDto) {
     return this.cuentas.cambiarPin(id, dto.pin);
+  }
+
+  @Post(':id/isolation')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Aísla una Cuenta compartida existente.',
+    description:
+      'Requiere exactamente un Cliente Final activo. Revoca la Ventana de Alta vigente (si la ' +
+      'hay) y bloquea el ingreso de Clientes Finales nuevos durante los días indicados.',
+  })
+  async aislarCuenta(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AislarCuentaDto) {
+    return this.cuentas.aislarCuenta(id, dto.dias);
   }
 
   @Post(':id/curiosity-window')

@@ -3,6 +3,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { PrismaService, TransactionClient } from '../../common/prisma/prisma.service';
 import {
+  CuentaAisladaError,
   CuentaEnVentanaCuriosidadError,
   VentanasCuriosidadService,
 } from './ventanas-curiosidad.service';
@@ -220,5 +221,49 @@ describe('VentanasCuriosidadService — apertura manual', () => {
 
     await expect(servicio.abrirManualmente('cuenta-1', 0)).rejects.toThrow('mayor a 0');
     expect(ventanaCreate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * HU-A02 — una Cuenta aislada bloquea el ingreso de Clientes Finales nuevos,
+ * igual que una Ventana de Alta vigente.
+ */
+describe('VentanasCuriosidadService — aislamiento de Cuenta', () => {
+  const crear = (finAislamiento: Date | null) => {
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(0),
+      cuenta: {
+        findUnique: jest.fn().mockResolvedValue({
+          aislada: finAislamiento !== null,
+          aislamientoFinEn: finAislamiento,
+        }),
+      },
+      ventanaCuriosidad: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as unknown as TransactionClient;
+    const prisma = {
+      transaction: jest.fn().mockImplementation((fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const servicio = new VentanasCuriosidadService(
+      prisma,
+      {} as RequestContextService,
+      {} as AuditService,
+    );
+    return { servicio };
+  };
+
+  it('bloquea a un Cliente Final nuevo mientras el aislamiento está vigente', async () => {
+    const { servicio } = crear(new Date(Date.now() + 86_400_000));
+
+    await expect(
+      servicio.asegurarClientePermitido('cuenta-1', 'cliente-nuevo'),
+    ).rejects.toBeInstanceOf(CuentaAisladaError);
+  });
+
+  it('no bloquea si el aislamiento ya venció', async () => {
+    const { servicio } = crear(new Date(Date.now() - 86_400_000));
+
+    await expect(
+      servicio.asegurarClientePermitido('cuenta-1', 'cliente-nuevo'),
+    ).resolves.toBeUndefined();
   });
 });

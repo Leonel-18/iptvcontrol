@@ -78,6 +78,9 @@ export const AccountDetail = () => {
   const [pinNuevo, setPinNuevo] = useState("");
   const [errorPin, setErrorPin] = useState("");
   const [confirmarCierre, setConfirmarCierre] = useState(false);
+  const [aislarAbierto, setAislarAbierto] = useState(false);
+  const [diasAislamiento, setDiasAislamiento] = useState(30);
+  const [errorDias, setErrorDias] = useState("");
   const navegar = useNavigate();
 
   const { data, isLoading, error } = useQuery({
@@ -150,6 +153,18 @@ export const AccountDetail = () => {
       }),
     onSuccess: () => {
       toast.success("Ventana de Alta agregada.");
+      void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const aislarCuenta = useMutation({
+    mutationFn: (dias: number) =>
+      api(`/accounts/${id}/isolation`, { metodo: "POST", body: { dias } }),
+    onSuccess: () => {
+      toast.success("Cuenta aislada.");
+      setAislarAbierto(false);
       void queryClient.invalidateQueries({ queryKey: ["account", id] });
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
@@ -272,6 +287,22 @@ export const AccountDetail = () => {
               >
                 <Trash2 />
                 Cerrar cuenta
+              </Button>
+            ) : null}
+            {!esOperador && data.aislada ? (
+              <Badge tone="warning">Compartida - Aislada</Badge>
+            ) : null}
+            {!esOperador &&
+            !data.es_exclusiva &&
+            data.estado === "activa" &&
+            data.clientes_activos === 1 ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setAislarAbierto(true)}
+              >
+                <Lock />
+                Aislar
               </Button>
             ) : null}
           </>
@@ -426,6 +457,59 @@ export const AccountDetail = () => {
                 disabled={cambiarPin.isPending}
               >
                 {cambiarPin.isPending ? "Guardando…" : "Guardar PIN"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={aislarAbierto} onOpenChange={setAislarAbierto}>
+        <DialogContent
+          titulo="Aislar esta Cuenta compartida"
+          descripcion="Mientras dure el aislamiento, la Cuenta no recibe Clientes Finales nuevos. Si tiene una Ventana de Alta vigente, se reemplaza por el aislamiento."
+        >
+          <div className="space-y-4">
+            <Field
+              label="Días de aislamiento"
+              htmlFor="dias-aislamiento"
+              required
+              error={errorDias || undefined}
+            >
+              <Input
+                id="dias-aislamiento"
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={diasAislamiento}
+                onChange={(evento) =>
+                  setDiasAislamiento(
+                    Number(evento.target.value.replace(/[^\d]/g, "")),
+                  )
+                }
+                autoFocus
+              />
+            </Field>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setAislarAbierto(false)}
+                disabled={aislarCuenta.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (!Number.isInteger(diasAislamiento) || diasAislamiento < 1) {
+                    setErrorDias("Indique un número entero de días mayor a 0.");
+                    return;
+                  }
+                  setErrorDias("");
+                  aislarCuenta.mutate(diasAislamiento);
+                }}
+                disabled={aislarCuenta.isPending}
+              >
+                {aislarCuenta.isPending ? "Aislando…" : "Aislar Cuenta"}
               </Button>
             </div>
           </div>
