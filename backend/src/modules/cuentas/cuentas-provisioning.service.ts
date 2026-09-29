@@ -26,6 +26,7 @@ import {
   LIMITE_POR_CATEGORIA_EXCLUSIVA,
 } from './capacidad.util';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
+import { PruebasService } from '../pruebas/pruebas.service';
 import { inicioMesArgentina, finMesArgentina } from '../../common/time/calendario-comercial';
 import { TransactionClient } from '../../common/prisma/prisma.service';
 
@@ -77,6 +78,10 @@ export interface CrearCuentaOpciones {
    */
   dispositivosFijos?: number;
   dispositivosMoviles?: number;
+  /** Cuenta de prueba (HU-P03): marca la Cuenta y consume un cupo del período. */
+  esPrueba?: boolean;
+  /** Vencimiento congelado al momento de crear la prueba. */
+  pruebaVenceEn?: Date;
 }
 
 /**
@@ -118,6 +123,7 @@ export class CuentasProvisioningService {
     private readonly identidad: IdentidadCuentasService,
     private readonly audit: AuditService,
     private readonly ventanasCuriosidad: VentanasCuriosidadService,
+    private readonly pruebas: PruebasService,
   ) {}
 
   /**
@@ -130,6 +136,7 @@ export class CuentasProvisioningService {
    */
   async crearCuenta(opciones: CrearCuentaOpciones): Promise<Cuenta> {
     const { empresaRevendedora, operadorPrincipalId, esExclusiva } = opciones;
+    const esPrueba = opciones.esPrueba === true;
     const config = await this.configuracion.obtener(operadorPrincipalId);
 
     const limiteDispositivos = LIMITE_POR_CATEGORIA_COMPARTIDA;
@@ -202,8 +209,23 @@ export class CuentasProvisioningService {
           dispositivosFijosHabilitados: dispositivosFijos,
           dispositivosMovilesHabilitados: dispositivosMoviles,
           estado: EstadoCuenta.activa,
+          // Cuenta de prueba (HU-P03): la marca y el vencimiento quedan
+          // congelados al crearla; cambiar la duración no los recalcula.
+          esPrueba,
+          pruebaCreadaEn: esPrueba ? new Date() : null,
+          pruebaVenceEn: esPrueba ? (opciones.pruebaVenceEn ?? null) : null,
         },
       });
+
+      if (esPrueba) {
+        // Consume el cupo del período en la misma transacción y con lock por
+        // Empresa Revendedora. Si el Proveedor falla después, `eliminarReserva`
+        // revierte el consumo junto con la reserva local.
+        await this.pruebas.consumirCupoDelPeriodo(
+          { empresaRevendedoraId: empresaRevendedora.id, cuentaId: cuenta.id },
+          tx,
+        );
+      }
       return cuenta;
     });
 
@@ -282,6 +304,21 @@ export class CuentasProvisioningService {
               intentos_dni: intento,
             },
           });
+
+          if (esPrueba) {
+            await this.audit.registrarEnTx(tx, {
+              accion: AccionAuditoria.creacion_cuenta_prueba,
+              entidad: EntidadAuditada.Cuenta,
+              entidadId: actualizada.id,
+              empresaRevendedoraId: empresaRevendedora.id,
+              detalle: {
+                proveedor_cuenta_id: cuentaProveedor.proveedorCuentaId,
+                es_exclusiva: esExclusiva,
+                prueba_creada_en: actualizada.pruebaCreadaEn?.toISOString() ?? null,
+                prueba_vence_en: actualizada.pruebaVenceEn?.toISOString() ?? null,
+              },
+            });
+          }
 
           return actualizada;
         });
@@ -592,6 +629,9 @@ export class CuentasProvisioningService {
         empresaRevendedoraId,
         estado: EstadoCuenta.activa,
         esExclusiva: false,
+        // Una Cuenta de prueba es temporal y dedicada: una venta normal nunca
+        // debe ubicarse ahí (HU-P03).
+        esPrueba: false,
         servicios,
         id: excluirCuentaIds.length ? { notIn: excluirCuentaIds } : undefined,
         // Las Cuentas importadas no participan de la búsqueda automática hasta
@@ -639,6 +679,16 @@ export class CuentasProvisioningService {
   private async eliminarReserva(cuentaId: string): Promise<void> {
     try {
       await this.prisma.db.cuenta.delete({ where: { id: cuentaId } });
+      // Si la reserva consumió cupo de prueba, se revierte con ella: nunca
+      // existió una prueba real. La tabla de consumo no tiene FK a `cuenta`, así
+      // que la limpieza es explícita y best-effort (no debe bloquear la baja).
+      await this.prisma.db.consumoCuentaPrueba
+        .deleteMany({ where: { cuentaId } })
+        .catch((cause) =>
+          this.logger.warn(
+            `Se revirtió la Cuenta ${cuentaId} pero no su consumo de prueba: ${(cause as Error).message}`,
+          ),
+        );
       this.logger.warn(
         `Se revirtió la reserva local de la Cuenta ${cuentaId} porque el proveedor no confirmó el alta.`,
       );

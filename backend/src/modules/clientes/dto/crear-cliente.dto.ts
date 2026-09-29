@@ -165,6 +165,16 @@ export class CrearClienteDto {
   @Max(2147483647)
   aislamiento_dias?: number;
 
+  @ApiPropertyOptional({
+    description:
+      'Cuenta de prueba: crea una Cuenta NUEVA dedicada (compartida o exclusiva) con una ' +
+      'duración tomada de la configuración de la Empresa Revendedora; el vendedor no la elige. ' +
+      'Requiere el módulo habilitado y cupo disponible. No se combina con Aislar Cuenta.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  es_prueba?: boolean;
+
   @ApiProperty({ type: DispositivoAltaDto })
   @ValidateNested()
   @Type(() => DispositivoAltaDto)

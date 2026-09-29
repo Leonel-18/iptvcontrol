@@ -54,6 +54,10 @@ export interface AltaDispositivoParams {
    *  Dispositivo previa (Pieza 4); la ventana de detección queda asociada al
    *  Cliente Final y el equipo se materializa al primer login. */
   abrirVentanaSinFila?: boolean;
+  /** Cuenta de prueba (HU-P03): fuerza una Cuenta NUEVA dedicada y marca el
+   *  vencimiento congelado. Nunca reutiliza una Cuenta existente. */
+  esPrueba?: boolean;
+  pruebaVenceEn?: Date;
 }
 
 export interface ResultadoAltaDispositivo {
@@ -152,7 +156,7 @@ export class DispositivosService {
     //
     // Excepción: "Aislar Cuenta" (forzarCuentaNueva) saltea la búsqueda a
     // propósito, para crear una Cuenta nueva dedicada a esa venta.
-    if (!cuentaId && !params.cuentaExclusiva && !params.forzarCuentaNueva) {
+    if (!cuentaId && !params.cuentaExclusiva && !params.forzarCuentaNueva && !params.esPrueba) {
       cuentaId = await this.provisioning.buscarCuentaConLugar(
         empresaRevendedora.id,
         umbral,
@@ -171,6 +175,8 @@ export class DispositivosService {
         servicios: params.servicios,
         dispositivosFijos: params.cuentaExclusiva ? undefined : cuposPorCategoria,
         dispositivosMoviles: params.cuentaExclusiva ? undefined : cuposPorCategoria,
+        esPrueba: params.esPrueba,
+        pruebaVenceEn: params.pruebaVenceEn,
       });
       cuentaId = cuentaNueva.id;
       cuentaCreada = true;

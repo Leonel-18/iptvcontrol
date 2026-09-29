@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ProveedorModule } from '../../proveedor/proveedor.module';
+import { PruebasModule } from '../pruebas/pruebas.module';
 import { CuentasController } from './cuentas.controller';
 import { CuentasService } from './cuentas.service';
 import { CuentasProvisioningService } from './cuentas-provisioning.service';
@@ -9,7 +10,7 @@ import { InventarioProveedorService } from './inventario-proveedor.service';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
 
 @Module({
-  imports: [ProveedorModule],
+  imports: [ProveedorModule, PruebasModule],
   controllers: [CuentasController],
   providers: [
     CuentasService,

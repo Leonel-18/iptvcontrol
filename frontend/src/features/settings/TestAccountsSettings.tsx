@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { FlaskConical } from 'lucide-react';
-import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   Badge,
@@ -23,6 +23,7 @@ import type { TestAccountsStatus } from '@/lib/types';
  * y deshabilitado mientras el módulo esté apagado.
  */
 export const TestAccountsSettings = () => {
+  const navigate = useNavigate();
   const consulta = useQuery({
     queryKey: ['settings', 'test-accounts'],
     queryFn: () => api<TestAccountsStatus>('/settings/test-accounts'),
@@ -49,15 +50,20 @@ export const TestAccountsSettings = () => {
         </Badge>
       </CardHeader>
       <CardContent className="space-y-5">
-        {pruebas.habilitadas ? (
-          <Alert tone="info">
-            Podés ofrecer pruebas a clientes nuevos. La duración configurada aplica a las pruebas
-            que crees de ahora en adelante.
-          </Alert>
-        ) : (
+        {!pruebas.habilitadas ? (
           <Alert tone="warning">
             El módulo de cuentas de prueba está deshabilitado para tu empresa. Consultá con el
             operador para activarlo.
+          </Alert>
+        ) : pruebas.disponible <= 0 ? (
+          <Alert tone="warning">
+            No quedan cuentas de prueba disponibles en este período ({pruebas.consumidas} de{' '}
+            {pruebas.total}). El cupo se renueva el próximo mes.
+          </Alert>
+        ) : (
+          <Alert tone="info">
+            Podés ofrecer pruebas a clientes nuevos. La duración configurada aplica a las pruebas
+            que crees de ahora en adelante.
           </Alert>
         )}
 
@@ -78,10 +84,8 @@ export const TestAccountsSettings = () => {
         <div className="flex justify-end">
           <Button
             variant="primary"
-            disabled={!pruebas.habilitadas}
-            onClick={() =>
-              toast.info('El alta de cuentas de prueba se habilita en la próxima actualización.')
-            }
+            disabled={!pruebas.habilitadas || pruebas.disponible <= 0}
+            onClick={() => navigate('/customers/new?prueba=1')}
           >
             <FlaskConical />
             Nueva cuenta de prueba
