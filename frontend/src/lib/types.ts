@@ -383,6 +383,20 @@ export interface ResellerDetail {
   creado_en: string;
 }
 
+/** Estado del módulo de cuentas de prueba y consumo del período (HU-P02). */
+export interface TestAccountsStatus {
+  /** Mes AR "YYYY-MM" del consumo informado. */
+  periodo: string;
+  habilitadas: boolean;
+  cupo_mensual: number;
+  extras: number;
+  total: number;
+  consumidas: number;
+  disponible: number;
+  duracion_dias: number;
+  avisos_dias: number[];
+}
+
 export interface CommercialPlan {
   id: string;
   tipo: "menudeo" | "obligacion_mensual";

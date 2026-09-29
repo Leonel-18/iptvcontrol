@@ -26,14 +26,30 @@ export function finMesArgentina(referencia: Date): Date {
   return bordeMesArgentina(referencia, 1);
 }
 
-function bordeMesArgentina(referencia: Date, mesOffset: number): Date {
+/**
+ * Período mensual AR de `referencia` como `"YYYY-MM"` (ej. "2026-09"). Se usa
+ * para acotar valores que aplican únicamente al mes en curso (extras de cuentas
+ * de prueba, HU-P02).
+ */
+export function periodoMesArgentina(referencia: Date): string {
+  const { anio, mes } = partesMesArgentina(referencia);
+  return `${anio}-${String(mes).padStart(2, '0')}`;
+}
+
+function partesMesArgentina(referencia: Date): { anio: number; mes: number } {
   const partes = new Intl.DateTimeFormat('en-CA', {
     timeZone: ZONA_ARGENTINA,
     year: 'numeric',
     month: '2-digit',
   }).formatToParts(referencia);
-  const anio = Number(partes.find((parte) => parte.type === 'year')?.value);
-  const mes = Number(partes.find((parte) => parte.type === 'month')?.value);
+  return {
+    anio: Number(partes.find((parte) => parte.type === 'year')?.value),
+    mes: Number(partes.find((parte) => parte.type === 'month')?.value),
+  };
+}
+
+function bordeMesArgentina(referencia: Date, mesOffset: number): Date {
+  const { anio, mes } = partesMesArgentina(referencia);
 
   const bordeLocal = new Date(Date.UTC(anio, mes - 1 + mesOffset, 1, 0, 0, 0, 0));
   // El "primer instante del mes N" expresado en la zona AR, convertido a UTC.

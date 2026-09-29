@@ -26,6 +26,7 @@ import { RevendedorasModule } from './modules/revendedoras/revendedoras.module';
 import { ModalidadesModule } from './modules/modalidades/modalidades.module';
 import { TeamMembersModule } from './modules/team-members/team-members.module';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module';
+import { PruebasModule } from './modules/pruebas/pruebas.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { IntegracionWhatsappModule } from './modules/integracion-whatsapp/integracion-whatsapp.module';
@@ -82,6 +83,7 @@ import { IntegracionWhatsappModule } from './modules/integracion-whatsapp/integr
     ModalidadesModule,
     TeamMembersModule,
     ConfiguracionModule,
+    PruebasModule,
     AuditoriaModule,
     ReportesModule,
     IntegracionWhatsappModule,

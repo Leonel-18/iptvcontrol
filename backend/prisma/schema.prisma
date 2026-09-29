@@ -342,6 +342,10 @@ model EmpresaRevendedora {
   pruebasCupoMensual   Int     @default(0) @map("pruebas_cupo_mensual")
   pruebasDuracionDias  Int     @default(0) @map("pruebas_duracion_dias")
   pruebasExtrasPeriodo Int     @default(0) @map("pruebas_extras_periodo")
+  /// Período (mes AR "YYYY-MM") al que pertenecen los extras actuales. Los extras
+  /// sólo aplican al período vigente: al cambiar de mes dejan de contar solos,
+  /// sin necesidad de un job (regla HU-P02).
+  pruebasExtrasPeriodoRef String? @map("pruebas_extras_periodo_ref")
   /// Múltiples días de aviso previo al vencimiento (ej. [7, 3, 1]).
   pruebasAvisosDias    Int[]   @default([]) @map("pruebas_avisos_dias")
 
@@ -358,9 +362,32 @@ model EmpresaRevendedora {
   auditLogs              AuditLog[]
   ventanasCuriosidad     VentanaCuriosidad[]
   plantillaWhatsApp      PlantillaWhatsApp?
+  consumosPrueba         ConsumoCuentaPrueba[]
 
   @@index([operadorPrincipalId])
   @@map("empresa_revendedora")
+}
+
+/// Consumo de cuentas de prueba por Empresa Revendedora (HU-P02).
+///
+/// Registro append-only: una fila por prueba creada. Es la fuente del contador
+/// mensual, deliberadamente independiente del estado actual de la Cuenta, para
+/// que borrar o convertir una prueba no devuelva cupo. `cuenta_id` se guarda sin
+/// clave foránea: si la Cuenta se elimina, el consumo debe sobrevivir.
+model ConsumoCuentaPrueba {
+  id String @id @default(uuid()) @db.Uuid
+
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  /// Cuenta de prueba asociada (referencia histórica, sin FK).
+  cuentaId String? @map("cuenta_id") @db.Uuid
+
+  /// Momento en que se consumió el cupo (alta de la prueba).
+  consumidaEn DateTime @default(now()) @map("consumida_en")
+
+  @@index([empresaRevendedoraId, consumidaEn])
+  @@map("consumo_cuenta_prueba")
 }
 
 /// Plantilla de WhatsApp de cada Empresa Revendedora (una por tenant).
