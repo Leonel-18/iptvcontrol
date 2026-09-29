@@ -217,6 +217,8 @@ export interface Customer {
   empresa_revendedora_id: string;
   cantidad_dispositivos: number;
   cuenta_ids: string[];
+  /** true si el cliente está en una Cuenta compartida aislada (HU-A04). */
+  cuenta_aislada?: boolean;
   suspendido_en: string | null;
   dado_de_baja_en: string | null;
   creado_en: string;
@@ -250,6 +252,8 @@ export interface CustomerOperatorView {
   empresa_revendedora_id: string;
   estado: string;
   tipo_alta: string;
+  /** true si el cliente está en una Cuenta compartida aislada (HU-A04). */
+  cuenta_aislada?: boolean;
   creado_en: string;
   dispositivos: AccountDevice[];
 }

@@ -124,8 +124,16 @@ export const AccountList = () => {
                     <CapacityMeter capacidad={cuenta.capacidad} />
                   </TD>
                   <TD>
-                    <Badge tone={cuenta.es_exclusiva ? 'info' : 'neutral'}>
-                      {cuenta.es_exclusiva ? 'Exclusiva' : 'Compartida'}
+                    <Badge
+                      tone={
+                        cuenta.es_exclusiva ? 'info' : cuenta.aislada ? 'warning' : 'neutral'
+                      }
+                    >
+                      {cuenta.es_exclusiva
+                        ? 'Exclusiva'
+                        : cuenta.aislada
+                          ? 'Compartida - Aislada'
+                          : 'Compartida'}
                     </Badge>
                   </TD>
                   <TD>

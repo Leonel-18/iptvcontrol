@@ -62,7 +62,11 @@ describe('ClientesService — visibilidad según el rol (regla 4.2)', () => {
     const count = jest.fn().mockResolvedValue(1);
 
     const prisma = {
-      db: { clienteFinal: { findMany, count } },
+      db: {
+        clienteFinal: { findMany, count },
+        // HU-A04: el listado consulta el aislamiento de las Cuentas de la página.
+        cuenta: { findMany: jest.fn().mockResolvedValue([]) },
+      },
     } as unknown as PrismaService;
 
     const contexto = {

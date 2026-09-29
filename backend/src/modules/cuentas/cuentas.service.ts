@@ -34,6 +34,7 @@ import {
 import {
   CuentaOperadorDto,
   CuentaRevendedoraDto,
+  esAislamientoVigente,
   mapCuentaParaOperador,
   mapCuentaParaRevendedora,
   mapDispositivoParaOperador,
@@ -105,7 +106,11 @@ export class CuentasService {
         where,
         include: {
           dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
-          ventasCompartidas: { select: { cuposPorCategoria: true } },
+          ventasCompartidas: { select: { id: true, cuposPorCategoria: true, aislada: true } },
+          ventanasCuriosidad: {
+            where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
+            select: { ventaCompartidaId: true },
+          },
         },
         orderBy: { creadoEn: 'desc' },
         skip: esCsv ? undefined : query.skip,
@@ -115,11 +120,14 @@ export class CuentasService {
 
     const data = cuentas.map((cuenta) => {
       const capacidad = calcularCapacidad(cuenta, umbral);
+      // Condición adicional "Compartida - Aislada" (HU-A04), consistente con el
+      // detalle: cubre el aislamiento de Cuenta y la venta aislada con ventana.
+      const aislada = esAislamientoVigente(cuenta);
       // En los listados no se descifran credenciales: descifrar 200 filas por
       // pantalla no aporta y multiplica la exposición del dato sensible.
       return esOperador
-        ? mapCuentaParaOperador(cuenta, capacidad)
-        : mapCuentaParaRevendedora(cuenta, capacidad, null);
+        ? mapCuentaParaOperador(cuenta, capacidad, undefined, aislada)
+        : mapCuentaParaRevendedora(cuenta, capacidad, null, undefined, aislada);
     });
 
     return PaginatedResponse.build(data, total, query.page ?? 1, query.per_page ?? 25);
@@ -150,6 +158,10 @@ export class CuentasService {
         clienteFinalExclusivo: {
           select: { id: true, numeroCliente: true, nombre: true, apellido: true },
         },
+        ventanasCuriosidad: {
+          where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
+          select: { ventaCompartidaId: true },
+        },
         dispositivos: {
           include: {
             clienteFinal: {
@@ -167,10 +179,11 @@ export class CuentasService {
 
     const umbral = await this.umbralAlerta();
     const capacidad = calcularCapacidad(cuenta, umbral);
+    const aislada = esAislamientoVigente(cuenta);
 
     if (this.contexto.esOperador) {
       return {
-        ...mapCuentaParaOperador(cuenta, capacidad, cuenta.proveedor?.nombre),
+        ...mapCuentaParaOperador(cuenta, capacidad, cuenta.proveedor?.nombre, aislada),
         dispositivos: cuenta.dispositivos.map(mapDispositivoParaOperador),
       };
     }
@@ -201,7 +214,13 @@ export class CuentasService {
         });
 
     return {
-      ...mapCuentaParaRevendedora(cuenta, capacidad, credenciales, cuenta.proveedor?.nombre),
+      ...mapCuentaParaRevendedora(
+        cuenta,
+        capacidad,
+        credenciales,
+        cuenta.proveedor?.nombre,
+        aislada,
+      ),
       dispositivos: cuenta.dispositivos.map(mapDispositivoParaRevendedora),
       cliente_final_exclusivo: cuenta.clienteFinalExclusivo
         ? {
@@ -244,8 +263,8 @@ export class CuentasService {
       ]),
       ventana_curiosidad: ventanas.activa,
       historial_ventanas_curiosidad: ventanas.historial,
-      // Aislamiento de Cuenta existente (HU-A02).
-      aislada: cuenta.aislada,
+      // Aislamiento de Cuenta existente (HU-A02) o venta aislada con ventana (HU-A01).
+      aislada,
       aislamiento_fin_en: cuenta.aislamientoFinEn,
       clientes_activos: clientesActivos,
     };

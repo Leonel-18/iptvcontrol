@@ -48,6 +48,12 @@ export class CuentaOperadorDto {
   proveedor_cuenta_id!: string | null;
   @ApiProperty({ enum: EstadoCuenta }) estado!: EstadoCuenta;
   @ApiProperty() es_exclusiva!: boolean;
+  @ApiProperty({
+    description:
+      'Condición adicional de una Cuenta compartida: está aislada (no recibe clientes nuevos). ' +
+      'Una Cuenta exclusiva nunca está aislada.',
+  })
+  aislada!: boolean;
   @ApiProperty({ description: 'La Cuenta importada todavía no tiene contraseña local válida.' })
   password_pendiente!: boolean;
   @ApiProperty() empresa_revendedora_id!: string;
@@ -100,17 +106,51 @@ export const nombresDeServicios = (servicios: string): string[] =>
     .map((codigo) => SENSA_SERVICIOS[codigo] ?? `Servicio ${codigo}`);
 
 /**
+ * Condición de aislamiento vigente de una Cuenta compartida (HU-A01 + HU-A04).
+ *
+ * La Cuenta sigue siendo compartida: el aislamiento es una condición adicional.
+ * Cubre las dos vías:
+ *  - `Cuenta.aislada` + `aislamiento_fin_en` futuro (aislar una Cuenta existente, HU-A02).
+ *  - una venta `aislada` (alta dedicada, HU-A01) con su Ventana de Alta vigente.
+ */
+export const esAislamientoVigente = (
+  cuenta: {
+    aislada: boolean;
+    aislamientoFinEn: Date | null;
+    ventasCompartidas?: { id: string; aislada: boolean }[];
+    ventanasCuriosidad?: { ventaCompartidaId: string | null }[];
+  },
+  ahora = new Date(),
+): boolean => {
+  if (cuenta.aislada && cuenta.aislamientoFinEn && cuenta.aislamientoFinEn > ahora) {
+    return true;
+  }
+  const ventasAisladas = new Set(
+    (cuenta.ventasCompartidas ?? []).filter((venta) => venta.aislada).map((venta) => venta.id),
+  );
+  return (cuenta.ventanasCuriosidad ?? []).some(
+    (ventana) =>
+      ventana.ventaCompartidaId !== null && ventasAisladas.has(ventana.ventaCompartidaId),
+  );
+};
+
+/**
  * Vista para el panel del Operador Principal: sin usuario, contraseña ni PIN.
+ *
+ * `aislada` se calcula en el servicio con `esAislamientoVigente`; si no se pasa,
+ * se cae al campo escalar `Cuenta.aislada`.
  */
 export const mapCuentaParaOperador = (
   cuenta: Cuenta,
   capacidad: CapacidadCuenta,
   proveedorNombre?: string | null,
+  aislada: boolean = cuenta.aislada,
 ): CuentaOperadorDto => ({
   id: cuenta.id,
   proveedor_cuenta_id: cuenta.proveedorCuentaId,
   estado: cuenta.estado,
   es_exclusiva: cuenta.esExclusiva,
+  aislada,
   password_pendiente: !cuenta.passwordCifrado,
   empresa_revendedora_id: cuenta.empresaRevendedoraId,
   proveedor: proveedorNombre ?? null,
@@ -138,8 +178,9 @@ export const mapCuentaParaRevendedora = (
   capacidad: CapacidadCuenta,
   credenciales: { password: string | null; pin: string | null } | null,
   proveedorNombre?: string | null,
+  aislada?: boolean,
 ): CuentaRevendedoraDto => ({
-  ...mapCuentaParaOperador(cuenta, capacidad, proveedorNombre),
+  ...mapCuentaParaOperador(cuenta, capacidad, proveedorNombre, aislada),
   usuario: cuenta.usuario,
   password: credenciales?.password ?? undefined,
   pin: credenciales?.pin ?? undefined,
