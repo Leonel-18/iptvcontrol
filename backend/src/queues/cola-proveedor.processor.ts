@@ -78,6 +78,8 @@ export class ColaProveedorProcessor extends WorkerHost {
         return this.barrerPruebasPorVencer();
       case TRABAJOS_PROVEEDOR.BARRER_VENTANAS_POR_VENCER:
         return this.barrerVentanasPorVencer();
+      case TRABAJOS_PROVEEDOR.BARRER_RECORDATORIOS_DISPOSITIVOS:
+        return this.barrerRecordatoriosDispositivos();
       default:
         this.logger.warn(`Trabajo desconocido en la cola: ${job.name}`);
         return null;
@@ -739,6 +741,76 @@ export class ColaProveedorProcessor extends WorkerHost {
       this.logger.log(`Avisos de ventanas de alta por vencer: ${creadas} creado(s).`);
     }
     return { creadas };
+  }
+
+  /**
+   * Recordatorios de dispositivos pendientes (HU-D04).
+   *
+   * Mientras un evento pendiente siga sin resolver, emite un aviso cada la
+   * frecuencia configurada por la Empresa Revendedora
+   * (`notif_dispositivos` + `notif_dispositivos_frecuencia_horas`, HU-N02). No
+   * depende del cron de detección y no crea una notificación por barrido: usa
+   * `ultimo_recordatorio_en` (o la fecha de detección la primera vez) para
+   * decidir. Cuando el dispositivo se asocia —por autoasignación (D02) o por el
+   * flujo manual— el evento deja de estar `pendiente` y cesan los recordatorios.
+   */
+  private async barrerRecordatoriosDispositivos(): Promise<{ recordatorios: number }> {
+    const operadores = await this.prisma.operadorPrincipal.findMany({ select: { id: true } });
+    const ahora = new Date();
+    let recordatorios = 0;
+
+    for (const operador of operadores) {
+      const pendientes = await this.prisma.transactionComoOperador(operador.id, (tx) =>
+        tx.incidenciaDispositivoProveedor.findMany({
+          where: {
+            estado: EstadoIncidenciaDispositivo.pendiente,
+            empresaRevendedora: { notifDispositivos: true },
+          },
+          select: {
+            id: true,
+            cuentaId: true,
+            empresaRevendedoraId: true,
+            primeraDeteccionEn: true,
+            ultimoRecordatorioEn: true,
+            empresaRevendedora: { select: { notifDispositivosFrecuenciaHoras: true } },
+          },
+        }),
+      );
+
+      for (const pendiente of pendientes) {
+        const frecuenciaMs =
+          pendiente.empresaRevendedora.notifDispositivosFrecuenciaHoras * 60 * 60_000;
+        const referencia = pendiente.ultimoRecordatorioEn ?? pendiente.primeraDeteccionEn;
+        if (ahora.getTime() - referencia.getTime() < frecuenciaMs) continue;
+
+        await this.prisma.transactionComoOperador(operador.id, async (tx) => {
+          // Condicional: si otra corrida ya lo recordó (o se resolvió), no repite.
+          const actualizadas = await tx.incidenciaDispositivoProveedor.updateMany({
+            where: { id: pendiente.id, estado: EstadoIncidenciaDispositivo.pendiente },
+            data: { ultimoRecordatorioEn: ahora },
+          });
+          if (actualizadas.count !== 1) return;
+
+          await this.notificaciones.crearEnTx(tx, {
+            empresaRevendedoraId: pendiente.empresaRevendedoraId,
+            tipo: 'dispositivo_pendiente',
+            titulo: 'Recordatorio: dispositivo pendiente',
+            mensaje:
+              'Sigue pendiente un dispositivo sin asignar en una cuenta. Revisá la cuenta para ' +
+              'asignarlo o darlo de baja.',
+            accionTipo: 'ver_cuenta',
+            accionRefId: pendiente.cuentaId,
+            clave: `dispositivo_pendiente:${pendiente.id}:recordatorio:${ahora.getTime()}`,
+          });
+          recordatorios += 1;
+        });
+      }
+    }
+
+    if (recordatorios > 0) {
+      this.logger.log(`Recordatorios de dispositivos pendientes: ${recordatorios} enviado(s).`);
+    }
+    return { recordatorios };
   }
 
   /**
