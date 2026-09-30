@@ -910,15 +910,25 @@ export class CuentasService {
       });
     }
 
+    // El cierre de una cuenta de prueba se audita con su propia acción, para
+    // poder distinguirlo de la creación y de la conversión (HU-P07).
+    const accionCierre = cuenta.esPrueba
+      ? AccionAuditoria.cierre_cuenta_prueba
+      : AccionAuditoria.cierre_cuenta;
+
     if (!cuenta.proveedorCuentaId) {
       // Nunca se confirmó en el Proveedor: no hay nada que cerrar allá.
       await this.prisma.db.cuenta.delete({ where: { id } });
       await this.audit.registrar({
-        accion: AccionAuditoria.cierre_cuenta,
+        accion: accionCierre,
         entidad: EntidadAuditada.Cuenta,
         entidadId: id,
         empresaRevendedoraId: cuenta.empresaRevendedoraId,
-        detalle: { proveedor_cuenta_id: null, motivo: 'nunca_confirmada_en_proveedor' },
+        detalle: {
+          proveedor_cuenta_id: null,
+          motivo: 'nunca_confirmada_en_proveedor',
+          es_prueba: cuenta.esPrueba,
+        },
       });
       return { id, estado: EstadoCuenta.cerrada };
     }
@@ -930,11 +940,11 @@ export class CuentasService {
       data: { estado: EstadoCuenta.cerrada },
     });
     await this.audit.registrar({
-      accion: AccionAuditoria.cierre_cuenta,
+      accion: accionCierre,
       entidad: EntidadAuditada.Cuenta,
       entidadId: id,
       empresaRevendedoraId: cuenta.empresaRevendedoraId,
-      detalle: { proveedor_cuenta_id: cuenta.proveedorCuentaId },
+      detalle: { proveedor_cuenta_id: cuenta.proveedorCuentaId, es_prueba: cuenta.esPrueba },
     });
     return { id, estado: EstadoCuenta.cerrada };
   }

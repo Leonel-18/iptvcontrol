@@ -117,6 +117,43 @@ describe('CuentasService — cerrar', () => {
     expect(resultado).toEqual({ id: 'cuenta-1', estado: EstadoCuenta.cerrada });
   });
 
+  it('audita el cierre de una cuenta de prueba con su propia acción (HU-P07)', async () => {
+    const { servicio, audit } = crearServicio({
+      id: 'cuenta-1',
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: '30000043',
+      empresaRevendedoraId: 'empresa-1',
+      esPrueba: true,
+      dispositivos: [],
+    });
+
+    await servicio.cerrar('cuenta-1');
+
+    expect(audit.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accion: 'cierre_cuenta_prueba',
+        detalle: expect.objectContaining({ es_prueba: true }),
+      }),
+    );
+  });
+
+  it('una cuenta normal sigue auditándose como cierre_cuenta', async () => {
+    const { servicio, audit } = crearServicio({
+      id: 'cuenta-1',
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: '30000043',
+      empresaRevendedoraId: 'empresa-1',
+      esPrueba: false,
+      dispositivos: [],
+    });
+
+    await servicio.cerrar('cuenta-1');
+
+    expect(audit.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({ accion: 'cierre_cuenta' }),
+    );
+  });
+
   it('si la Cuenta nunca se confirmó en el Proveedor, sólo borra la reserva local (no llama a SENSA)', async () => {
     const { servicio, cerrarCuentaProveedor, cuentaDelete } = crearServicio({
       id: 'cuenta-1',
