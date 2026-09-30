@@ -16,6 +16,7 @@ function armarServicio(opciones: {
   contexto?: Record<string, unknown>;
 }) {
   const tx = {
+    $executeRaw: jest.fn().mockResolvedValue(0),
     empresaRevendedora: {
       findUniqueOrThrow: jest
         .fn()
@@ -106,17 +107,27 @@ describe('PruebasService', () => {
     });
   });
 
-  it('registra el consumo como fila append-only', async () => {
-    const { service, tx } = armarServicio({});
+  it('consume el cupo con lock por empresa y fila append-only', async () => {
+    const { service, tx } = armarServicio({ consumidas: 14 });
 
-    await service.registrarConsumo(
+    await service.consumirCupoDelPeriodo(
       { empresaRevendedoraId: 'empresa-1', cuentaId: 'cuenta-9' },
       tx as never,
     );
 
+    expect(tx.$executeRaw).toHaveBeenCalled();
     expect(tx.consumoCuentaPrueba.create).toHaveBeenCalledWith({
       data: { empresaRevendedoraId: 'empresa-1', cuentaId: 'cuenta-9' },
     });
+  });
+
+  it('no consume el cupo si el período ya está lleno (borrar/converter no devuelve)', async () => {
+    const { service, tx } = armarServicio({ consumidas: 15 });
+
+    await expect(
+      service.consumirCupoDelPeriodo({ empresaRevendedoraId: 'empresa-1' }, tx as never),
+    ).rejects.toThrow('No hay cupo de cuentas de prueba disponible');
+    expect(tx.consumoCuentaPrueba.create).not.toHaveBeenCalled();
   });
 
   it('reserva la consulta al panel de la Empresa Revendedora', async () => {

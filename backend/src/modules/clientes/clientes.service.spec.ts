@@ -13,6 +13,7 @@ import { RequestContextService } from '../../common/context/request-context.serv
 import { DispositivosService } from '../dispositivos/dispositivos.service';
 import { IdentificadoresService } from '../cuentas/identificadores.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
+import { PruebasService } from '../pruebas/pruebas.service';
 import { ListarClientesQueryDto } from './dto/listar-clientes.query';
 
 /**
@@ -85,6 +86,7 @@ describe('ClientesService — visibilidad según el rol (regla 4.2)', () => {
       {} as DispositivosService,
       {} as IdentificadoresService,
       {} as ProveedorService,
+      {} as PruebasService,
     );
 
     return { servicio, findMany };
@@ -224,6 +226,7 @@ describe('ClientesService — ciclo de vida de una venta compartida', () => {
       dispositivos,
       {} as IdentificadoresService,
       {} as ProveedorService,
+      {} as PruebasService,
     );
     jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: cliente.id } as never);
     return { servicio, dispositivos, ventaDeleteMany };
@@ -315,6 +318,7 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
       dispositivos,
       identificadores,
       {} as ProveedorService,
+      {} as PruebasService,
     );
     jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: clienteCreado.id } as never);
     return { servicio, alta, reservarVentaContextual, audit, prisma, cuentaUpdate };
@@ -483,6 +487,7 @@ describe('ClientesService — validación de Aislar Cuenta', () => {
       dispositivos,
       {} as IdentificadoresService,
       {} as ProveedorService,
+      {} as PruebasService,
     );
     return { servicio };
   };
@@ -571,6 +576,7 @@ describe('ClientesService — validación de DNI y teléfono al editar', () => {
       {} as DispositivosService,
       {} as IdentificadoresService,
       {} as ProveedorService,
+      {} as PruebasService,
     );
     return { servicio, findFirst, update };
   };
@@ -604,5 +610,63 @@ describe('ClientesService — validación de DNI y teléfono al editar', () => {
 
     expect(findFirst).not.toHaveBeenCalled();
     expect(update).toHaveBeenCalled();
+  });
+
+  describe('alta de cuenta de prueba (HU-P03)', () => {
+    const crearParaAlta = () => {
+      const dispositivos = {
+        operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
+      } as unknown as DispositivosService;
+      const contexto = {
+        esOperador: false,
+        empresaRevendedoraId: 'empresa-1',
+        operadorPrincipalId: 'operador-1',
+        teamMemberId: 'team-1',
+      } as unknown as RequestContextService;
+      return new ClientesService(
+        { db: {} } as unknown as PrismaService,
+        {} as AuditService,
+        {} as CryptoService,
+        contexto,
+        dispositivos,
+        {} as IdentificadoresService,
+        {} as ProveedorService,
+        {} as PruebasService,
+      );
+    };
+
+    const baseDto = () => ({
+      nombre: 'Juan',
+      dni: '30000026',
+      tipo_alta: TipoAltaClienteFinal.dispositivo_compartido,
+      cupos_por_categoria: 1 as const,
+      dispositivo: {},
+    });
+
+    it('rechaza combinar una prueba con Aislar Cuenta', async () => {
+      await expect(
+        crearParaAlta().crear({ ...baseDto(), es_prueba: true, aislar_cuenta: true } as never),
+      ).rejects.toThrow('no puede combinarse con Aislar Cuenta');
+    });
+
+    it('rechaza una prueba sobre una Cuenta existente', async () => {
+      await expect(
+        crearParaAlta().crear({
+          ...baseDto(),
+          es_prueba: true,
+          cuenta_id: '11111111-1111-1111-1111-111111111111',
+        } as never),
+      ).rejects.toThrow('Cuenta nueva');
+    });
+
+    it('rechaza una prueba con Ventana de Alta', async () => {
+      await expect(
+        crearParaAlta().crear({
+          ...baseDto(),
+          es_prueba: true,
+          duracion_ventana_curiosidad_minutos: 30,
+        } as never),
+      ).rejects.toThrow('no admite una Ventana de Alta');
+    });
   });
 });

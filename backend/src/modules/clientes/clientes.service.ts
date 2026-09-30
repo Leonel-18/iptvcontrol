@@ -27,6 +27,7 @@ import { DispositivosService } from '../dispositivos/dispositivos.service';
 import { IdentificadoresService } from '../cuentas/identificadores.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
 import { normalizarServicios, validarServiciosContratados } from '../../proveedor/servicios.util';
+import { PruebasService } from '../pruebas/pruebas.service';
 import { CrearClienteDto } from './dto/crear-cliente.dto';
 import { ActualizarClienteDto, ListarClientesQueryDto } from './dto/listar-clientes.query';
 import { calcularCapacidad, ESTADOS_QUE_OCUPAN } from '../cuentas/capacidad.util';
@@ -73,6 +74,7 @@ export class ClientesService {
     private readonly dispositivos: DispositivosService,
     private readonly identificadores: IdentificadoresService,
     private readonly proveedor: ProveedorService,
+    private readonly pruebas: PruebasService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -418,6 +420,28 @@ export class ClientesService {
       );
     }
 
+    // Cuenta de prueba (HU-P03): siempre crea una Cuenta NUEVA dedicada, con la
+    // duración tomada de la configuración de la Empresa Revendedora (no la elige
+    // el vendedor). No puede coexistir con aislamiento ni con una carga contextual.
+    const esPrueba = dto.es_prueba === true;
+    if (esPrueba) {
+      if (dto.cuenta_id || dto.agrupar_en_cliente_id) {
+        throw new BadRequestException(
+          'Una cuenta de prueba siempre se crea en una Cuenta nueva: no admite una Cuenta existente.',
+        );
+      }
+      if (dto.aislar_cuenta || dto.aislamiento_dias !== undefined) {
+        throw new BadRequestException(
+          'Una cuenta de prueba no puede combinarse con Aislar Cuenta.',
+        );
+      }
+      if (dto.duracion_ventana_curiosidad_minutos !== undefined) {
+        throw new BadRequestException(
+          'Una cuenta de prueba no admite una Ventana de Alta: es una Cuenta nueva dedicada.',
+        );
+      }
+    }
+
     // "Aislar Cuenta" (HU-A01): crea una Cuenta compartida NUEVA y aislada, que
     // nunca reutiliza una existente. El aislamiento se expresa en DÍAS (entero
     // mayor a 0) y reemplaza a la Ventana de Alta: internamente se apoya en el
@@ -521,6 +545,22 @@ export class ClientesService {
       validarServiciosContratados(servicios, licencias);
     }
 
+    // Vencimiento de la prueba: se congela con la duración configurada al momento
+    // de crear. Se valida antes de tocar el Proveedor (módulo habilitado y cupo).
+    let pruebaVenceEn: Date | undefined;
+    if (esPrueba) {
+      const configuracion = await this.prisma.db.empresaRevendedora.findUniqueOrThrow({
+        where: { id: empresaRevendedoraId },
+        select: { pruebasDuracionDias: true },
+      });
+      await this.prisma.transaction((tx) =>
+        this.pruebas.asegurarDisponibilidad(empresaRevendedoraId, tx),
+      );
+      pruebaVenceEn = new Date(
+        Date.now() + configuracion.pruebasDuracionDias * MINUTOS_POR_DIA * 60_000,
+      );
+    }
+
     // --- Alta normal ---------------------------------------------------------
     const cliente = await this.prisma.transaction(async (tx) => {
       if (cuentaForzadaId && dto.tipo_alta === TipoAltaClienteFinal.cuenta_exclusiva) {
@@ -620,6 +660,9 @@ export class ClientesService {
         ventaAislada: aislarCuenta,
         // Pieza 4: la venta compartida NO crea una fila de Dispositivo previa.
         abrirVentanaSinFila: dto.tipo_alta === TipoAltaClienteFinal.dispositivo_compartido,
+        // Cuenta de prueba (HU-P03): fuerza una Cuenta nueva dedicada.
+        esPrueba,
+        pruebaVenceEn,
       });
 
       await this.audit.registrar({
@@ -637,6 +680,8 @@ export class ClientesService {
           cargado_manualmente_en_cuenta: Boolean(cuentaForzadaId),
           duplicado_confirmado: Boolean(dto.confirmar_duplicado),
           aislada: aislarCuenta,
+          es_prueba: esPrueba,
+          prueba_vence_en: pruebaVenceEn?.toISOString() ?? null,
         },
       });
 

@@ -73,13 +73,30 @@ export class PruebasService {
   }
 
   /**
-   * Registra el consumo de una prueba. Append-only: no se revierte al borrar o
-   * convertir la prueba (HU-P02).
+   * Consume un cupo de prueba dentro de la transacción del alta (HU-P03).
+   *
+   * Toma un lock por Empresa Revendedora y vuelve a verificar habilitación y
+   * disponibilidad antes de registrar el consumo, para que dos altas
+   * concurrentes no superen `cupo + extras`. La fila es append-only: no se
+   * revierte al borrar o convertir la prueba (HU-P02).
    */
-  async registrarConsumo(
+  async consumirCupoDelPeriodo(
     params: { empresaRevendedoraId: string; cuentaId?: string | null },
     tx: TransactionClient,
   ): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${params.empresaRevendedoraId}))`;
+    const estado = await this.calcularEstado(tx, params.empresaRevendedoraId, new Date());
+    if (!estado.habilitadas) {
+      throw new BadRequestException(
+        'El módulo de cuentas de prueba está deshabilitado para esta Empresa Revendedora.',
+      );
+    }
+    if (estado.disponible <= 0) {
+      throw new BadRequestException(
+        `No hay cupo de cuentas de prueba disponible en este período ` +
+          `(${estado.consumidas} de ${estado.total}).`,
+      );
+    }
     await tx.consumoCuentaPrueba.create({
       data: {
         empresaRevendedoraId: params.empresaRevendedoraId,

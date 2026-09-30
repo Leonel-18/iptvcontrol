@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Check, UserPlus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, FlaskConical, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import type {
   ServiceCatalogItem,
   SharedCapacity,
   CuriosityWindowSettings,
+  TestAccountsStatus,
 } from '@/lib/types';
 import {
   customerIntakeHelp,
@@ -106,6 +107,7 @@ interface EstadoFormulario {
   duracionVentanaCuriosidadMinutos: number;
   aislarCuenta: boolean;
   aislamientoDias: number;
+  esPrueba: boolean;
 }
 
 const INICIAL: EstadoFormulario = {
@@ -123,6 +125,7 @@ const INICIAL: EstadoFormulario = {
   duracionVentanaCuriosidadMinutos: 0,
   aislarCuenta: false,
   aislamientoDias: 30,
+  esPrueba: false,
 };
 
 const PASOS = ['Cliente', 'Método de alta', 'Servicios', 'Confirmar'] as const;
@@ -130,6 +133,7 @@ const PASOS = ['Cliente', 'Método de alta', 'Servicios', 'Confirmar'] as const;
 export const CustomerForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
 
   const [paso, setPaso] = useState(0);
   const [valores, setValores] = useState<EstadoFormulario>(INICIAL);
@@ -153,6 +157,22 @@ export const CustomerForm = () => {
     queryFn: () => api<CuriosityWindowSettings>('/settings/curiosity-window'),
     staleTime: 5 * 60 * 1000,
   });
+
+  const estadoPruebas = useQuery({
+    queryKey: ['settings', 'test-accounts'],
+    queryFn: () => api<TestAccountsStatus>('/settings/test-accounts'),
+    staleTime: 60 * 1000,
+  });
+  const pruebasHabilitadas = estadoPruebas.data?.habilitadas === true;
+  const pruebasDisponibles = estadoPruebas.data?.disponible ?? 0;
+  const puedeProbar = pruebasHabilitadas && pruebasDisponibles > 0;
+
+  // Entrada directa desde la tarjeta de Configuración (`/customers/new?prueba=1`).
+  useEffect(() => {
+    if (puedeProbar && searchParams.get('prueba') === '1') {
+      setValores((actual) => (actual.esPrueba ? actual : { ...actual, esPrueba: true }));
+    }
+  }, [puedeProbar, searchParams]);
 
   const serviciosContratados = (catalogo.data ?? []).filter((servicio) => servicio.contratado);
   const catalogoDisponible = catalogo.isSuccess && serviciosContratados.length > 0;
@@ -223,16 +243,19 @@ export const CustomerForm = () => {
             ...(decisionDuplicado?.tipo !== 'agrupar'
               ? { servicios: valores.servicios }
               : {}),
+            ...(decisionDuplicado?.tipo !== 'agrupar' && valores.esPrueba
+              ? { es_prueba: true }
+              : {}),
             ...(decisionDuplicado?.tipo !== 'agrupar' &&
             valores.metodoAlta === 'dispositivo_compartido'
+              ? { cupos_por_categoria: valores.cuposPorCategoria }
+              : {}),
+            ...(decisionDuplicado?.tipo !== 'agrupar' &&
+            valores.metodoAlta === 'dispositivo_compartido' &&
+            !valores.esPrueba
               ? valores.aislarCuenta
-                ? {
-                    cupos_por_categoria: valores.cuposPorCategoria,
-                    aislar_cuenta: true,
-                    aislamiento_dias: valores.aislamientoDias,
-                  }
+                ? { aislar_cuenta: true, aislamiento_dias: valores.aislamientoDias }
                 : {
-                    cupos_por_categoria: valores.cuposPorCategoria,
                     duracion_ventana_curiosidad_minutos:
                       valores.duracionVentanaCuriosidadMinutos,
                   }
@@ -306,7 +329,7 @@ export const CustomerForm = () => {
       return false;
     }
 
-    if (paso === 1 && valores.metodoAlta === 'dispositivo_compartido') {
+    if (paso === 1 && valores.metodoAlta === 'dispositivo_compartido' && !valores.esPrueba) {
       if (valores.aislarCuenta) {
         if (!Number.isInteger(valores.aislamientoDias) || valores.aislamientoDias < 1) {
           setErrores((actual) => ({
@@ -602,6 +625,48 @@ export const CustomerForm = () => {
                 </button>
               ))}
 
+              {decisionDuplicado?.tipo !== 'agrupar' ? (
+                <label
+                  className={cn(
+                    'flex items-start gap-3 rounded-lg border p-4 transition-colors',
+                    !puedeProbar && 'opacity-60',
+                    valores.esPrueba && puedeProbar
+                      ? 'border-azure-500 bg-azure-50 dark:bg-azure-900/30'
+                      : puedeProbar && 'hover:bg-navy-50 dark:hover:bg-navy-800',
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={valores.esPrueba}
+                    disabled={!puedeProbar}
+                    onChange={(evento) =>
+                      setValores((actual) => ({
+                        ...actual,
+                        esPrueba: evento.target.checked,
+                        // Una prueba nunca coexiste con aislamiento (HU-P03).
+                        aislarCuenta: evento.target.checked ? false : actual.aislarCuenta,
+                      }))
+                    }
+                    className="mt-0.5 size-4 shrink-0 accent-azure-500"
+                  />
+                  <span>
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <FlaskConical className="size-4" />
+                      Cuenta de prueba
+                    </span>
+                    <span className="mt-0.5 block text-sm texto-suave">
+                      {!pruebasHabilitadas
+                        ? 'El módulo de cuentas de prueba está deshabilitado para tu empresa.'
+                        : pruebasDisponibles <= 0
+                          ? 'No quedan cuentas de prueba disponibles en este período.'
+                          : `Crea una Cuenta nueva dedicada (compartida o exclusiva) por ${
+                              estadoPruebas.data?.duracion_dias ?? 0
+                            } día(s), según la configuración de tu empresa. La duración no se elige acá.`}
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+
               {valores.metodoAlta === 'dispositivo_compartido' ? (
                 <div className="space-y-3">
                   <fieldset className="rounded-lg border p-4">
@@ -631,6 +696,8 @@ export const CustomerForm = () => {
                     </div>
                   </fieldset>
 
+                  {!valores.esPrueba ? (
+                    <>
                   <label
                     className={cn(
                       'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
@@ -711,6 +778,8 @@ export const CustomerForm = () => {
                       />
                     </div>
                   )}
+                    </>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -858,8 +927,16 @@ export const CustomerForm = () => {
                     {sharedCapacityLabels[valores.cuposPorCategoria]}
                   </Resumen>
                 ) : null}
+                {decisionDuplicado?.tipo !== 'agrupar' && valores.esPrueba ? (
+                  <Resumen etiqueta="Cuenta de prueba">
+                    {`Se crea una Cuenta nueva dedicada por ${
+                      estadoPruebas.data?.duracion_dias ?? 0
+                    } día(s).`}
+                  </Resumen>
+                ) : null}
                 {decisionDuplicado?.tipo !== 'agrupar' &&
-                valores.metodoAlta === 'dispositivo_compartido' ? (
+                valores.metodoAlta === 'dispositivo_compartido' &&
+                !valores.esPrueba ? (
                   <Resumen etiqueta="Ventana de Alta">
                     {formatDurationMinutes(valores.duracionVentanaCuriosidadMinutos)}
                   </Resumen>
@@ -887,6 +964,15 @@ export const CustomerForm = () => {
                   <p>
                     Se autoriza un Dispositivo adicional con los servicios y los cupos disponibles
                     de la venta existente.
+                  </p>
+                ) : valores.esPrueba ? (
+                  <p>
+                    Se crea una <strong>Cuenta nueva de prueba</strong> (
+                    {valores.metodoAlta === 'cuenta_exclusiva'
+                      ? 'exclusiva'
+                      : `compartida, ${sharedCapacityLabels[valores.cuposPorCategoria]}`}
+                    ) sólo para este cliente, por {estadoPruebas.data?.duracion_dias ?? 0} día(s).
+                    Al vencer se cierra automáticamente y el cliente queda sin cuenta.
                   </p>
                 ) : valores.metodoAlta === 'cuenta_exclusiva' ? (
                   <p>

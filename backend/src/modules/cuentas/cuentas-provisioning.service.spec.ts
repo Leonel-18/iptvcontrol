@@ -12,6 +12,7 @@ import { ConfiguracionProveedorService } from '../../proveedor/configuracion-pro
 import { IdentificadoresService } from './identificadores.service';
 import { IdentidadCuentasService } from './identidad-cuentas.service';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
+import { PruebasService } from '../pruebas/pruebas.service';
 
 /**
  * =============================================================================
@@ -108,6 +109,10 @@ describe('CuentasProvisioningService — crearCuenta', () => {
 
     const audit = { registrarEnTx: jest.fn() } as unknown as AuditService;
 
+    const pruebas = {
+      consumirCupoDelPeriodo: jest.fn().mockResolvedValue(undefined),
+    } as unknown as PruebasService;
+
     const servicio = new CuentasProvisioningService(
       prisma,
       crypto,
@@ -117,10 +122,57 @@ describe('CuentasProvisioningService — crearCuenta', () => {
       identidad,
       audit,
       {} as VentanasCuriosidadService,
+      pruebas,
     );
 
-    return { servicio, crearCuentaProveedor, identidad };
+    return {
+      servicio,
+      crearCuentaProveedor,
+      identidad,
+      pruebas,
+      audit,
+      cuentaCreate: tx.cuenta.create,
+    };
   };
+
+  it('marca la Cuenta como prueba, congela el vencimiento y consume un cupo (HU-P03)', async () => {
+    const { servicio, pruebas, cuentaCreate } = crearServicio();
+    const vence = new Date('2026-10-29T12:00:00Z');
+
+    await servicio.crearCuenta({
+      empresaRevendedora,
+      operadorPrincipalId: 'operador-1',
+      esExclusiva: false,
+      esPrueba: true,
+      pruebaVenceEn: vence,
+    });
+
+    expect(cuentaCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          esPrueba: true,
+          pruebaVenceEn: vence,
+          pruebaCreadaEn: expect.any(Date),
+        }),
+      }),
+    );
+    expect(pruebas.consumirCupoDelPeriodo).toHaveBeenCalledWith(
+      { empresaRevendedoraId: empresaRevendedora.id, cuentaId: 'cuenta-1' },
+      expect.anything(),
+    );
+  });
+
+  it('una Cuenta normal no consume cupo de prueba (HU-P03)', async () => {
+    const { servicio, pruebas } = crearServicio();
+
+    await servicio.crearCuenta({
+      empresaRevendedora,
+      operadorPrincipalId: 'operador-1',
+      esExclusiva: false,
+    });
+
+    expect(pruebas.consumirCupoDelPeriodo).not.toHaveBeenCalled();
+  });
 
   it('envía referenciaExterna igual al DNI generado, no al UUID de la Cuenta', async () => {
     const { servicio, crearCuentaProveedor } = crearServicio();
@@ -351,6 +403,7 @@ describe('CuentasProvisioningService — contadores de venta', () => {
         abrirPorNuevaVentaEnTx: jest.fn().mockResolvedValue(undefined),
         cerrarPorCancelacionEnTx: jest.fn().mockResolvedValue(undefined),
       } as unknown as VentanasCuriosidadService,
+      {} as PruebasService,
     );
 
     return {
@@ -529,6 +582,7 @@ describe('CuentasProvisioningService — búsqueda por cupos', () => {
       {} as IdentidadCuentasService,
       {} as AuditService,
       {} as VentanasCuriosidadService,
+      {} as PruebasService,
     );
   };
 

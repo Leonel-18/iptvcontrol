@@ -169,6 +169,7 @@ enum AccionAuditoria {
   cambio_plantilla_whatsapp
   apertura_aislamiento_cuenta
   fin_aislamiento_cuenta
+  creacion_cuenta_prueba
 }
 
 enum EntidadAuditada {
@@ -510,6 +511,13 @@ model Cuenta {
   /// Dispositivos porque una Cuenta puede tener cliente antes del primer login.
   clienteFinalExclusivoId String?       @map("cliente_final_exclusivo_id") @db.Uuid
   clienteFinalExclusivo   ClienteFinal? @relation("ClienteFinalCuentaExclusiva", fields: [clienteFinalExclusivoId], references: [id], onDelete: SetNull)
+
+  /// Cuenta de prueba (Épica B): se crea desde el alta con una duración tomada
+  /// de la configuración de la Empresa Revendedora. El vencimiento queda
+  /// congelado al crearla y no cambia si luego se modifica la duración.
+  esPrueba       Boolean   @default(false) @map("es_prueba")
+  pruebaCreadaEn DateTime? @map("prueba_creada_en")
+  pruebaVenceEn  DateTime? @map("prueba_vence_en")
 
   /// Parametrización de contenido vigente en el Proveedor (ej. "1|3|5").
   servicios String @default("1") @db.VarChar(40)
