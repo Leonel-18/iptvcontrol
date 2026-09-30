@@ -503,3 +503,111 @@ describe('ColaProveedorProcessor — avisos de pruebas por vencer (HU-N03)', () 
     expect(resultado).toEqual({ creadas: 0 });
   });
 });
+
+/**
+ * HU-N04 — Avisos de ventanas de alta próximas a vencer. Mismo esquema que N03
+ * pero sobre `ventana_curiosidad`: un aviso por hito alcanzado, idempotente, y
+ * sólo para ventanas vigentes (no revocadas ni vencidas).
+ */
+describe('ColaProveedorProcessor — avisos de ventanas de alta por vencer (HU-N04)', () => {
+  const DIA_MS = 24 * 60 * 60_000;
+
+  const crearProcesador = (opciones: {
+    ventanas?: {
+      id: string;
+      cuentaId: string;
+      empresaRevendedoraId: string;
+      finPrevistoEn: Date;
+      empresaRevendedora: { notifVentanaAlta: boolean; notifVentanaAltaDias: number[] };
+    }[];
+    creada?: boolean;
+  }) => {
+    const tx = {
+      ventanaCuriosidad: { findMany: jest.fn().mockResolvedValue(opciones.ventanas ?? []) },
+    };
+    const prisma = {
+      operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_op: string, fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const crearEnTx = jest.fn().mockResolvedValue({ id: 'n1', creada: opciones.creada ?? true });
+    const notificaciones = { crearEnTx } as unknown as NotificacionesService;
+
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      {} as ProveedorService,
+      {} as AuditService,
+      {} as ColaProveedorService,
+      {} as CuentasProvisioningService,
+      notificaciones,
+    );
+    return { procesador, crearEnTx };
+  };
+
+  const disparar = (procesador: ColaProveedorProcessor) =>
+    procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_VENTANAS_POR_VENCER } as never);
+
+  const VENTANA = {
+    id: 'ventana-1',
+    cuentaId: 'cuenta-1',
+    empresaRevendedoraId: 'empresa-1',
+    finPrevistoEn: new Date(Date.now() + 2 * DIA_MS),
+    empresaRevendedora: { notifVentanaAlta: true, notifVentanaAltaDias: [3, 1] },
+  };
+
+  it('crea un aviso por cada hito alcanzado y lleva a la cuenta', async () => {
+    const { procesador, crearEnTx } = crearProcesador({ ventanas: [VENTANA] });
+
+    const resultado = await disparar(procesador);
+
+    // Faltan ~2 días: se dispara el hito 3; el de 1 todavía no.
+    expect(crearEnTx).toHaveBeenCalledTimes(1);
+    expect(crearEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tipo: 'ventana_alta_por_vencer',
+        accionTipo: 'ver_cuenta',
+        accionRefId: 'cuenta-1',
+        clave: 'ventana_alta_por_vencer:ventana-1:3',
+      }),
+    );
+    expect(resultado).toEqual({ creadas: 1 });
+  });
+
+  it('no avisa si la Empresa Revendedora desactivó los avisos de ventana', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      ventanas: [
+        {
+          ...VENTANA,
+          empresaRevendedora: { notifVentanaAlta: false, notifVentanaAltaDias: [3, 1] },
+        },
+      ],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ creadas: 0 });
+  });
+
+  it('no avisa sobre una ventana ya vencida', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      ventanas: [{ ...VENTANA, finPrevistoEn: new Date(Date.now() - 60_000) }],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ creadas: 0 });
+  });
+
+  it('no cuenta como nueva una notificación ya existente (idempotencia por clave)', async () => {
+    const { procesador } = crearProcesador({ ventanas: [VENTANA], creada: false });
+
+    const resultado = await disparar(procesador);
+
+    expect(resultado).toEqual({ creadas: 0 });
+  });
+});

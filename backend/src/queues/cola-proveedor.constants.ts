@@ -53,6 +53,11 @@ export const TRABAJOS_PROVEEDOR = {
    * mismo hito no se notifica dos veces.
    */
   BARRER_PRUEBAS_POR_VENCER: 'barrer_pruebas_por_vencer',
+  /**
+   * Genera los avisos de ventanas de alta próximas a vencer (HU-N04) según los
+   * hitos en días configurados para cada Empresa Revendedora. Idempotente.
+   */
+  BARRER_VENTANAS_POR_VENCER: 'barrer_ventanas_por_vencer',
 } as const;
 
 export interface DatosEliminarDispositivo {

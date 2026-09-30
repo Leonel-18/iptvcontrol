@@ -120,6 +120,25 @@ export class ColaProveedorService implements OnModuleInit {
         `No se pudo programar el barrido de pruebas por vencer: ${(error as Error).message}`,
       );
     }
+
+    try {
+      await this.cola.add(
+        TRABAJOS_PROVEEDOR.BARRER_VENTANAS_POR_VENCER,
+        {},
+        {
+          jobId: 'barrer-ventanas-por-vencer',
+          // Genera los avisos de ventanas de alta por vencer (HU-N04). Hitos en
+          // días: 30 minutos alcanza y cada hito se avisa una sola vez.
+          repeat: { every: 30 * 60_000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 86_400 },
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `No se pudo programar el barrido de ventanas por vencer: ${(error as Error).message}`,
+      );
+    }
   }
 
   async encolarEliminacionDispositivo(datos: DatosEliminarDispositivo): Promise<void> {
