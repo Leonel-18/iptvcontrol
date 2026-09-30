@@ -832,6 +832,9 @@ model IncidenciaDispositivoProveedor {
   cantidadDetecciones Int                         @default(1) @map("cantidad_detecciones")
   primeraDeteccionEn  DateTime                    @default(now()) @map("primera_deteccion_en")
   ultimaDeteccionEn   DateTime                    @default(now()) @map("ultima_deteccion_en")
+  /// Último recordatorio enviado por este evento pendiente (HU-D04). Es la base
+  /// para respetar la frecuencia configurada sin spamear en cada barrido.
+  ultimoRecordatorioEn DateTime?                 @map("ultimo_recordatorio_en")
   resueltaEn          DateTime?                   @map("resuelta_en")
 
   creadoEn      DateTime @default(now()) @map("creado_en")

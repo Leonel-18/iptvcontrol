@@ -1049,3 +1049,125 @@ describe('ColaProveedorProcessor — notificación de dispositivo pendiente (HU-
     expect(crearEnTx).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * HU-D04 — Recordatorios de dispositivos pendientes. Mientras el evento siga
+ * pendiente, emite un aviso cada la frecuencia configurada (por Empresa
+ * Revendedora); no spamea por barrido y cesa al resolverse.
+ */
+describe('ColaProveedorProcessor — recordatorios de dispositivos (HU-D04)', () => {
+  const HORA_MS = 60 * 60_000;
+
+  const crearProcesador = (opciones: {
+    pendientes?: {
+      id: string;
+      cuentaId: string;
+      empresaRevendedoraId: string;
+      primeraDeteccionEn: Date;
+      ultimoRecordatorioEn: Date | null;
+      empresaRevendedora: { notifDispositivosFrecuenciaHoras: number };
+    }[];
+    updateCount?: number;
+  }) => {
+    const updateMany = jest.fn().mockResolvedValue({ count: opciones.updateCount ?? 1 });
+    const tx = {
+      incidenciaDispositivoProveedor: {
+        findMany: jest.fn().mockResolvedValue(opciones.pendientes ?? []),
+        updateMany,
+      },
+    };
+    const prisma = {
+      operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_op: string, fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const crearEnTx = jest.fn().mockResolvedValue({ id: 'n1', creada: true });
+    const notificaciones = { crearEnTx } as unknown as NotificacionesService;
+
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      {} as ProveedorService,
+      {} as AuditService,
+      {} as ColaProveedorService,
+      {} as CuentasProvisioningService,
+      notificaciones,
+    );
+    return { procesador, updateMany, crearEnTx };
+  };
+
+  const disparar = (procesador: ColaProveedorProcessor) =>
+    procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_RECORDATORIOS_DISPOSITIVOS } as never);
+
+  const PENDIENTE = {
+    id: 'inc-1',
+    cuentaId: 'cuenta-1',
+    empresaRevendedoraId: 'empresa-1',
+    primeraDeteccionEn: new Date(Date.now() - 25 * HORA_MS),
+    ultimoRecordatorioEn: null as Date | null,
+    empresaRevendedora: { notifDispositivosFrecuenciaHoras: 24 },
+  };
+
+  it('emite el recordatorio cuando pasó la frecuencia y lo marca', async () => {
+    const { procesador, crearEnTx, updateMany } = crearProcesador({ pendientes: [PENDIENTE] });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tipo: 'dispositivo_pendiente',
+        accionTipo: 'ver_cuenta',
+        accionRefId: 'cuenta-1',
+      }),
+    );
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'inc-1', estado: 'pendiente' },
+        data: expect.objectContaining({ ultimoRecordatorioEn: expect.any(Date) }),
+      }),
+    );
+    expect(resultado).toEqual({ recordatorios: 1 });
+  });
+
+  it('no recuerda si todavía no se cumplió la frecuencia', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      pendientes: [{ ...PENDIENTE, primeraDeteccionEn: new Date(Date.now() - 1 * HORA_MS) }],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ recordatorios: 0 });
+  });
+
+  it('usa el último recordatorio como referencia (no repite antes de tiempo)', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      pendientes: [
+        {
+          ...PENDIENTE,
+          primeraDeteccionEn: new Date(Date.now() - 100 * HORA_MS),
+          ultimoRecordatorioEn: new Date(Date.now() - 1 * HORA_MS),
+        },
+      ],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ recordatorios: 0 });
+  });
+
+  it('no recuerda si el evento ya se resolvió durante la corrida', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      pendientes: [PENDIENTE],
+      updateCount: 0,
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ recordatorios: 0 });
+  });
+});

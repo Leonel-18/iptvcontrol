@@ -58,6 +58,12 @@ export const TRABAJOS_PROVEEDOR = {
    * hitos en días configurados para cada Empresa Revendedora. Idempotente.
    */
   BARRER_VENTANAS_POR_VENCER: 'barrer_ventanas_por_vencer',
+  /**
+   * Recordatorios de dispositivos pendientes (HU-D04): mientras el evento siga
+   * sin resolver, emite un aviso cada la frecuencia configurada por la Empresa
+   * Revendedora. No depende del cron de detección ni genera spam por barrido.
+   */
+  BARRER_RECORDATORIOS_DISPOSITIVOS: 'barrer_recordatorios_dispositivos',
 } as const;
 
 export interface DatosEliminarDispositivo {
