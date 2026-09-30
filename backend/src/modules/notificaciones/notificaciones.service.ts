@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AccionNotificacion, TipoNotificacion } from '@prisma/client';
-import { PrismaService } from '../../common/prisma/prisma.service';
+import { PrismaService, TransactionClient } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 
 export interface CrearNotificacionParams {
@@ -31,23 +31,35 @@ export class NotificacionesService {
 
   /**
    * Crea una notificación para una Empresa Revendedora. Si se pasa `clave` y ya
-   * existe una igual para ese tenant, devuelve la existente sin duplicar: así un
-   * job puede correr seguido sin repetir el mismo aviso.
+   * existe una igual para ese tenant, no la duplica: devuelve `{ creada: false }`.
+   * Así un job puede correr seguido sin repetir el mismo aviso.
    */
-  async crear(params: CrearNotificacionParams) {
+  async crear(params: CrearNotificacionParams): Promise<{ id: string; creada: boolean }> {
+    return this.prisma.transaction((tx) => this.crearEnTx(tx, params));
+  }
+
+  /**
+   * Igual que `crear`, pero dentro de una transacción ya abierta: lo usan los
+   * jobs de avisos, que corren con contexto de Operador Principal.
+   */
+  async crearEnTx(
+    tx: TransactionClient,
+    params: CrearNotificacionParams,
+  ): Promise<{ id: string; creada: boolean }> {
     if (params.clave) {
-      const existente = await this.prisma.db.notificacion.findUnique({
+      const existente = await tx.notificacion.findUnique({
         where: {
           empresaRevendedoraId_clave: {
             empresaRevendedoraId: params.empresaRevendedoraId,
             clave: params.clave,
           },
         },
+        select: { id: true },
       });
-      if (existente) return existente;
+      if (existente) return { id: existente.id, creada: false };
     }
 
-    return this.prisma.db.notificacion.create({
+    const creada = await tx.notificacion.create({
       data: {
         empresaRevendedoraId: params.empresaRevendedoraId,
         tipo: params.tipo,
@@ -57,7 +69,9 @@ export class NotificacionesService {
         accionRefId: params.accionRefId ?? null,
         clave: params.clave ?? null,
       },
+      select: { id: true },
     });
+    return { id: creada.id, creada: true };
   }
 
   /** Últimas notificaciones del tenant, con el estado leído del usuario actual. */

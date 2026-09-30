@@ -15,6 +15,7 @@ import { AuditService } from '../common/audit/audit.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ProveedorService } from '../proveedor/proveedor.service';
 import { CuentasProvisioningService } from '../modules/cuentas/cuentas-provisioning.service';
+import { NotificacionesService } from '../modules/notificaciones/notificaciones.service';
 import {
   COLA_PROVEEDOR,
   DatosCerrarCuenta,
@@ -47,6 +48,7 @@ export class ColaProveedorProcessor extends WorkerHost {
     private readonly audit: AuditService,
     private readonly cola: ColaProveedorService,
     private readonly provisioning: CuentasProvisioningService,
+    private readonly notificaciones: NotificacionesService,
   ) {
     super();
   }
@@ -71,6 +73,8 @@ export class ColaProveedorProcessor extends WorkerHost {
         return this.barrerAislamientos();
       case TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_VENCIDAS:
         return this.barrerPruebasVencidas();
+      case TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_POR_VENCER:
+        return this.barrerPruebasPorVencer();
       default:
         this.logger.warn(`Trabajo desconocido en la cola: ${job.name}`);
         return null;
@@ -606,6 +610,68 @@ export class ColaProveedorProcessor extends WorkerHost {
           (cause as Error).message,
       );
     }
+  }
+
+  /**
+   * Avisos de cuentas de prueba próximas a vencer (HU-N03).
+   *
+   * Por cada Empresa Revendedora toma sus hitos de anticipación en días
+   * (`pruebas_avisos_dias`, parametrizados por el Operador Principal) y crea una
+   * notificación cuando faltan esos días o menos. La `clave` la hace idempotente:
+   * un mismo hito nunca se notifica dos veces. Una prueba convertida o cerrada
+   * deja de aparecer acá (el filtro exige `esPrueba` + `activa`).
+   */
+  private async barrerPruebasPorVencer(): Promise<{ creadas: number }> {
+    const DIA_MS = 24 * 60 * 60_000;
+    const operadores = await this.prisma.operadorPrincipal.findMany({ select: { id: true } });
+    const ahora = new Date();
+    let creadas = 0;
+
+    for (const operador of operadores) {
+      const pruebas = await this.prisma.transactionComoOperador(operador.id, (tx) =>
+        tx.cuenta.findMany({
+          where: { esPrueba: true, estado: EstadoCuenta.activa, pruebaVenceEn: { not: null } },
+          select: {
+            id: true,
+            empresaRevendedoraId: true,
+            pruebaVenceEn: true,
+            empresaRevendedora: { select: { pruebasHabilitadas: true, pruebasAvisosDias: true } },
+          },
+        }),
+      );
+
+      for (const prueba of pruebas) {
+        const empresa = prueba.empresaRevendedora;
+        if (!empresa.pruebasHabilitadas || !prueba.pruebaVenceEn) continue;
+
+        const msFaltantes = prueba.pruebaVenceEn.getTime() - ahora.getTime();
+        if (msFaltantes <= 0) continue;
+
+        for (const hito of empresa.pruebasAvisosDias) {
+          if (msFaltantes > hito * DIA_MS) continue;
+
+          const resultado = await this.prisma.transactionComoOperador(operador.id, (tx) =>
+            this.notificaciones.crearEnTx(tx, {
+              empresaRevendedoraId: prueba.empresaRevendedoraId,
+              tipo: 'prueba_por_vencer',
+              titulo: 'Cuenta de prueba por vencer',
+              mensaje:
+                `La cuenta de prueba vence en ${hito} día(s). ` +
+                'Podés convertirla a permanente desde la cuenta.',
+              accionTipo: 'ver_cuenta',
+              accionRefId: prueba.id,
+              clave: `prueba_por_vencer:${prueba.id}:${hito}`,
+            }),
+          );
+          if (resultado.creada) creadas += 1;
+        }
+      }
+    }
+
+    if (creadas > 0) {
+      this.logger.log(`Avisos de cuentas de prueba por vencer: ${creadas} creado(s).`);
+    }
+    return { creadas };
   }
 
   /**

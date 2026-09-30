@@ -6,6 +6,7 @@ import { ProveedorService } from '../proveedor/proveedor.service';
 import { AuditService } from '../common/audit/audit.service';
 import { ColaProveedorService } from './cola-proveedor.service';
 import { CuentasProvisioningService } from '../modules/cuentas/cuentas-provisioning.service';
+import { NotificacionesService } from '../modules/notificaciones/notificaciones.service';
 
 /**
  * =============================================================================
@@ -73,7 +74,14 @@ describe('ColaProveedorProcessor — vencimiento de ventana de vinculación', ()
       encolarSincronizacionContadoresVenta: jest.fn().mockResolvedValue(undefined),
     } as unknown as ColaProveedorService;
 
-    const procesador = new ColaProveedorProcessor(prisma, proveedor, audit, cola, provisioning);
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      proveedor,
+      audit,
+      cola,
+      provisioning,
+      {} as NotificacionesService,
+    );
     return { procesador, dispositivoUpdate, dispositivoDelete, ventaDeleteMany, provisioning, tx };
   };
 
@@ -186,6 +194,7 @@ describe('ColaProveedorProcessor — fin automático de aislamiento (HU-A03)', (
       audit,
       {} as ColaProveedorService,
       {} as CuentasProvisioningService,
+      {} as NotificacionesService,
     );
     return { procesador, cuentaUpdateMany, audit };
   };
@@ -278,6 +287,7 @@ describe('ColaProveedorProcessor — vencimiento de cuentas de prueba (HU-P06)',
       audit,
       {} as ColaProveedorService,
       {} as CuentasProvisioningService,
+      {} as NotificacionesService,
     );
     return { procesador, cuentaUpdateMany, cerrarCuenta, audit, tx };
   };
@@ -362,5 +372,134 @@ describe('ColaProveedorProcessor — vencimiento de cuentas de prueba (HU-P06)',
 
     expect(audit.registrarEnTx).not.toHaveBeenCalled();
     expect(resultado).toEqual({ cerradas: 0, fallidas: 1 });
+  });
+});
+
+/**
+ * HU-N03 — Avisos de cuentas de prueba próximas a vencer. Se genera un aviso por
+ * cada hito configurado que ya se alcanzó; el mismo hito no se repite (la clave
+ * lo hace idempotente). Una prueba convertida o cerrada no aparece en el barrido.
+ */
+describe('ColaProveedorProcessor — avisos de pruebas por vencer (HU-N03)', () => {
+  const DIA_MS = 24 * 60 * 60_000;
+
+  const crearProcesador = (opciones: {
+    pruebas?: {
+      id: string;
+      empresaRevendedoraId: string;
+      pruebaVenceEn: Date;
+      empresaRevendedora: { pruebasHabilitadas: boolean; pruebasAvisosDias: number[] };
+    }[];
+    creada?: boolean;
+  }) => {
+    const tx = { cuenta: { findMany: jest.fn().mockResolvedValue(opciones.pruebas ?? []) } };
+    const prisma = {
+      operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_op: string, fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const crearEnTx = jest.fn().mockResolvedValue({ id: 'n1', creada: opciones.creada ?? true });
+    const notificaciones = { crearEnTx } as unknown as NotificacionesService;
+
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      {} as ProveedorService,
+      {} as AuditService,
+      {} as ColaProveedorService,
+      {} as CuentasProvisioningService,
+      notificaciones,
+    );
+    return { procesador, crearEnTx };
+  };
+
+  const disparar = (procesador: ColaProveedorProcessor) =>
+    procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_POR_VENCER } as never);
+
+  it('crea un aviso por cada hito alcanzado y lleva a la cuenta', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      pruebas: [
+        {
+          id: 'cuenta-1',
+          empresaRevendedoraId: 'empresa-1',
+          pruebaVenceEn: new Date(Date.now() + 2 * DIA_MS),
+          empresaRevendedora: { pruebasHabilitadas: true, pruebasAvisosDias: [7, 3, 1] },
+        },
+      ],
+    });
+
+    const resultado = await disparar(procesador);
+
+    // Faltan ~2 días: se disparan los hitos 7 y 3; el de 1 todavía no.
+    expect(crearEnTx).toHaveBeenCalledTimes(2);
+    expect(crearEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tipo: 'prueba_por_vencer',
+        accionTipo: 'ver_cuenta',
+        accionRefId: 'cuenta-1',
+        clave: 'prueba_por_vencer:cuenta-1:7',
+      }),
+    );
+    expect(crearEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ clave: 'prueba_por_vencer:cuenta-1:3' }),
+    );
+    expect(resultado).toEqual({ creadas: 2 });
+  });
+
+  it('no avisa si el módulo de pruebas está deshabilitado para la empresa', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      pruebas: [
+        {
+          id: 'cuenta-1',
+          empresaRevendedoraId: 'empresa-1',
+          pruebaVenceEn: new Date(Date.now() + 1 * DIA_MS),
+          empresaRevendedora: { pruebasHabilitadas: false, pruebasAvisosDias: [7, 3, 1] },
+        },
+      ],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ creadas: 0 });
+  });
+
+  it('no avisa sobre una prueba ya vencida (la cierra el otro barrido)', async () => {
+    const { procesador, crearEnTx } = crearProcesador({
+      pruebas: [
+        {
+          id: 'cuenta-1',
+          empresaRevendedoraId: 'empresa-1',
+          pruebaVenceEn: new Date(Date.now() - 60_000),
+          empresaRevendedora: { pruebasHabilitadas: true, pruebasAvisosDias: [7, 3, 1] },
+        },
+      ],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(crearEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ creadas: 0 });
+  });
+
+  it('no cuenta como nueva una notificación ya existente (idempotencia por clave)', async () => {
+    const { procesador } = crearProcesador({
+      creada: false,
+      pruebas: [
+        {
+          id: 'cuenta-1',
+          empresaRevendedoraId: 'empresa-1',
+          pruebaVenceEn: new Date(Date.now() + 1 * DIA_MS),
+          empresaRevendedora: { pruebasHabilitadas: true, pruebasAvisosDias: [1] },
+        },
+      ],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(resultado).toEqual({ creadas: 0 });
   });
 });
