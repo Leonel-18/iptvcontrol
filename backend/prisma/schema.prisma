@@ -368,9 +368,77 @@ model EmpresaRevendedora {
   ventanasCuriosidad     VentanaCuriosidad[]
   plantillaWhatsApp      PlantillaWhatsApp?
   consumosPrueba         ConsumoCuentaPrueba[]
+  notificaciones         Notificacion[]
+  notificacionesLeidas   NotificacionLectura[]
 
   @@index([operadorPrincipalId])
   @@map("empresa_revendedora")
+}
+
+/// Notificación persistente y empresarial (Épica C, HU-N01).
+///
+/// Es del tenant, no de una persona: todos los Team Members de la Empresa
+/// Revendedora la ven. El estado leído/no leído es individual y vive en
+/// `NotificacionLectura`. `clave` es la deduplicación por tenant, para que los
+/// jobs no repitan el mismo aviso en cada barrido (HU-N02/N03/N04).
+model Notificacion {
+  id String @id @default(uuid()) @db.Uuid
+
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  tipo    TipoNotificacion
+  titulo  String           @db.VarChar(160)
+  mensaje String           @db.Text
+
+  /// Acción contextual opcional ("Ver cuenta", etc.). El frontend arma la ruta.
+  accionTipo  AccionNotificacion? @map("accion_tipo")
+  accionRefId String?             @map("accion_ref_id") @db.Uuid
+
+  /// Identidad de deduplicación (ej. "prueba_por_vencer:<cuenta>:7"). Null = sin
+  /// deduplicación. En Postgres los NULL no chocan entre sí.
+  clave String? @db.VarChar(200)
+
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  lecturas NotificacionLectura[]
+
+  @@unique([empresaRevendedoraId, clave])
+  @@index([empresaRevendedoraId, creadoEn])
+  @@map("notificacion")
+}
+
+/// Estado de lectura de una notificación, por Team Member (HU-N01): registra
+/// quién la marcó como leída y cuándo.
+model NotificacionLectura {
+  id String @id @default(uuid()) @db.Uuid
+
+  notificacionId String       @map("notificacion_id") @db.Uuid
+  notificacion   Notificacion @relation(fields: [notificacionId], references: [id], onDelete: Cascade)
+
+  teamMemberId String     @map("team_member_id") @db.Uuid
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  /// Denormalizado para RLS y consultas multi-tenant sin joins.
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  leidoEn DateTime @default(now()) @map("leido_en")
+
+  @@unique([notificacionId, teamMemberId])
+  @@index([teamMemberId])
+  @@index([empresaRevendedoraId])
+  @@map("notificacion_lectura")
+}
+
+enum TipoNotificacion {
+  prueba_por_vencer
+  ventana_alta_por_vencer
+  dispositivo_pendiente
+}
+
+enum AccionNotificacion {
+  ver_cuenta
 }
 
 /// Consumo de cuentas de prueba por Empresa Revendedora (HU-P02).
@@ -790,6 +858,7 @@ model TeamMember {
   ventanasCuriosidadIniciadas   VentanaCuriosidad[] @relation("VentanaCuriosidadIniciadaPor")
   ventanasCuriosidadFinalizadas VentanaCuriosidad[] @relation("VentanaCuriosidadFinalizadaPor")
   plantillasWhatsAppActualizadas PlantillaWhatsApp[]  @relation("PlantillaWhatsAppActualizadaPor")
+  notificacionesLeidas           NotificacionLectura[]
 
   @@index([empresaRevendedoraId])
   @@index([operadorPrincipalId])
