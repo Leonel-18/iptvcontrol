@@ -69,6 +69,8 @@ export class ColaProveedorProcessor extends WorkerHost {
         return this.cerrarCuenta(job.data as DatosCerrarCuenta);
       case TRABAJOS_PROVEEDOR.BARRER_AISLAMIENTOS:
         return this.barrerAislamientos();
+      case TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_VENCIDAS:
+        return this.barrerPruebasVencidas();
       default:
         this.logger.warn(`Trabajo desconocido en la cola: ${job.name}`);
         return null;
@@ -447,6 +449,163 @@ export class ColaProveedorProcessor extends WorkerHost {
     }
 
     return { cerrados };
+  }
+
+  /**
+   * Barrido de cuentas de prueba vencidas (HU-P06).
+   *
+   * Busca, por Operador Principal, las pruebas activas cuyo `prueba_vence_en` ya
+   * pasó y las cierra en el Proveedor y localmente. El Cliente Final NO se toca:
+   * queda sin Cuenta. El consumo mensual no se modifica (el cupo no se devuelve).
+   *
+   * Si el Proveedor falla, la Cuenta queda intacta localmente y el próximo
+   * barrido vuelve a intentarlo: es la vía de reintento. Idempotente.
+   */
+  private async barrerPruebasVencidas(): Promise<{ cerradas: number; fallidas: number }> {
+    const operadores = await this.prisma.operadorPrincipal.findMany({ select: { id: true } });
+    const ahora = new Date();
+    let cerradas = 0;
+    let fallidas = 0;
+
+    for (const operador of operadores) {
+      const vencidas = await this.prisma.transactionComoOperador(operador.id, (tx) =>
+        tx.cuenta.findMany({
+          where: { esPrueba: true, estado: EstadoCuenta.activa, pruebaVenceEn: { lte: ahora } },
+          select: { id: true, empresaRevendedoraId: true, proveedorCuentaId: true },
+        }),
+      );
+
+      for (const cuenta of vencidas) {
+        try {
+          const cerro = await this.cerrarPruebaVencida(cuenta, operador.id);
+          if (cerro) cerradas += 1;
+        } catch (error) {
+          fallidas += 1;
+          await this.registrarFalloCierrePrueba(cuenta, operador.id, error);
+        }
+      }
+    }
+
+    if (cerradas > 0 || fallidas > 0) {
+      this.logger.log(
+        `Barrido de pruebas vencidas: ${cerradas} cerrada(s), ${fallidas} con fallo (se reintentan).`,
+      );
+    }
+    return { cerradas, fallidas };
+  }
+
+  /**
+   * Cierra una cuenta de prueba vencida. Devuelve `true` si la cerró, `false` si
+   * otra corrida ya lo había hecho (idempotencia).
+   *
+   * Orden: primero el Proveedor (fuera de la transacción, como en el alta). Si
+   * falla, se propaga y NO se toca el estado local — así se evita quedar con una
+   * Cuenta falsamente cerrada. Recién con el Proveedor cerrado se desvincula al
+   * Cliente Final y se marca la Cuenta como cerrada.
+   */
+  private async cerrarPruebaVencida(
+    cuenta: { id: string; empresaRevendedoraId: string; proveedorCuentaId: string | null },
+    operadorPrincipalId: string,
+  ): Promise<boolean> {
+    if (cuenta.proveedorCuentaId) {
+      await this.proveedor.cerrarCuenta(operadorPrincipalId, cuenta.proveedorCuentaId);
+    }
+
+    return this.prisma.transactionComoOperador(operadorPrincipalId, async (tx) => {
+      // Cancela las ventanas de vinculación abiertas de la Cuenta: los equipos ya
+      // no tienen a dónde vincularse.
+      await tx.solicitudVinculacionDispositivo.updateMany({
+        where: {
+          cuentaId: cuenta.id,
+          estado: {
+            in: [
+              EstadoSolicitudVinculacion.pendiente,
+              EstadoSolicitudVinculacion.observando,
+              EstadoSolicitudVinculacion.ambiguo,
+            ],
+          },
+        },
+        data: { estado: EstadoSolicitudVinculacion.cancelado },
+      });
+      // Desvincula los Dispositivos de la Cuenta (no se borran: quedan como
+      // historial). El Cliente Final no se toca.
+      await tx.dispositivo.updateMany({
+        where: { cuentaId: cuenta.id },
+        data: {
+          estado: EstadoDispositivo.dado_de_baja,
+          estadoVinculacion: EstadoVinculacionDispositivo.cancelado,
+          proveedorDeviceId: null,
+          clienteFinalId: null,
+        },
+      });
+      await tx.ventaCompartida.deleteMany({ where: { cuentaId: cuenta.id } });
+
+      // Actualización condicional: si otra corrida ya la cerró, no repite el
+      // efecto ni la auditoría.
+      const actualizadas = await tx.cuenta.updateMany({
+        where: { id: cuenta.id, esPrueba: true, estado: EstadoCuenta.activa },
+        data: {
+          estado: EstadoCuenta.cerrada,
+          esPrueba: false,
+          pruebaVenceEn: null,
+          clienteFinalExclusivoId: null,
+        },
+      });
+      if (actualizadas.count !== 1) return false;
+
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.cierre_automatico_cuenta_prueba,
+        entidad: EntidadAuditada.Cuenta,
+        entidadId: cuenta.id,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        operadorPrincipalId,
+        detalle: { cuenta_id: cuenta.id, origen: 'automatico' },
+      });
+      return true;
+    });
+  }
+
+  /**
+   * Registra el fallo del cierre automático (HU-P06/P07). No audita en cada
+   * barrido: sólo si no hay un fallo reciente de la misma Cuenta, para no llenar
+   * el log mientras el Proveedor está caído. El reintento lo hace el próximo
+   * barrido, porque la Cuenta sigue activa y con `prueba_vence_en` vencido.
+   */
+  private async registrarFalloCierrePrueba(
+    cuenta: { id: string; empresaRevendedoraId: string },
+    operadorPrincipalId: string,
+    error: unknown,
+  ): Promise<void> {
+    const mensaje = (error as Error).message;
+    this.logger.error(`No se pudo cerrar la cuenta de prueba ${cuenta.id}: ${mensaje}`);
+
+    try {
+      await this.prisma.transactionComoOperador(operadorPrincipalId, async (tx) => {
+        const reciente = await tx.auditLog.findFirst({
+          where: {
+            accion: AccionAuditoria.fallo_cierre_cuenta_prueba,
+            entidadId: cuenta.id,
+            creadoEn: { gte: new Date(Date.now() - 60 * 60_000) },
+          },
+          select: { id: true },
+        });
+        if (reciente) return;
+
+        await this.audit.registrarEnTx(tx, {
+          accion: AccionAuditoria.fallo_cierre_cuenta_prueba,
+          entidad: EntidadAuditada.Cuenta,
+          entidadId: cuenta.id,
+          empresaRevendedoraId: cuenta.empresaRevendedoraId,
+          operadorPrincipalId,
+          detalle: { cuenta_id: cuenta.id, origen: 'automatico', error: mensaje.slice(0, 300) },
+        });
+      });
+    } catch (cause) {
+      this.logger.error(
+        `No se pudo auditar el fallo de cierre de la cuenta de prueba ${cuenta.id}: ` +
+          (cause as Error).message,
+      );
+    }
   }
 
   /**

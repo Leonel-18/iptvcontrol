@@ -81,6 +81,25 @@ export class ColaProveedorService implements OnModuleInit {
         `No se pudo programar el barrido de aislamientos: ${(error as Error).message}`,
       );
     }
+
+    try {
+      await this.cola.add(
+        TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_VENCIDAS,
+        {},
+        {
+          jobId: 'barrer-pruebas-vencidas',
+          // Cierra las cuentas de prueba vencidas (HU-P06). Idempotente: si no
+          // hay ninguna vencida, no hace nada.
+          repeat: { every: 5 * 60_000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 86_400 },
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `No se pudo programar el barrido de pruebas vencidas: ${(error as Error).message}`,
+      );
+    }
   }
 
   async encolarEliminacionDispositivo(datos: DatosEliminarDispositivo): Promise<void> {

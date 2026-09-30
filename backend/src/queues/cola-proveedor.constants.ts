@@ -41,6 +41,12 @@ export const TRABAJOS_PROVEEDOR = {
    * `Compartida` sin tocar ventanas ni capacidad. Idempotente.
    */
   BARRER_AISLAMIENTOS: 'barrer_aislamientos_cuenta',
+  /**
+   * Cierra las cuentas de prueba vencidas (HU-P06): las cierra en el Proveedor
+   * y desvincula al Cliente Final (sin darlo de baja). Idempotente; si el
+   * Proveedor falla, no marca nada localmente y reintenta en el próximo barrido.
+   */
+  BARRER_PRUEBAS_VENCIDAS: 'barrer_pruebas_vencidas',
 } as const;
 
 export interface DatosEliminarDispositivo {
