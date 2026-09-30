@@ -100,6 +100,26 @@ export class ColaProveedorService implements OnModuleInit {
         `No se pudo programar el barrido de pruebas vencidas: ${(error as Error).message}`,
       );
     }
+
+    try {
+      await this.cola.add(
+        TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_POR_VENCER,
+        {},
+        {
+          jobId: 'barrer-pruebas-por-vencer',
+          // Genera los avisos de pruebas próximas a vencer (HU-N03). Los hitos
+          // son en días, así que 30 minutos alcanza de sobra; cada hito se avisa
+          // una sola vez.
+          repeat: { every: 30 * 60_000 },
+          removeOnComplete: true,
+          removeOnFail: { age: 86_400 },
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `No se pudo programar el barrido de pruebas por vencer: ${(error as Error).message}`,
+      );
+    }
   }
 
   async encolarEliminacionDispositivo(datos: DatosEliminarDispositivo): Promise<void> {

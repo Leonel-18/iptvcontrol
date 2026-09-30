@@ -27,7 +27,12 @@ const crearServicio = (
     upsert: jest.fn().mockResolvedValue(undefined),
     createMany: jest.fn().mockResolvedValue({ count: 0 }),
   };
-  const prisma = { db: { notificacion, notificacionLectura } } as unknown as PrismaService;
+  const prisma = {
+    db: { notificacion, notificacionLectura },
+    transaction: jest
+      .fn()
+      .mockImplementation((fn: (tx: unknown) => unknown) => fn({ notificacion })),
+  } as unknown as PrismaService;
   const contexto = {
     esOperador: false,
     empresaRevendedoraId: 'empresa-1',
@@ -87,7 +92,7 @@ describe('NotificacionesService (HU-N01)', () => {
       clave: 'prueba_por_vencer:cuenta-1:3',
     });
 
-    expect(resultado).toEqual({ id: 'existente' });
+    expect(resultado).toEqual({ id: 'existente', creada: false });
     expect(notificacion.create).not.toHaveBeenCalled();
   });
 
@@ -104,9 +109,11 @@ describe('NotificacionesService (HU-N01)', () => {
       clave: 'clave-1',
     });
 
-    expect(notificacion.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ empresaRevendedoraId: 'empresa-1', clave: 'clave-1' }),
-    });
+    expect(notificacion.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ empresaRevendedoraId: 'empresa-1', clave: 'clave-1' }),
+      }),
+    );
   });
 
   it('marca una notificación como leída para el usuario actual', async () => {

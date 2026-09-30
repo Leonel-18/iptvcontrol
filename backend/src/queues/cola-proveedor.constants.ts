@@ -47,6 +47,12 @@ export const TRABAJOS_PROVEEDOR = {
    * Proveedor falla, no marca nada localmente y reintenta en el próximo barrido.
    */
   BARRER_PRUEBAS_VENCIDAS: 'barrer_pruebas_vencidas',
+  /**
+   * Genera los avisos de cuentas de prueba próximas a vencer (HU-N03) según los
+   * hitos en días configurados para cada Empresa Revendedora. Idempotente: un
+   * mismo hito no se notifica dos veces.
+   */
+  BARRER_PRUEBAS_POR_VENCER: 'barrer_pruebas_por_vencer',
 } as const;
 
 export interface DatosEliminarDispositivo {
