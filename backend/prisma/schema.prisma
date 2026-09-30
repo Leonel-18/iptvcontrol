@@ -825,6 +825,10 @@ model IncidenciaDispositivoProveedor {
   mac                 String?                     @db.VarChar(40)
   tipoProveedor       String?                     @map("tipo_proveedor") @db.VarChar(40)
   estado              EstadoIncidenciaDispositivo @default(pendiente)
+  /// Cuántos Clientes Finales ACTIVOS tenía la Cuenta al detectar el Dispositivo
+  /// sin dueño (HU-D01). Los dados de baja y los suspendidos no cuentan. Es el
+  /// dato que decide la autoasignación (1) o la notificación (0 / 2+) en D02/D03.
+  clientesActivosAlDetectar Int? @map("clientes_activos_al_detectar")
   cantidadDetecciones Int                         @default(1) @map("cantidad_detecciones")
   primeraDeteccionEn  DateTime                    @default(now()) @map("primera_deteccion_en")
   ultimaDeteccionEn   DateTime                    @default(now()) @map("ultima_deteccion_en")

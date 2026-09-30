@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import {
   AccionAuditoria,
   EntidadAuditada,
+  EstadoClienteFinal,
   EstadoCuenta,
   EstadoDispositivo,
   EstadoIncidenciaDispositivo,
@@ -12,7 +13,7 @@ import {
 } from '@prisma/client';
 import { Job } from 'bullmq';
 import { AuditService } from '../common/audit/audit.service';
-import { PrismaService } from '../common/prisma/prisma.service';
+import { PrismaService, TransactionClient } from '../common/prisma/prisma.service';
 import { ProveedorService } from '../proveedor/proveedor.service';
 import { CuentasProvisioningService } from '../modules/cuentas/cuentas-provisioning.service';
 import { NotificacionesService } from '../modules/notificaciones/notificaciones.service';
@@ -821,6 +822,12 @@ export class ColaProveedorProcessor extends WorkerHost {
       const desconocidos = inventario.filter((item) => !permitidos.has(item.proveedorDeviceId));
       if (desconocidos.length === 0) return 0;
 
+      // Cuántos Clientes Finales ACTIVOS tiene la Cuenta (los dados de baja y los
+      // suspendidos no cuentan). Es el dato que en D02/D03 decide si el
+      // dispositivo se autoasigna (1) o se notifica (0 / 2+). Se refresca en cada
+      // detección para reflejar el estado actual del evento pendiente (HU-D01).
+      const clientesActivos = await this.contarClientesActivos(tx, cuentaId);
+
       let nuevas = 0;
       for (const item of desconocidos) {
         const existente = await tx.incidenciaDispositivoProveedor.findUnique({
@@ -832,7 +839,11 @@ export class ColaProveedorProcessor extends WorkerHost {
         if (existente?.estado === EstadoIncidenciaDispositivo.pendiente) {
           await tx.incidenciaDispositivoProveedor.update({
             where: { id: existente.id },
-            data: { cantidadDetecciones: { increment: 1 }, ultimaDeteccionEn: new Date() },
+            data: {
+              cantidadDetecciones: { increment: 1 },
+              ultimaDeteccionEn: new Date(),
+              clientesActivosAlDetectar: clientesActivos,
+            },
           });
           continue;
         }
@@ -847,6 +858,7 @@ export class ColaProveedorProcessor extends WorkerHost {
                 cantidadDetecciones: { increment: 1 },
                 ultimaDeteccionEn: new Date(),
                 resueltaEn: null,
+                clientesActivosAlDetectar: clientesActivos,
               },
             })
           : await tx.incidenciaDispositivoProveedor.create({
@@ -856,6 +868,7 @@ export class ColaProveedorProcessor extends WorkerHost {
                 proveedorDeviceId: item.proveedorDeviceId,
                 mac: item.mac,
                 tipoProveedor: item.tipo,
+                clientesActivosAlDetectar: clientesActivos,
               },
             });
 
@@ -869,11 +882,31 @@ export class ColaProveedorProcessor extends WorkerHost {
           detalle: {
             cuenta_id: cuentaId,
             proveedor_device_id: item.proveedorDeviceId,
+            clientes_activos: clientesActivos,
             origen: 'barrido_periodico',
           },
         });
       }
       return nuevas;
+    });
+  }
+
+  /**
+   * Cuenta los Clientes Finales ACTIVOS de una Cuenta (HU-D01/D02/D03). Un
+   * Cliente Final cuenta si está `activo`; los `suspendido` y `dado_de_baja` no.
+   * Se asocia a la Cuenta por cualquiera de sus vías: venta compartida,
+   * Dispositivo o titular explícito de una Cuenta exclusiva.
+   */
+  private contarClientesActivos(tx: TransactionClient, cuentaId: string): Promise<number> {
+    return tx.clienteFinal.count({
+      where: {
+        estado: EstadoClienteFinal.activo,
+        OR: [
+          { ventasCompartidas: { some: { cuentaId } } },
+          { dispositivos: { some: { cuentaId } } },
+          { cuentasExclusivas: { some: { id: cuentaId } } },
+        ],
+      },
     });
   }
 
