@@ -124,6 +124,38 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
       expect(vistaDispositivo.tipo).toBe(TipoDispositivo.fijo);
       expect(vistaDispositivo.estado).toBe(EstadoDispositivo.activo);
     });
+
+    it('expone la condición de prueba con su vencimiento (HU-P04)', () => {
+      const vence = new Date('2026-10-29T12:00:00Z');
+      const vista = mapCuentaParaOperador(
+        { ...cuenta, esPrueba: true, pruebaVenceEn: vence },
+        capacidad,
+      );
+
+      expect(vista.es_prueba).toBe(true);
+      expect(vista.prueba_vence_en).toEqual(vence);
+    });
+
+    it('una cuenta de prueba nunca se informa como aislada (HU-P04)', () => {
+      // Aunque el aislamiento esté vigente, la prueba tiene prioridad y no
+      // coexisten como tags.
+      const vista = mapCuentaParaOperador(
+        { ...cuenta, esPrueba: true, pruebaVenceEn: new Date('2026-10-29T12:00:00Z') },
+        capacidad,
+        null,
+        true,
+      );
+
+      expect(vista.aislada).toBe(false);
+    });
+
+    it('una cuenta no-prueba conserva la condición de aislamiento', () => {
+      const vista = mapCuentaParaOperador(cuenta, capacidad, null, true);
+
+      expect(vista.es_prueba).toBe(false);
+      expect(vista.prueba_vence_en).toBeNull();
+      expect(vista.aislada).toBe(true);
+    });
   });
 
   describe('vista de la Empresa Revendedora', () => {

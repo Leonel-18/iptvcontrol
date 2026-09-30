@@ -12,6 +12,7 @@ import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { useSesion } from "@/lib/session";
+import { accountModality } from "@/lib/account-modality";
 import { formatearFecha, formatearMac } from "@/lib/utils";
 import type {
   AccountDevice,
@@ -335,8 +336,10 @@ export const CustomerDetail = () => {
             <Card>
               <CardHeader className="flex-row items-center justify-between gap-3">
                 <CardTitle>Su cuenta en el proveedor</CardTitle>
-                {data.cuenta.aislada ? (
-                  <Badge tone="warning">Compartida - Aislada</Badge>
+                {data.cuenta.es_prueba || data.cuenta.aislada ? (
+                  <Badge tone={accountModality(data.cuenta).tone}>
+                    {accountModality(data.cuenta).label}
+                  </Badge>
                 ) : null}
               </CardHeader>
               <CardContent className="space-y-3">

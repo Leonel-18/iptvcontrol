@@ -54,6 +54,17 @@ export class CuentaOperadorDto {
       'Una Cuenta exclusiva nunca está aislada.',
   })
   aislada!: boolean;
+  @ApiProperty({
+    description:
+      'Cuenta de prueba (HU-P03/P04): es temporal y nunca se muestra junto con "Aislada". El ' +
+      'frontend compone el tag "Compartida - Prueba" o "Exclusiva - Prueba" según `es_exclusiva`.',
+  })
+  es_prueba!: boolean;
+  @ApiProperty({
+    description: 'Vencimiento congelado de una cuenta de prueba. null si no es prueba.',
+    nullable: true,
+  })
+  prueba_vence_en!: Date | null;
   @ApiProperty({ description: 'La Cuenta importada todavía no tiene contraseña local válida.' })
   password_pendiente!: boolean;
   @ApiProperty() empresa_revendedora_id!: string;
@@ -150,7 +161,10 @@ export const mapCuentaParaOperador = (
   proveedor_cuenta_id: cuenta.proveedorCuentaId,
   estado: cuenta.estado,
   es_exclusiva: cuenta.esExclusiva,
-  aislada,
+  // Una cuenta de prueba nunca se muestra como aislada (HU-P04).
+  aislada: cuenta.esPrueba ? false : aislada,
+  es_prueba: cuenta.esPrueba,
+  prueba_vence_en: cuenta.esPrueba ? cuenta.pruebaVenceEn : null,
   password_pendiente: !cuenta.passwordCifrado,
   empresa_revendedora_id: cuenta.empresaRevendedoraId,
   proveedor: proveedorNombre ?? null,

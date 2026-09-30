@@ -5,6 +5,7 @@ import { api, descargarCsv, type Paginado } from '@/lib/api';
 import { useSesion } from '@/lib/session';
 import { formatearFecha } from '@/lib/utils';
 import type { Account } from '@/lib/types';
+import { accountModality } from '@/lib/account-modality';
 import { accountStatusLabels } from '@/i18n/entityLabels';
 import { AccountStatusBadge, CopyableId, ExportCsvButton, PageHeader } from '@/components/common';
 import { CapacityMeter } from '@/components/CapacityMeter';
@@ -124,16 +125,8 @@ export const AccountList = () => {
                     <CapacityMeter capacidad={cuenta.capacidad} />
                   </TD>
                   <TD>
-                    <Badge
-                      tone={
-                        cuenta.es_exclusiva ? 'info' : cuenta.aislada ? 'warning' : 'neutral'
-                      }
-                    >
-                      {cuenta.es_exclusiva
-                        ? 'Exclusiva'
-                        : cuenta.aislada
-                          ? 'Compartida - Aislada'
-                          : 'Compartida'}
+                    <Badge tone={accountModality(cuenta).tone}>
+                      {accountModality(cuenta).label}
                     </Badge>
                   </TD>
                   <TD>
