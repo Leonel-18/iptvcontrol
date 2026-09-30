@@ -611,3 +611,129 @@ describe('ColaProveedorProcessor — avisos de ventanas de alta por vencer (HU-N
     expect(resultado).toEqual({ creadas: 0 });
   });
 });
+
+/**
+ * HU-D01 — Detección de dispositivos sin Cliente Final. El barrido de inventario
+ * reutiliza la incidencia existente (un único evento por dispositivo/cuenta) y
+ * guarda cuántos Clientes Finales ACTIVOS tenía la Cuenta al detectarlo.
+ */
+describe('ColaProveedorProcessor — dispositivos sin cliente (HU-D01)', () => {
+  const crearProcesador = (opciones: {
+    inventario?: { proveedorDeviceId: string; mac?: string; tipo?: string }[];
+    conocidos?: { proveedorDeviceId: string | null }[];
+    existente?: { id: string; estado: string } | null;
+    clientesActivos?: number;
+    ventanasAbiertas?: number;
+  }) => {
+    const incidenciaCreate = jest
+      .fn()
+      .mockImplementation(({ data }: { data: Record<string, unknown> }) => ({
+        id: 'inc-1',
+        ...data,
+      }));
+    const incidenciaUpdate = jest.fn().mockResolvedValue({ id: 'inc-1' });
+    const clienteFinalCount = jest.fn().mockResolvedValue(opciones.clientesActivos ?? 0);
+
+    const tx = {
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValue([
+          { id: 'cuenta-1', empresa_revendedora_id: 'empresa-1', proveedor_cuenta_id: '30000001' },
+        ]),
+      dispositivo: { findMany: jest.fn().mockResolvedValue(opciones.conocidos ?? []) },
+      solicitudVinculacionDispositivo: {
+        count: jest.fn().mockResolvedValue(opciones.ventanasAbiertas ?? 0),
+      },
+      incidenciaDispositivoProveedor: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn().mockResolvedValue(opciones.existente ?? null),
+        create: incidenciaCreate,
+        update: incidenciaUpdate,
+      },
+      clienteFinal: { count: clienteFinalCount },
+    };
+    const prisma = {
+      operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_op: string, fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const proveedor = {
+      listarDispositivos: jest.fn().mockResolvedValue(opciones.inventario ?? []),
+    } as unknown as ProveedorService;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      proveedor,
+      audit,
+      {} as ColaProveedorService,
+      {} as CuentasProvisioningService,
+      {} as NotificacionesService,
+    );
+    return { procesador, incidenciaCreate, incidenciaUpdate, clienteFinalCount, audit };
+  };
+
+  const disparar = (procesador: ColaProveedorProcessor) =>
+    procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_INVENTARIO_CUENTAS } as never);
+
+  it('registra el evento pendiente con la cantidad de clientes activos y lo audita', async () => {
+    const { procesador, incidenciaCreate, clienteFinalCount, audit } = crearProcesador({
+      inventario: [{ proveedorDeviceId: 'dev-1', mac: 'AA', tipo: 'stationary' }],
+      clientesActivos: 1,
+    });
+
+    await disparar(procesador);
+
+    expect(clienteFinalCount).toHaveBeenCalled();
+    expect(incidenciaCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cuentaId: 'cuenta-1',
+          proveedorDeviceId: 'dev-1',
+          clientesActivosAlDetectar: 1,
+        }),
+      }),
+    );
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'deteccion_dispositivo_no_autorizado',
+        detalle: expect.objectContaining({ cuenta_id: 'cuenta-1', clientes_activos: 1 }),
+      }),
+    );
+  });
+
+  it('no duplica el evento: refresca la incidencia pendiente en vez de crear otra', async () => {
+    const { procesador, incidenciaCreate, incidenciaUpdate } = crearProcesador({
+      inventario: [{ proveedorDeviceId: 'dev-1' }],
+      existente: { id: 'inc-1', estado: 'pendiente' },
+      clientesActivos: 2,
+    });
+
+    await disparar(procesador);
+
+    expect(incidenciaCreate).not.toHaveBeenCalled();
+    expect(incidenciaUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'inc-1' },
+        data: expect.objectContaining({ clientesActivosAlDetectar: 2 }),
+      }),
+    );
+  });
+
+  it('no registra eventos mientras hay una ventana de vinculación abierta', async () => {
+    const { procesador, incidenciaCreate, clienteFinalCount } = crearProcesador({
+      inventario: [{ proveedorDeviceId: 'dev-1' }],
+      ventanasAbiertas: 1,
+    });
+
+    await disparar(procesador);
+
+    expect(incidenciaCreate).not.toHaveBeenCalled();
+    expect(clienteFinalCount).not.toHaveBeenCalled();
+  });
+});
