@@ -1,4 +1,4 @@
-import { EstadoDispositivo, EstadoSolicitudVinculacion } from '@prisma/client';
+import { EstadoCuenta, EstadoDispositivo, EstadoSolicitudVinculacion } from '@prisma/client';
 import { ColaProveedorProcessor } from './cola-proveedor.processor';
 import { TRABAJOS_PROVEEDOR } from './cola-proveedor.constants';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -223,5 +223,144 @@ describe('ColaProveedorProcessor — fin automático de aislamiento (HU-A03)', (
 
     expect(audit.registrarEnTx).not.toHaveBeenCalled();
     expect(resultado).toEqual({ cerrados: 0 });
+  });
+});
+
+/**
+ * HU-P06 — Vencimiento automático de cuentas de prueba. Cierra la Cuenta en el
+ * Proveedor y desvincula al Cliente Final (sin darlo de baja); si el Proveedor
+ * falla, no toca el estado local y audita el fallo para reintentar.
+ */
+describe('ColaProveedorProcessor — vencimiento de cuentas de prueba (HU-P06)', () => {
+  const PRUEBA = {
+    id: 'cuenta-1',
+    empresaRevendedoraId: 'empresa-1',
+    proveedorCuentaId: '30000042',
+  };
+
+  const crearProcesador = (opciones: {
+    vencidas?: (typeof PRUEBA)[];
+    updateCount?: number;
+    cerrarFalla?: boolean;
+    falloReciente?: boolean;
+  }) => {
+    const cuentaUpdateMany = jest.fn().mockResolvedValue({ count: opciones.updateCount ?? 1 });
+    const tx = {
+      cuenta: {
+        findMany: jest.fn().mockResolvedValue(opciones.vencidas ?? []),
+        updateMany: cuentaUpdateMany,
+      },
+      solicitudVinculacionDispositivo: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      dispositivo: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      ventaCompartida: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      auditLog: {
+        findFirst: jest.fn().mockResolvedValue(opciones.falloReciente ? { id: 'audit-1' } : null),
+      },
+    };
+    const prisma = {
+      operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_op: string, fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const cerrarCuenta = opciones.cerrarFalla
+      ? jest.fn().mockRejectedValue(new Error('SENSA caído'))
+      : jest.fn().mockResolvedValue(undefined);
+    const proveedor = { cerrarCuenta } as unknown as ProveedorService;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      proveedor,
+      audit,
+      {} as ColaProveedorService,
+      {} as CuentasProvisioningService,
+    );
+    return { procesador, cuentaUpdateMany, cerrarCuenta, audit, tx };
+  };
+
+  const disparar = (procesador: ColaProveedorProcessor) =>
+    procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_VENCIDAS } as never);
+
+  it('cierra la prueba vencida en el Proveedor, desvincula y audita como sistema', async () => {
+    const { procesador, cerrarCuenta, cuentaUpdateMany, audit, tx } = crearProcesador({
+      vencidas: [PRUEBA],
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(cerrarCuenta).toHaveBeenCalledWith('operador-1', '30000042');
+    expect(cuentaUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          estado: EstadoCuenta.cerrada,
+          esPrueba: false,
+          pruebaVenceEn: null,
+        }),
+      }),
+    );
+    // El Cliente Final NO se elimina: sólo se desvinculan sus Dispositivos.
+    expect(tx.dispositivo.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ clienteFinalId: null }),
+      }),
+    );
+    expect(tx.ventaCompartida.deleteMany).toHaveBeenCalledWith({
+      where: { cuentaId: 'cuenta-1' },
+    });
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'cierre_automatico_cuenta_prueba',
+        operadorPrincipalId: 'operador-1',
+        detalle: expect.objectContaining({ origen: 'automatico' }),
+      }),
+    );
+    expect(resultado).toEqual({ cerradas: 1, fallidas: 0 });
+  });
+
+  it('es idempotente: si otra corrida ya la cerró, no repite el efecto', async () => {
+    const { procesador, audit } = crearProcesador({ vencidas: [PRUEBA], updateCount: 0 });
+
+    const resultado = await disparar(procesador);
+
+    expect(audit.registrarEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ cerradas: 0, fallidas: 0 });
+  });
+
+  it('si el Proveedor falla, no toca el estado local y audita el fallo', async () => {
+    const { procesador, cuentaUpdateMany, audit } = crearProcesador({
+      vencidas: [PRUEBA],
+      cerrarFalla: true,
+    });
+
+    const resultado = await disparar(procesador);
+
+    // No se marcó nada localmente: sigue activa para reintentar.
+    expect(cuentaUpdateMany).not.toHaveBeenCalled();
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'fallo_cierre_cuenta_prueba',
+        detalle: expect.objectContaining({ origen: 'automatico' }),
+      }),
+    );
+    expect(resultado).toEqual({ cerradas: 0, fallidas: 1 });
+  });
+
+  it('no duplica la auditoría de fallo mientras el Proveedor sigue caído', async () => {
+    const { procesador, audit } = crearProcesador({
+      vencidas: [PRUEBA],
+      cerrarFalla: true,
+      falloReciente: true,
+    });
+
+    const resultado = await disparar(procesador);
+
+    expect(audit.registrarEnTx).not.toHaveBeenCalled();
+    expect(resultado).toEqual({ cerradas: 0, fallidas: 1 });
   });
 });

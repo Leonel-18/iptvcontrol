@@ -52,6 +52,8 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   creacion_cuenta_prueba: 'Creación de cuenta de prueba',
   conversion_cuenta_prueba: 'Conversión de cuenta de prueba a permanente',
   cierre_cuenta_prueba: 'Cierre de cuenta de prueba',
+  cierre_automatico_cuenta_prueba: 'Cierre automático de cuenta de prueba',
+  fallo_cierre_cuenta_prueba: 'Fallo del cierre automático de cuenta de prueba',
 };
 
 /**

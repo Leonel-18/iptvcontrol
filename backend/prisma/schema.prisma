@@ -172,6 +172,8 @@ enum AccionAuditoria {
   creacion_cuenta_prueba
   conversion_cuenta_prueba
   cierre_cuenta_prueba
+  cierre_automatico_cuenta_prueba
+  fallo_cierre_cuenta_prueba
 }
 
 enum EntidadAuditada {
