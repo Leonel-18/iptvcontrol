@@ -895,13 +895,25 @@ export class ColaProveedorProcessor extends WorkerHost {
 
         // HU-D02: con un único Cliente Final activo, se autoasigna y el evento
         // queda resuelto (deja de generar recordatorios).
-        await this.intentarAutoasignar(tx, {
+        const asignado = await this.intentarAutoasignar(tx, {
           cuentaId,
           empresaRevendedoraId,
           operadorPrincipalId,
           incidencia: registrada,
           clientesActivos,
         });
+
+        // HU-D03: si no se pudo asignar porque la Cuenta tiene 0 o 2+ Clientes
+        // Finales activos, se notifica a la Empresa Revendedora (sin flujo de
+        // asignación desde acá: sólo `Ver cuenta`).
+        if (!asignado) {
+          await this.notificarDispositivoPendiente(tx, {
+            incidenciaId: registrada.id,
+            cuentaId,
+            empresaRevendedoraId,
+            clientesActivos,
+          });
+        }
       }
       return nuevas;
     });
@@ -1071,6 +1083,47 @@ export class ColaProveedorProcessor extends WorkerHost {
       },
     });
     return true;
+  }
+
+  /**
+   * Notifica a la Empresa Revendedora un dispositivo pendiente que no pudo
+   * autoasignarse (HU-D03). Sólo aplica a los casos de D03: 0 clientes activos
+   * (Caso A) o 2 o más (Caso B). Con exactamente 1 cliente el problema no es de
+   * cantidad, así que no se notifica (queda para la resolución manual existente).
+   * Idempotente por `clave`: una sola notificación por evento.
+   */
+  private async notificarDispositivoPendiente(
+    tx: TransactionClient,
+    params: {
+      incidenciaId: string;
+      cuentaId: string;
+      empresaRevendedoraId: string;
+      clientesActivos: { id: string }[];
+    },
+  ): Promise<void> {
+    const cantidad = params.clientesActivos.length;
+    if (cantidad === 1) return;
+
+    const titulo =
+      cantidad === 0
+        ? 'Dispositivo en una cuenta sin clientes activos'
+        : 'Dispositivo nuevo sin dueño definido';
+    const mensaje =
+      cantidad === 0
+        ? 'Se detectó un dispositivo en una cuenta que no tiene Clientes Finales activos. ' +
+          'Revisá la cuenta para asignarlo o darlo de baja.'
+        : 'Se detectó un dispositivo nuevo en una cuenta con más de un Cliente Final activo y no ' +
+          'se pudo determinar a quién pertenece. Revisá la cuenta.';
+
+    await this.notificaciones.crearEnTx(tx, {
+      empresaRevendedoraId: params.empresaRevendedoraId,
+      tipo: 'dispositivo_pendiente',
+      titulo,
+      mensaje,
+      accionTipo: 'ver_cuenta',
+      accionRefId: params.cuentaId,
+      clave: `dispositivo_pendiente:${params.incidenciaId}`,
+    });
   }
 
   /**
