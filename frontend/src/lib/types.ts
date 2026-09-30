@@ -60,6 +60,9 @@ export interface Account {
   // Aislamiento de Cuenta compartida existente (HU-A02).
   aislada?: boolean;
   aislamiento_fin_en?: string | null;
+  /** Cuenta de prueba (HU-P03/P04). Nunca se muestra junto con "Aislada". */
+  es_prueba?: boolean;
+  prueba_vence_en?: string | null;
   /** Clientes Finales activos de la Cuenta (undefined en exclusivas). */
   clientes_activos?: number | null;
 }
@@ -219,6 +222,8 @@ export interface Customer {
   cuenta_ids: string[];
   /** true si el cliente está en una Cuenta compartida aislada (HU-A04). */
   cuenta_aislada?: boolean;
+  /** true si el cliente está en una Cuenta de prueba (HU-P04). */
+  cuenta_es_prueba?: boolean;
   suspendido_en: string | null;
   dado_de_baja_en: string | null;
   creado_en: string;
@@ -237,6 +242,9 @@ export interface CustomerDetail extends Customer {
     es_exclusiva: boolean;
     /** true si la venta de este cliente se creó con "Aislar Cuenta". */
     aislada: boolean;
+    /** Cuenta de prueba del cliente (HU-P04). */
+    es_prueba: boolean;
+    prueba_vence_en: string | null;
     capacidad: string | null;
     fijos: string | null;
     moviles: string | null;
@@ -254,6 +262,8 @@ export interface CustomerOperatorView {
   tipo_alta: string;
   /** true si el cliente está en una Cuenta compartida aislada (HU-A04). */
   cuenta_aislada?: boolean;
+  /** true si el cliente está en una Cuenta de prueba (HU-P04). */
+  cuenta_es_prueba?: boolean;
   creado_en: string;
   dispositivos: AccountDevice[];
 }

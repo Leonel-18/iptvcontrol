@@ -5,6 +5,7 @@ import { api, descargarCsv, type Paginado } from '@/lib/api';
 import { useSesion } from '@/lib/session';
 import { formatearFecha } from '@/lib/utils';
 import type { Customer, CustomerOperatorView } from '@/lib/types';
+import { accountModality } from '@/lib/account-modality';
 import { customerStatusLabels } from '@/i18n/entityLabels';
 import {
   CopyableId,
@@ -147,6 +148,11 @@ export const CustomerList = () => {
                           dispositivo.estado === 'activo' ||
                           dispositivo.estado === 'bloqueado_por_suspension',
                       ).length;
+                const modalidad = accountModality({
+                  es_exclusiva: cliente.tipo_alta === 'cuenta_exclusiva',
+                  es_prueba: cliente.cuenta_es_prueba,
+                  aislada: cliente.cuenta_aislada,
+                });
 
                 return (
                   <TR key={cliente.id}>
@@ -181,21 +187,7 @@ export const CustomerList = () => {
                       <CustomerStatusBadge estado={cliente.estado} />
                     </TD>
                     <TD>
-                      <Badge
-                        tone={
-                          cliente.tipo_alta === 'cuenta_exclusiva'
-                            ? 'info'
-                            : cliente.cuenta_aislada
-                              ? 'warning'
-                              : 'neutral'
-                        }
-                      >
-                        {cliente.tipo_alta === 'cuenta_exclusiva'
-                          ? 'Exclusiva'
-                          : cliente.cuenta_aislada
-                            ? 'Compartida - Aislada'
-                            : 'Compartida'}
-                      </Badge>
+                      <Badge tone={modalidad.tone}>{modalidad.label}</Badge>
                     </TD>
                     <TD align="right">
                       <span className="tabular-nums">{dispositivos}</span>

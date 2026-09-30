@@ -13,6 +13,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { useSesion } from "@/lib/session";
+import { accountModality } from "@/lib/account-modality";
 import { formatearFecha, formatearMac } from "@/lib/utils";
 import type {
   AccountCredentials,
@@ -303,11 +304,12 @@ export const AccountDetail = () => {
                 Cerrar cuenta
               </Button>
             ) : null}
-            {!esOperador && data.aislada ? (
-              <Badge tone="warning">Compartida - Aislada</Badge>
+            {!esOperador && (data.es_prueba || data.aislada) ? (
+              <Badge tone={accountModality(data).tone}>{accountModality(data).label}</Badge>
             ) : null}
             {!esOperador &&
             !data.es_exclusiva &&
+            !data.es_prueba &&
             data.estado === "activa" &&
             data.clientes_activos === 1 ? (
               <Button

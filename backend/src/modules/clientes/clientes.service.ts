@@ -137,12 +137,16 @@ export class ClientesService {
     // Condición "Compartida - Aislada" de las Cuentas de esta página (HU-A04):
     // una sola consulta para las Cuentas involucradas, en vez de anidar la
     // relación completa dentro de cada Cliente.
-    const cuentaIds = [
-      ...new Set([
-        ...clientes.flatMap((cliente) => cliente.dispositivos.map((d) => d.cuentaId)),
-        ...clientes.flatMap((cliente) => (cliente.ventasCompartidas ?? []).map((v) => v.cuentaId)),
-      ]),
+    const cuentaIdsPorCliente = (cliente: {
+      dispositivos: { cuentaId: string }[];
+      ventasCompartidas?: { cuentaId: string }[];
+      cuentasExclusivas?: { id: string }[];
+    }) => [
+      ...cliente.dispositivos.map((d) => d.cuentaId),
+      ...(cliente.ventasCompartidas ?? []).map((v) => v.cuentaId),
+      ...(cliente.cuentasExclusivas ?? []).map((c) => c.id),
     ];
+    const cuentaIds = [...new Set(clientes.flatMap(cuentaIdsPorCliente))];
     const cuentasDeLaPagina = cuentaIds.length
       ? await this.prisma.db.cuenta.findMany({
           where: { id: { in: cuentaIds } },
@@ -150,6 +154,7 @@ export class ClientesService {
             id: true,
             aislada: true,
             aislamientoFinEn: true,
+            esPrueba: true,
             ventasCompartidas: { select: { id: true, aislada: true } },
             ventanasCuriosidad: {
               where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
@@ -161,18 +166,18 @@ export class ClientesService {
     const aisladas = new Map(
       cuentasDeLaPagina.map((cuenta) => [cuenta.id, esAislamientoVigente(cuenta)]),
     );
+    const dePrueba = new Map(cuentasDeLaPagina.map((cuenta) => [cuenta.id, cuenta.esPrueba]));
 
     // Para el Operador Principal se serializa la versión por ID, igual que en el
     // detalle: nombre y datos de contacto no llegan al frontend (regla 4.2).
     const data = clientes.map((cliente) => {
-      const idsCliente = [
-        ...cliente.dispositivos.map((dispositivo) => dispositivo.cuentaId),
-        ...(cliente.ventasCompartidas ?? []).map((venta) => venta.cuentaId),
-      ];
-      const cuentaAislada = idsCliente.some((id) => aisladas.get(id) === true);
+      const idsCliente = cuentaIdsPorCliente(cliente);
+      // Una cuenta de prueba nunca debe verse como "aislada" (HU-P04).
+      const cuentaEsPrueba = idsCliente.some((id) => dePrueba.get(id) === true);
+      const cuentaAislada = !cuentaEsPrueba && idsCliente.some((id) => aisladas.get(id) === true);
       return esOperador
-        ? this.mapClienteParaOperador(cliente, cuentaAislada)
-        : this.mapCliente(cliente, cuentaAislada);
+        ? this.mapClienteParaOperador(cliente, cuentaAislada, cuentaEsPrueba)
+        : this.mapCliente(cliente, cuentaAislada, cuentaEsPrueba);
     });
     return PaginatedResponse.build(data, total, query.page ?? 1, query.per_page ?? 25);
   }
@@ -263,11 +268,16 @@ export class ClientesService {
         })
       : null;
 
-    // Condición de aislamiento vigente de la Cuenta del cliente (HU-A04).
-    const cuentaAislada = cuentaPrincipal ? await this.esCuentaAislada(cuentaPrincipal.id) : false;
+    // Condición de aislamiento vigente de la Cuenta del cliente (HU-A04). Una
+    // cuenta de prueba nunca se informa como aislada (HU-P04).
+    const cuentaEsPrueba = cuentaPrincipal?.esPrueba ?? false;
+    const aislamientoVigente = cuentaPrincipal
+      ? await this.esCuentaAislada(cuentaPrincipal.id)
+      : false;
+    const cuentaAislada = !cuentaEsPrueba && aislamientoVigente;
 
     return {
-      ...this.mapCliente(cliente, cuentaAislada),
+      ...this.mapCliente(cliente, cuentaAislada, cuentaEsPrueba),
       // Credenciales de la Cuenta del cliente: es lo que la Empresa Revendedora
       // le pasa al Cliente Final para que use el servicio.
       cuenta: cuentaPrincipal
@@ -284,6 +294,10 @@ export class ClientesService {
             // true si la Cuenta del cliente está aislada (HU-A02) o su venta se
             // creó con "Aislar Cuenta" y la Ventana sigue vigente (HU-A01).
             aislada: cuentaAislada,
+            // Cuenta de prueba (HU-P04): condición que el frontend compone como
+            // "Compartida - Prueba" o "Exclusiva - Prueba".
+            es_prueba: cuentaEsPrueba,
+            prueba_vence_en: cuentaEsPrueba ? cuentaPrincipal.pruebaVenceEn : null,
             capacidad: capacidad
               ? capacidad.esExclusiva
                 ? `${capacidad.ocupados} de ${capacidad.limite}`
@@ -1012,6 +1026,7 @@ export class ClientesService {
       cuentasExclusivas?: { id: string }[];
     },
     cuentaAislada = false,
+    cuentaEsPrueba = false,
   ) {
     return {
       id: cliente.id,
@@ -1020,6 +1035,7 @@ export class ClientesService {
       estado: cliente.estado,
       tipo_alta: cliente.tipoAlta,
       cuenta_aislada: cuentaAislada,
+      cuenta_es_prueba: cuentaEsPrueba,
       cantidad_dispositivos: this.contarDispositivosOcupados(cliente.dispositivos),
       cuenta_ids: [
         ...new Set([
@@ -1064,6 +1080,7 @@ export class ClientesService {
       cuentasExclusivas?: { id: string }[];
     },
     cuentaAislada = false,
+    cuentaEsPrueba = false,
   ) {
     return {
       id: cliente.id,
@@ -1078,6 +1095,7 @@ export class ClientesService {
       direccion: cliente.direccion,
       tipo_alta: cliente.tipoAlta,
       cuenta_aislada: cuentaAislada,
+      cuenta_es_prueba: cuentaEsPrueba,
       estado: cliente.estado,
       empresa_revendedora_id: cliente.empresaRevendedoraId,
       cantidad_dispositivos: cliente.dispositivos.filter(
