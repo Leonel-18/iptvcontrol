@@ -8,6 +8,7 @@ import { ProveedorService } from '../../proveedor/proveedor.service';
 import { CONECTOR_SENSA } from '../../proveedor/sensa/sensa.constants';
 import {
   ActualizarConexionProveedorDto,
+  ActualizarNotificacionesDto,
   ActualizarPlantillaWhatsAppDto,
   ActualizarVentanaCuriosidadDto,
   ConfiguracionProveedorRespuestaDto,
@@ -243,6 +244,75 @@ export class ConfiguracionService {
       });
     });
     return this.obtenerVentanaCuriosidad();
+  }
+
+  /** Preferencias de notificaciones internas de la Empresa Revendedora (HU-N02). */
+  async obtenerNotificaciones() {
+    const empresaRevendedoraId = this.exigirRevendedor();
+    const empresa = await this.prisma.db.empresaRevendedora.findUniqueOrThrow({
+      where: { id: empresaRevendedoraId },
+      select: {
+        notifDispositivos: true,
+        notifDispositivosFrecuenciaHoras: true,
+        notifVentanaAlta: true,
+        notifVentanaAltaDias: true,
+        pruebasHabilitadas: true,
+        pruebasAvisosDias: true,
+      },
+    });
+    return {
+      dispositivos: {
+        habilitados: empresa.notifDispositivos,
+        frecuencia_horas: empresa.notifDispositivosFrecuenciaHoras,
+      },
+      ventana_alta: {
+        habilitados: empresa.notifVentanaAlta,
+        dias: empresa.notifVentanaAltaDias,
+      },
+      // Los hitos de las cuentas de prueba los parametriza el Operador Principal
+      // (HU-P01). Acá se muestran como referencia, no se editan.
+      pruebas: {
+        habilitadas: empresa.pruebasHabilitadas,
+        dias: empresa.pruebasAvisosDias,
+      },
+    };
+  }
+
+  async actualizarNotificaciones(dto: ActualizarNotificacionesDto) {
+    const empresaRevendedoraId = this.exigirRevendedor();
+    await this.prisma.transaction(async (tx) => {
+      const anterior = await tx.empresaRevendedora.findUniqueOrThrow({
+        where: { id: empresaRevendedoraId },
+        select: {
+          notifDispositivos: true,
+          notifDispositivosFrecuenciaHoras: true,
+          notifVentanaAlta: true,
+          notifVentanaAltaDias: true,
+        },
+      });
+      await tx.empresaRevendedora.update({
+        where: { id: empresaRevendedoraId },
+        data: {
+          notifDispositivos: dto.dispositivos_habilitados,
+          notifDispositivosFrecuenciaHoras: dto.dispositivos_frecuencia_horas,
+          notifVentanaAlta: dto.ventana_alta_habilitados,
+          notifVentanaAltaDias: dto.ventana_alta_dias,
+        },
+      });
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.cambio_configuracion_notificaciones,
+        entidad: EntidadAuditada.EmpresaRevendedora,
+        entidadId: empresaRevendedoraId,
+        detalle: {
+          dispositivos_habilitados: dto.dispositivos_habilitados ?? null,
+          dispositivos_frecuencia_horas: dto.dispositivos_frecuencia_horas ?? null,
+          ventana_alta_habilitados: dto.ventana_alta_habilitados ?? null,
+          ventana_alta_dias: dto.ventana_alta_dias ?? null,
+          anterior,
+        },
+      });
+    });
+    return this.obtenerNotificaciones();
   }
 
   private formatearPrueba(resultado: {

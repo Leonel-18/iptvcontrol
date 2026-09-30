@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/common';
 import { CuriosityWindowSettings } from './CuriosityWindowSettings';
+import { NotificationSettings } from './NotificationSettings';
 import { TestAccountsSettings } from './TestAccountsSettings';
 import { WhatsappTemplateSettings } from './WhatsappTemplateSettings';
 
@@ -22,6 +23,7 @@ export const ResellerSettingsView = () => {
       <div className="grid max-w-4xl gap-4">
         <CuriosityWindowSettings />
         <TestAccountsSettings />
+        <NotificationSettings />
         <WhatsappTemplateSettings />
       </div>
     </>

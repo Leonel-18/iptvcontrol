@@ -1,6 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Length, Matches, Max, MaxLength, Min } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class ActualizarVentanaCuriosidadDto {
   @ApiProperty({
@@ -28,6 +40,50 @@ export class ActualizarPlantillaWhatsAppDto {
   @IsString()
   @Length(1, 4000)
   contenido!: string;
+}
+
+/**
+ * Preferencias de notificaciones internas de la Empresa Revendedora (HU-N02).
+ *
+ * Los hitos de vencimiento se expresan como múltiples días de anticipación (no
+ * spam periódico). La frecuencia de dispositivos define cada cuánto recordar el
+ * mismo evento pendiente.
+ */
+export class ActualizarNotificacionesDto {
+  @ApiPropertyOptional({ description: 'Recibir avisos de dispositivos pendientes.' })
+  @IsOptional()
+  @IsBoolean()
+  dispositivos_habilitados?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Cada cuántas horas recordar un dispositivo pendiente sin resolver.',
+    example: 24,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(8760)
+  dispositivos_frecuencia_horas?: number;
+
+  @ApiPropertyOptional({ description: 'Recibir avisos de ventanas de alta próximas a vencer.' })
+  @IsOptional()
+  @IsBoolean()
+  ventana_alta_habilitados?: boolean;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description:
+      'Hitos de anticipación para la ventana de alta, en días (enteros > 0, ej. [3, 1]).',
+    example: [3, 1],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(365, { each: true })
+  ventana_alta_dias?: number[];
 }
 
 /**
