@@ -906,3 +906,146 @@ describe('CuentasService — revocarAislamiento (HU-A03)', () => {
     );
   });
 });
+
+describe('CuentasService — convertir prueba a permanente (HU-P05)', () => {
+  const crearServicio = (
+    cuenta: Record<string, unknown> | null,
+    opciones: { esOperador?: boolean } = {},
+  ) => {
+    const cuentaUpdate = jest.fn().mockResolvedValue(undefined);
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      cuenta: {
+        findUnique: jest.fn().mockResolvedValue(cuenta),
+        update: cuentaUpdate,
+        // `obtener()` corre después de la conversión.
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const prisma = {
+      db: {
+        cuenta: {
+          findUnique: jest.fn().mockResolvedValue(cuenta),
+          groupBy: jest.fn().mockResolvedValue([]),
+        },
+        dispositivo: { count: jest.fn().mockResolvedValue(0), groupBy: jest.fn(async () => []) },
+        ventaCompartida: { findMany: jest.fn().mockResolvedValue([]) },
+        clienteFinal: { count: jest.fn().mockResolvedValue(0), findMany: jest.fn(async () => []) },
+        incidenciaDispositivoProveedor: { count: jest.fn().mockResolvedValue(0) },
+      },
+      transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const audit = { registrarEnTx: jest.fn() } as unknown as AuditService;
+    const contexto = {
+      esOperador: opciones.esOperador ?? false,
+      empresaRevendedoraId: opciones.esOperador ? null : 'empresa-1',
+      teamMemberId: 'team-1',
+    } as unknown as RequestContextService;
+    const abrirManualmente = jest.fn().mockResolvedValue({});
+    const ventanasCuriosidad = { abrirManualmente } as unknown as VentanasCuriosidadService;
+
+    const servicio = new CuentasService(
+      prisma,
+      {} as CryptoService,
+      contexto,
+      {} as ProveedorService,
+      audit,
+      ventanasCuriosidad,
+      {} as CuentasProvisioningService,
+      {} as ColaProveedorService,
+    );
+    // La conversión devuelve `obtener()`: no hace falta armar todo su mock.
+    jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: 'cuenta-1' } as never);
+
+    return { servicio, cuentaUpdate, audit, abrirManualmente };
+  };
+
+  it('quita la condición de prueba, conserva el consumo y audita', async () => {
+    const { servicio, cuentaUpdate, audit } = crearServicio({
+      id: 'cuenta-1',
+      empresaRevendedoraId: 'empresa-1',
+      esPrueba: true,
+      esExclusiva: false,
+      pruebaVenceEn: new Date('2026-10-29T12:00:00Z'),
+    });
+
+    await servicio.convertirPruebaAPermanente('cuenta-1', {});
+
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: { id: 'cuenta-1' },
+      data: { esPrueba: false, pruebaVenceEn: null },
+    });
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ accion: 'conversion_cuenta_prueba' }),
+    );
+  });
+
+  it('no abre Ventana de Alta si no se pidió', async () => {
+    const { servicio, abrirManualmente } = crearServicio({
+      id: 'cuenta-1',
+      empresaRevendedoraId: 'empresa-1',
+      esPrueba: true,
+      esExclusiva: false,
+    });
+
+    await servicio.convertirPruebaAPermanente('cuenta-1', {});
+
+    expect(abrirManualmente).not.toHaveBeenCalled();
+  });
+
+  it('abre la Ventana de Alta opcional en una Cuenta compartida', async () => {
+    const { servicio, abrirManualmente } = crearServicio({
+      id: 'cuenta-1',
+      empresaRevendedoraId: 'empresa-1',
+      esPrueba: true,
+      esExclusiva: false,
+    });
+
+    await servicio.convertirPruebaAPermanente('cuenta-1', {
+      duracion_ventana_curiosidad_minutos: 1440,
+    });
+
+    expect(abrirManualmente).toHaveBeenCalledWith('cuenta-1', 1440);
+  });
+
+  it('rechaza la Ventana de Alta en una Cuenta exclusiva', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-1',
+      empresaRevendedoraId: 'empresa-1',
+      esPrueba: true,
+      esExclusiva: true,
+    });
+
+    await expect(
+      servicio.convertirPruebaAPermanente('cuenta-1', {
+        duracion_ventana_curiosidad_minutos: 1440,
+      }),
+    ).rejects.toThrow('no admite una Ventana de Alta');
+  });
+
+  it('rechaza una Cuenta que no es de prueba', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-1',
+      empresaRevendedoraId: 'empresa-1',
+      esPrueba: false,
+      esExclusiva: false,
+    });
+
+    await expect(servicio.convertirPruebaAPermanente('cuenta-1', {})).rejects.toThrow(
+      'no es una cuenta de prueba',
+    );
+  });
+
+  it('rechaza el pedido del Operador Principal', async () => {
+    const { servicio } = crearServicio(
+      { id: 'cuenta-1', empresaRevendedoraId: 'empresa-1', esPrueba: true, esExclusiva: false },
+      { esOperador: true },
+    );
+
+    await expect(servicio.convertirPruebaAPermanente('cuenta-1', {})).rejects.toThrow(
+      'Sólo la Empresa Revendedora',
+    );
+  });
+});

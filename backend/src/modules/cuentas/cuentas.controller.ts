@@ -19,6 +19,7 @@ import { CambiarPasswordCuentaDto } from './dto/cambiar-password-cuenta.dto';
 import { CambiarPinCuentaDto } from './dto/cambiar-pin-cuenta.dto';
 import { AbrirVentanaCuriosidadDto } from './dto/abrir-ventana.dto';
 import { AislarCuentaDto } from './dto/aislar-cuenta.dto';
+import { ConvertirPruebaAPermanenteDto } from './dto/convertir-prueba.dto';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
 import { SoloRevendedor } from '../../common/auth/decorators';
 import { InventarioProveedorService } from './inventario-proveedor.service';
@@ -171,6 +172,22 @@ export class CuentasController {
   })
   async aislarCuenta(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AislarCuentaDto) {
     return this.cuentas.aislarCuenta(id, dto.dias);
+  }
+
+  @Post(':id/test-to-permanent')
+  @SoloRevendedor()
+  @ApiOperation({
+    summary: 'Convierte una cuenta de prueba en permanente.',
+    description:
+      'Conserva la misma Cuenta, Cliente Final, credenciales y Dispositivos; quita la condición ' +
+      'de prueba y su vencimiento (deja de cerrarse sola). En una Cuenta compartida se puede ' +
+      'pedir opcionalmente una Ventana de Alta; en una exclusiva no aplica.',
+  })
+  convertirPrueba(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConvertirPruebaAPermanenteDto,
+  ) {
+    return this.cuentas.convertirPruebaAPermanente(id, dto);
   }
 
   @Post(':id/isolation/revoke')

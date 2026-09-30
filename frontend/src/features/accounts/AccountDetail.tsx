@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  BadgeCheck,
   KeyRound,
   Lock,
   Pencil,
@@ -27,6 +28,7 @@ import {
   WhatsappTemplateButton,
 } from "@/components/common";
 import { AccountDevicesTab } from "./AccountDevicesTab";
+import { CuriosityDurationInput } from "@/components/CuriosityDurationInput";
 import { CuriosityWindowPanel } from "./CuriosityWindowPanel";
 import { EditAccountDialog } from "./EditAccountDialog";
 import { CapacityMeter } from "@/components/CapacityMeter";
@@ -83,6 +85,8 @@ export const AccountDetail = () => {
   const [aislarAbierto, setAislarAbierto] = useState(false);
   const [diasAislamiento, setDiasAislamiento] = useState(30);
   const [errorDias, setErrorDias] = useState("");
+  const [convertirAbierto, setConvertirAbierto] = useState(false);
+  const [duracionConversion, setDuracionConversion] = useState(0);
   const [confirmarRevocarAislamiento, setConfirmarRevocarAislamiento] =
     useState(false);
   const navegar = useNavigate();
@@ -182,6 +186,25 @@ export const AccountDetail = () => {
       setConfirmarRevocarAislamiento(false);
       void queryClient.invalidateQueries({ queryKey: ["account", id] });
       void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
+  const convertirPrueba = useMutation({
+    mutationFn: (duracionMinutos: number) =>
+      api(`/accounts/${id}/test-to-permanent`, {
+        metodo: "POST",
+        body:
+          duracionMinutos > 0
+            ? { duracion_ventana_curiosidad_minutos: duracionMinutos }
+            : {},
+      }),
+    onSuccess: () => {
+      toast.success("La cuenta de prueba ahora es permanente.");
+      setConvertirAbierto(false);
+      void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      void queryClient.invalidateQueries({ queryKey: ["customer"] });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -306,6 +329,16 @@ export const AccountDetail = () => {
             ) : null}
             {!esOperador && (data.es_prueba || data.aislada) ? (
               <Badge tone={accountModality(data).tone}>{accountModality(data).label}</Badge>
+            ) : null}
+            {!esOperador && data.es_prueba && data.estado === "activa" ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setConvertirAbierto(true)}
+              >
+                <BadgeCheck />
+                Convertir a permanente
+              </Button>
             ) : null}
             {!esOperador &&
             !data.es_exclusiva &&
@@ -551,6 +584,48 @@ export const AccountDetail = () => {
                 disabled={aislarCuenta.isPending}
               >
                 {aislarCuenta.isPending ? "Aislando…" : "Aislar Cuenta"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={convertirAbierto} onOpenChange={setConvertirAbierto}>
+        <DialogContent
+          titulo="Convertir en cuenta permanente"
+          descripcion="La misma Cuenta, con su cliente, credenciales y dispositivos, pasa a ser permanente: deja de tener vencimiento y no se cierra sola."
+        >
+          <div className="space-y-4">
+            <Alert tone="info">
+              El cupo de prueba ya consumido no se devuelve.
+            </Alert>
+            {!data.es_exclusiva ? (
+              <div className="rounded-lg border p-4">
+                <CuriosityDurationInput
+                  value={duracionConversion}
+                  onChange={setDuracionConversion}
+                  help="Opcional. Con una duración mayor a 0, la Cuenta queda protegida ese plazo y no recibe otros clientes nuevos; con 0 queda como Cuenta compartida normal de inmediato."
+                />
+              </div>
+            ) : (
+              <Alert tone="info">
+                Una Cuenta exclusiva no admite Ventana de Alta: pasa directo a Exclusiva.
+              </Alert>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setConvertirAbierto(false)}
+                disabled={convertirPrueba.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => convertirPrueba.mutate(duracionConversion)}
+                disabled={convertirPrueba.isPending}
+              >
+                {convertirPrueba.isPending ? "Convirtiendo…" : "Convertir a permanente"}
               </Button>
             </div>
           </div>

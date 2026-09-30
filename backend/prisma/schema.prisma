@@ -170,6 +170,7 @@ enum AccionAuditoria {
   apertura_aislamiento_cuenta
   fin_aislamiento_cuenta
   creacion_cuenta_prueba
+  conversion_cuenta_prueba
 }
 
 enum EntidadAuditada {
