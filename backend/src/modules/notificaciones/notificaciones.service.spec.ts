@@ -27,8 +27,12 @@ const crearServicio = (
     upsert: jest.fn().mockResolvedValue(undefined),
     createMany: jest.fn().mockResolvedValue({ count: 0 }),
   };
+  const teamMember = {
+    findUniqueOrThrow: jest.fn().mockResolvedValue({ sonidoNotificaciones: true }),
+    update: jest.fn().mockResolvedValue(undefined),
+  };
   const prisma = {
-    db: { notificacion, notificacionLectura },
+    db: { notificacion, notificacionLectura, teamMember },
     transaction: jest
       .fn()
       .mockImplementation((fn: (tx: unknown) => unknown) => fn({ notificacion })),
@@ -44,6 +48,7 @@ const crearServicio = (
     servicio: new NotificacionesService(prisma, contexto),
     notificacion,
     notificacionLectura,
+    teamMember,
   };
 };
 
@@ -157,5 +162,33 @@ describe('NotificacionesService (HU-N01)', () => {
     });
 
     await expect(servicio.listar()).rejects.toThrow('Empresa Revendedora');
+  });
+});
+
+describe('NotificacionesService — preferencia de sonido (HU-N05)', () => {
+  it('devuelve la preferencia del usuario actual', async () => {
+    const { servicio } = crearServicio();
+
+    await expect(servicio.obtenerPreferenciaSonido()).resolves.toEqual({
+      sonido_habilitado: true,
+    });
+  });
+
+  it('guarda la preferencia del usuario actual', async () => {
+    const { servicio, teamMember } = crearServicio();
+
+    await expect(servicio.actualizarPreferenciaSonido(false)).resolves.toEqual({
+      sonido_habilitado: false,
+    });
+    expect(teamMember.update).toHaveBeenCalledWith({
+      where: { id: 'team-1' },
+      data: { sonidoNotificaciones: false },
+    });
+  });
+
+  it('exige un usuario autenticado', async () => {
+    const { servicio } = crearServicio({ contexto: { teamMemberId: undefined } });
+
+    await expect(servicio.obtenerPreferenciaSonido()).rejects.toThrow('usuario autenticado');
   });
 });

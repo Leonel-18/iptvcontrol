@@ -1,9 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { cn, formatearFechaHora } from '@/lib/utils';
-import type { AppNotification, NotificationCenter } from '@/lib/types';
+import {
+  prepararSonido,
+  reproducirSonidoNotificacion,
+} from '@/lib/notification-sound';
+import type {
+  AppNotification,
+  NotificationCenter,
+  NotificationSoundPreference,
+} from '@/lib/types';
 import { Button } from '@/components/ui/primitives';
 import {
   DropdownMenu,
@@ -41,6 +50,33 @@ export const NotificationBell = () => {
 
   const noLeidas = centro.data?.no_leidas ?? 0;
   const items = centro.data?.data ?? [];
+
+  // Preferencia individual de sonido (HU-N05).
+  const preferencia = useQuery({
+    queryKey: ['me', 'notification-sound'],
+    queryFn: () => api<NotificationSoundPreference>('/me/notification-sound'),
+    staleTime: 5 * 60 * 1000,
+  });
+  const sonidoHabilitado = preferencia.data?.sonido_habilitado ?? false;
+
+  // Habilita el audio en el primer gesto del usuario (política de autoplay).
+  useEffect(() => {
+    window.addEventListener('pointerdown', prepararSonido, { once: true });
+    return () => window.removeEventListener('pointerdown', prepararSonido);
+  }, []);
+
+  // Suena sólo cuando aparece una notificación nueva sin leer.
+  const noLeidasPrevias = useRef<number | null>(null);
+  useEffect(() => {
+    if (
+      noLeidasPrevias.current !== null &&
+      noLeidas > noLeidasPrevias.current &&
+      sonidoHabilitado
+    ) {
+      reproducirSonidoNotificacion();
+    }
+    noLeidasPrevias.current = noLeidas;
+  }, [noLeidas, sonidoHabilitado]);
 
   const abrir = (notificacion: AppNotification) => {
     if (!notificacion.leida) marcarLeida.mutate(notificacion.id);

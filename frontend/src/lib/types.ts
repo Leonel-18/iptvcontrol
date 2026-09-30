@@ -498,6 +498,11 @@ export interface NotificationCenter {
   data: AppNotification[];
 }
 
+/** Preferencia individual de sonido de notificaciones (HU-N05). */
+export interface NotificationSoundPreference {
+  sonido_habilitado: boolean;
+}
+
 /** Preferencias de notificaciones internas de la Empresa Revendedora (HU-N02). */
 export interface NotificationSettings {
   dispositivos: { habilitados: boolean; frecuencia_horas: number };
