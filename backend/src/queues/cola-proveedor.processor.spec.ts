@@ -632,7 +632,10 @@ describe('ColaProveedorProcessor — dispositivos sin cliente (HU-D01)', () => {
         ...data,
       }));
     const incidenciaUpdate = jest.fn().mockResolvedValue({ id: 'inc-1' });
-    const clienteFinalCount = jest.fn().mockResolvedValue(opciones.clientesActivos ?? 0);
+    const clientes = Array.from({ length: opciones.clientesActivos ?? 0 }, (_, i) => ({
+      id: `cli-${i + 1}`,
+    }));
+    const clienteFinalFindMany = jest.fn().mockResolvedValue(clientes);
 
     const tx = {
       $queryRaw: jest
@@ -650,7 +653,7 @@ describe('ColaProveedorProcessor — dispositivos sin cliente (HU-D01)', () => {
         create: incidenciaCreate,
         update: incidenciaUpdate,
       },
-      clienteFinal: { count: clienteFinalCount },
+      clienteFinal: { findMany: clienteFinalFindMany },
     };
     const prisma = {
       operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
@@ -674,27 +677,27 @@ describe('ColaProveedorProcessor — dispositivos sin cliente (HU-D01)', () => {
       {} as CuentasProvisioningService,
       {} as NotificacionesService,
     );
-    return { procesador, incidenciaCreate, incidenciaUpdate, clienteFinalCount, audit };
+    return { procesador, incidenciaCreate, incidenciaUpdate, clienteFinalFindMany, audit };
   };
 
   const disparar = (procesador: ColaProveedorProcessor) =>
     procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_INVENTARIO_CUENTAS } as never);
 
   it('registra el evento pendiente con la cantidad de clientes activos y lo audita', async () => {
-    const { procesador, incidenciaCreate, clienteFinalCount, audit } = crearProcesador({
+    const { procesador, incidenciaCreate, clienteFinalFindMany, audit } = crearProcesador({
       inventario: [{ proveedorDeviceId: 'dev-1', mac: 'AA', tipo: 'stationary' }],
-      clientesActivos: 1,
+      clientesActivos: 2,
     });
 
     await disparar(procesador);
 
-    expect(clienteFinalCount).toHaveBeenCalled();
+    expect(clienteFinalFindMany).toHaveBeenCalled();
     expect(incidenciaCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           cuentaId: 'cuenta-1',
           proveedorDeviceId: 'dev-1',
-          clientesActivosAlDetectar: 1,
+          clientesActivosAlDetectar: 2,
         }),
       }),
     );
@@ -702,7 +705,7 @@ describe('ColaProveedorProcessor — dispositivos sin cliente (HU-D01)', () => {
       expect.anything(),
       expect.objectContaining({
         accion: 'deteccion_dispositivo_no_autorizado',
-        detalle: expect.objectContaining({ cuenta_id: 'cuenta-1', clientes_activos: 1 }),
+        detalle: expect.objectContaining({ cuenta_id: 'cuenta-1', clientes_activos: 2 }),
       }),
     );
   });
@@ -726,7 +729,7 @@ describe('ColaProveedorProcessor — dispositivos sin cliente (HU-D01)', () => {
   });
 
   it('no registra eventos mientras hay una ventana de vinculación abierta', async () => {
-    const { procesador, incidenciaCreate, clienteFinalCount } = crearProcesador({
+    const { procesador, incidenciaCreate, clienteFinalFindMany } = crearProcesador({
       inventario: [{ proveedorDeviceId: 'dev-1' }],
       ventanasAbiertas: 1,
     });
@@ -734,6 +737,183 @@ describe('ColaProveedorProcessor — dispositivos sin cliente (HU-D01)', () => {
     await disparar(procesador);
 
     expect(incidenciaCreate).not.toHaveBeenCalled();
-    expect(clienteFinalCount).not.toHaveBeenCalled();
+    expect(clienteFinalFindMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * HU-D02 — Autoasignación con un único Cliente Final activo. Se reutiliza el
+ * mismo criterio de la resolución manual: se reclama un Dispositivo pendiente o
+ * se crea uno vinculado, respetando el cupo; el evento queda resuelto.
+ */
+describe('ColaProveedorProcessor — autoasignación con un solo cliente (HU-D02)', () => {
+  const crearProcesador = (opciones: {
+    clientesActivos?: number;
+    esExclusiva?: boolean;
+    clienteFinalExclusivoId?: string | null;
+    venta?: { cuposPorCategoria: number } | null;
+    ocupados?: number;
+    tipo?: string;
+  }) => {
+    const incidenciaCreate = jest
+      .fn()
+      .mockImplementation(({ data }: { data: Record<string, unknown> }) => ({
+        id: 'inc-1',
+        ...data,
+      }));
+    const incidenciaUpdate = jest.fn().mockResolvedValue({ id: 'inc-1' });
+    const dispositivoCreate = jest.fn().mockResolvedValue({ id: 'disp-1' });
+    const dispositivoUpdate = jest.fn().mockResolvedValue({ id: 'disp-1' });
+    const cuentaUpdate = jest.fn().mockResolvedValue(undefined);
+
+    const clientes = Array.from({ length: opciones.clientesActivos ?? 1 }, (_, i) => ({
+      id: `cli-${i + 1}`,
+    }));
+
+    const tx = {
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValue([
+          { id: 'cuenta-1', empresa_revendedora_id: 'empresa-1', proveedor_cuenta_id: '30000001' },
+        ]),
+      dispositivo: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(opciones.ocupados ?? 0),
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: dispositivoCreate,
+        update: dispositivoUpdate,
+      },
+      solicitudVinculacionDispositivo: {
+        count: jest.fn().mockResolvedValue(0),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      incidenciaDispositivoProveedor: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: incidenciaCreate,
+        update: incidenciaUpdate,
+      },
+      clienteFinal: { findMany: jest.fn().mockResolvedValue(clientes) },
+      cuenta: {
+        findUnique: jest.fn().mockResolvedValue({
+          esExclusiva: opciones.esExclusiva ?? false,
+          clienteFinalExclusivoId: opciones.clienteFinalExclusivoId ?? null,
+        }),
+        update: cuentaUpdate,
+      },
+      ventaCompartida: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(
+            opciones.venta === undefined ? { cuposPorCategoria: 1 } : opciones.venta,
+          ),
+      },
+    };
+    const prisma = {
+      operadorPrincipal: { findMany: jest.fn().mockResolvedValue([{ id: 'operador-1' }]) },
+      transactionComoOperador: jest
+        .fn()
+        .mockImplementation((_op: string, fn: (t: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+
+    const proveedor = {
+      listarDispositivos: jest
+        .fn()
+        .mockResolvedValue([
+          { proveedorDeviceId: 'dev-1', mac: 'AA', tipo: opciones.tipo ?? 'stationary' },
+        ]),
+    } as unknown as ProveedorService;
+    const audit = {
+      registrarEnTx: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const procesador = new ColaProveedorProcessor(
+      prisma,
+      proveedor,
+      audit,
+      {} as ColaProveedorService,
+      {} as CuentasProvisioningService,
+      {} as NotificacionesService,
+    );
+    return { procesador, incidenciaUpdate, dispositivoCreate, cuentaUpdate, audit };
+  };
+
+  const disparar = (procesador: ColaProveedorProcessor) =>
+    procesador.process({ name: TRABAJOS_PROVEEDOR.BARRER_INVENTARIO_CUENTAS } as never);
+
+  it('asigna el dispositivo al único cliente activo de una compartida y resuelve el evento', async () => {
+    const { procesador, dispositivoCreate, incidenciaUpdate, audit } = crearProcesador({
+      clientesActivos: 1,
+    });
+
+    await disparar(procesador);
+
+    expect(dispositivoCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cuentaId: 'cuenta-1',
+          clienteFinalId: 'cli-1',
+          proveedorDeviceId: 'dev-1',
+          tipo: 'fijo',
+        }),
+      }),
+    );
+    expect(incidenciaUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ estado: 'reconocido' }) }),
+    );
+    expect(audit.registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'resolucion_incidencia_dispositivo',
+        detalle: expect.objectContaining({ origen: 'automatico', cliente_final_id: 'cli-1' }),
+      }),
+    );
+  });
+
+  it('funciona también en una Cuenta exclusiva (asigna el titular)', async () => {
+    const { procesador, dispositivoCreate, cuentaUpdate } = crearProcesador({
+      clientesActivos: 1,
+      esExclusiva: true,
+    });
+
+    await disparar(procesador);
+
+    expect(dispositivoCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ clienteFinalId: 'cli-1' }) }),
+    );
+    expect(cuentaUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { clienteFinalExclusivoId: 'cli-1' } }),
+    );
+  });
+
+  it('no asigna si hay dos o más clientes activos', async () => {
+    const { procesador, dispositivoCreate } = crearProcesador({ clientesActivos: 2 });
+
+    await disparar(procesador);
+
+    expect(dispositivoCreate).not.toHaveBeenCalled();
+  });
+
+  it('no asigna si el cupo de la categoría está lleno', async () => {
+    const { procesador, dispositivoCreate } = crearProcesador({
+      clientesActivos: 1,
+      ocupados: 1,
+      venta: { cuposPorCategoria: 1 },
+    });
+
+    await disparar(procesador);
+
+    expect(dispositivoCreate).not.toHaveBeenCalled();
+  });
+
+  it('no asigna si el Proveedor no informa una categoría reconocida', async () => {
+    const { procesador, dispositivoCreate } = crearProcesador({
+      clientesActivos: 1,
+      tipo: 'desconocido',
+    });
+
+    await disparar(procesador);
+
+    expect(dispositivoCreate).not.toHaveBeenCalled();
   });
 });

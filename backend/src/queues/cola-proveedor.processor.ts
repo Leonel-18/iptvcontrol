@@ -822,11 +822,11 @@ export class ColaProveedorProcessor extends WorkerHost {
       const desconocidos = inventario.filter((item) => !permitidos.has(item.proveedorDeviceId));
       if (desconocidos.length === 0) return 0;
 
-      // Cuántos Clientes Finales ACTIVOS tiene la Cuenta (los dados de baja y los
-      // suspendidos no cuentan). Es el dato que en D02/D03 decide si el
-      // dispositivo se autoasigna (1) o se notifica (0 / 2+). Se refresca en cada
+      // Clientes Finales ACTIVOS de la Cuenta (los dados de baja y los
+      // suspendidos no cuentan). Es el dato que decide si el dispositivo se
+      // autoasigna (1) o se notifica (0 / 2+) en HU-D02/D03. Se refresca en cada
       // detección para reflejar el estado actual del evento pendiente (HU-D01).
-      const clientesActivos = await this.contarClientesActivos(tx, cuentaId);
+      const clientesActivos = await this.listarClientesActivos(tx, cuentaId);
 
       let nuevas = 0;
       for (const item of desconocidos) {
@@ -836,55 +836,71 @@ export class ColaProveedorProcessor extends WorkerHost {
           },
         });
 
+        let registrada: {
+          id: string;
+          proveedorDeviceId: string;
+          mac: string | null;
+          tipoProveedor: string | null;
+        };
+
         if (existente?.estado === EstadoIncidenciaDispositivo.pendiente) {
-          await tx.incidenciaDispositivoProveedor.update({
+          registrada = await tx.incidenciaDispositivoProveedor.update({
             where: { id: existente.id },
             data: {
               cantidadDetecciones: { increment: 1 },
               ultimaDeteccionEn: new Date(),
-              clientesActivosAlDetectar: clientesActivos,
+              clientesActivosAlDetectar: clientesActivos.length,
             },
           });
-          continue;
+        } else {
+          registrada = existente
+            ? await tx.incidenciaDispositivoProveedor.update({
+                where: { id: existente.id },
+                data: {
+                  estado: EstadoIncidenciaDispositivo.pendiente,
+                  mac: item.mac,
+                  tipoProveedor: item.tipo,
+                  cantidadDetecciones: { increment: 1 },
+                  ultimaDeteccionEn: new Date(),
+                  resueltaEn: null,
+                  clientesActivosAlDetectar: clientesActivos.length,
+                },
+              })
+            : await tx.incidenciaDispositivoProveedor.create({
+                data: {
+                  cuentaId,
+                  empresaRevendedoraId,
+                  proveedorDeviceId: item.proveedorDeviceId,
+                  mac: item.mac,
+                  tipoProveedor: item.tipo,
+                  clientesActivosAlDetectar: clientesActivos.length,
+                },
+              });
+
+          nuevas += 1;
+          await this.audit.registrarEnTx(tx, {
+            accion: AccionAuditoria.deteccion_dispositivo_no_autorizado,
+            entidad: EntidadAuditada.IncidenciaDispositivoProveedor,
+            entidadId: registrada.id,
+            empresaRevendedoraId,
+            operadorPrincipalId,
+            detalle: {
+              cuenta_id: cuentaId,
+              proveedor_device_id: item.proveedorDeviceId,
+              clientes_activos: clientesActivos.length,
+              origen: 'barrido_periodico',
+            },
+          });
         }
 
-        const registrada = existente
-          ? await tx.incidenciaDispositivoProveedor.update({
-              where: { id: existente.id },
-              data: {
-                estado: EstadoIncidenciaDispositivo.pendiente,
-                mac: item.mac,
-                tipoProveedor: item.tipo,
-                cantidadDetecciones: { increment: 1 },
-                ultimaDeteccionEn: new Date(),
-                resueltaEn: null,
-                clientesActivosAlDetectar: clientesActivos,
-              },
-            })
-          : await tx.incidenciaDispositivoProveedor.create({
-              data: {
-                cuentaId,
-                empresaRevendedoraId,
-                proveedorDeviceId: item.proveedorDeviceId,
-                mac: item.mac,
-                tipoProveedor: item.tipo,
-                clientesActivosAlDetectar: clientesActivos,
-              },
-            });
-
-        nuevas += 1;
-        await this.audit.registrarEnTx(tx, {
-          accion: AccionAuditoria.deteccion_dispositivo_no_autorizado,
-          entidad: EntidadAuditada.IncidenciaDispositivoProveedor,
-          entidadId: registrada.id,
+        // HU-D02: con un único Cliente Final activo, se autoasigna y el evento
+        // queda resuelto (deja de generar recordatorios).
+        await this.intentarAutoasignar(tx, {
+          cuentaId,
           empresaRevendedoraId,
           operadorPrincipalId,
-          detalle: {
-            cuenta_id: cuentaId,
-            proveedor_device_id: item.proveedorDeviceId,
-            clientes_activos: clientesActivos,
-            origen: 'barrido_periodico',
-          },
+          incidencia: registrada,
+          clientesActivos,
         });
       }
       return nuevas;
@@ -892,13 +908,15 @@ export class ColaProveedorProcessor extends WorkerHost {
   }
 
   /**
-   * Cuenta los Clientes Finales ACTIVOS de una Cuenta (HU-D01/D02/D03). Un
-   * Cliente Final cuenta si está `activo`; los `suspendido` y `dado_de_baja` no.
-   * Se asocia a la Cuenta por cualquiera de sus vías: venta compartida,
-   * Dispositivo o titular explícito de una Cuenta exclusiva.
+   * Clientes Finales ACTIVOS de una Cuenta (HU-D01/D02/D03): sólo `activo`; los
+   * `suspendido` y `dado_de_baja` no cuentan. Se asocia por cualquiera de sus
+   * vías: venta compartida, Dispositivo o titular de una Cuenta exclusiva.
    */
-  private contarClientesActivos(tx: TransactionClient, cuentaId: string): Promise<number> {
-    return tx.clienteFinal.count({
+  private listarClientesActivos(
+    tx: TransactionClient,
+    cuentaId: string,
+  ): Promise<{ id: string }[]> {
+    return tx.clienteFinal.findMany({
       where: {
         estado: EstadoClienteFinal.activo,
         OR: [
@@ -907,7 +925,152 @@ export class ColaProveedorProcessor extends WorkerHost {
           { cuentasExclusivas: { some: { id: cuentaId } } },
         ],
       },
+      select: { id: true },
+      orderBy: { creadoEn: 'asc' },
     });
+  }
+
+  /**
+   * Autoasigna un Dispositivo sin dueño cuando la Cuenta tiene EXACTAMENTE un
+   * Cliente Final activo (HU-D02). Reutiliza el mismo criterio que la resolución
+   * manual de incidencias: reclama un Dispositivo pendiente del Cliente o crea
+   * uno `vinculado`, respetando el cupo de su categoría. Si no hay exactamente un
+   * cliente activo, falta la categoría del Proveedor, no hay venta (compartida) o
+   * el cupo está lleno, NO asigna: el evento queda pendiente.
+   */
+  private async intentarAutoasignar(
+    tx: TransactionClient,
+    params: {
+      cuentaId: string;
+      empresaRevendedoraId: string;
+      operadorPrincipalId: string;
+      incidencia: {
+        id: string;
+        proveedorDeviceId: string;
+        mac: string | null;
+        tipoProveedor: string | null;
+      };
+      clientesActivos: { id: string }[];
+    },
+  ): Promise<boolean> {
+    if (params.clientesActivos.length !== 1) return false;
+
+    const cuenta = await tx.cuenta.findUnique({
+      where: { id: params.cuentaId },
+      select: { esExclusiva: true, clienteFinalExclusivoId: true },
+    });
+    if (!cuenta) return false;
+
+    const tipo = this.tipoLocal(params.incidencia.tipoProveedor ?? undefined);
+    if (!tipo) return false;
+
+    const clienteFinalId = params.clientesActivos[0].id;
+    if (
+      cuenta.esExclusiva &&
+      cuenta.clienteFinalExclusivoId &&
+      cuenta.clienteFinalExclusivoId !== clienteFinalId
+    ) {
+      return false;
+    }
+
+    const venta = cuenta.esExclusiva
+      ? null
+      : await tx.ventaCompartida.findUnique({
+          where: { cuentaId_clienteFinalId: { cuentaId: params.cuentaId, clienteFinalId } },
+          select: { cuposPorCategoria: true },
+        });
+    if (!cuenta.esExclusiva && !venta) return false;
+
+    const ocupados = await tx.dispositivo.count({
+      where: {
+        cuentaId: params.cuentaId,
+        ...(cuenta.esExclusiva ? {} : { clienteFinalId }),
+        tipo,
+        estado: { in: [EstadoDispositivo.activo, EstadoDispositivo.bloqueado_por_suspension] },
+      },
+    });
+    const limite = cuenta.esExclusiva ? 3 : venta!.cuposPorCategoria;
+    if (ocupados >= limite) return false;
+
+    const datos = {
+      proveedorDeviceId: params.incidencia.proveedorDeviceId,
+      mac: params.incidencia.mac,
+      tipo,
+      tipoProveedor: params.incidencia.tipoProveedor,
+      estado: EstadoDispositivo.activo,
+      estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
+    };
+
+    const pendiente = await tx.dispositivo.findFirst({
+      where: {
+        cuentaId: params.cuentaId,
+        clienteFinalId,
+        proveedorDeviceId: null,
+        estado: EstadoDispositivo.activo,
+        estadoVinculacion: {
+          in: [EstadoVinculacionDispositivo.pendiente, EstadoVinculacionDispositivo.observando],
+        },
+      },
+      orderBy: { creadoEn: 'asc' },
+      select: { id: true },
+    });
+
+    if (pendiente) {
+      await tx.dispositivo.update({ where: { id: pendiente.id }, data: datos });
+      await tx.solicitudVinculacionDispositivo.updateMany({
+        where: {
+          dispositivoId: pendiente.id,
+          estado: {
+            in: [
+              EstadoSolicitudVinculacion.pendiente,
+              EstadoSolicitudVinculacion.observando,
+              EstadoSolicitudVinculacion.ambiguo,
+            ],
+          },
+        },
+        data: {
+          estado: EstadoSolicitudVinculacion.vinculado,
+          proveedorDeviceIdCandidato: params.incidencia.proveedorDeviceId,
+          ultimoSondeoEn: new Date(),
+        },
+      });
+    } else {
+      await tx.dispositivo.create({
+        data: {
+          cuentaId: params.cuentaId,
+          empresaRevendedoraId: params.empresaRevendedoraId,
+          clienteFinalId,
+          ...datos,
+        },
+      });
+    }
+
+    if (cuenta.esExclusiva && !cuenta.clienteFinalExclusivoId) {
+      await tx.cuenta.update({
+        where: { id: params.cuentaId },
+        data: { clienteFinalExclusivoId: clienteFinalId },
+      });
+    }
+
+    await tx.incidenciaDispositivoProveedor.update({
+      where: { id: params.incidencia.id },
+      data: { estado: EstadoIncidenciaDispositivo.reconocido, resueltaEn: new Date() },
+    });
+    await this.audit.registrarEnTx(tx, {
+      accion: AccionAuditoria.resolucion_incidencia_dispositivo,
+      entidad: EntidadAuditada.IncidenciaDispositivoProveedor,
+      entidadId: params.incidencia.id,
+      empresaRevendedoraId: params.empresaRevendedoraId,
+      operadorPrincipalId: params.operadorPrincipalId,
+      detalle: {
+        cuenta_id: params.cuentaId,
+        proveedor_device_id: params.incidencia.proveedorDeviceId,
+        resolucion: 'vinculado',
+        origen: 'automatico',
+        cliente_final_id: clienteFinalId,
+      },
+    });
+    return true;
   }
 
   /**
