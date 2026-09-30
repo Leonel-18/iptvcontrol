@@ -2,6 +2,7 @@ import { PageHeader } from '@/components/common';
 import { CuriosityWindowSettings } from './CuriosityWindowSettings';
 import { NotificationSettings } from './NotificationSettings';
 import { TestAccountsSettings } from './TestAccountsSettings';
+import { UserPreferences } from './UserPreferences';
 import { WhatsappTemplateSettings } from './WhatsappTemplateSettings';
 
 /**
@@ -24,6 +25,7 @@ export const ResellerSettingsView = () => {
         <CuriosityWindowSettings />
         <TestAccountsSettings />
         <NotificationSettings />
+        <UserPreferences />
         <WhatsappTemplateSettings />
       </div>
     </>

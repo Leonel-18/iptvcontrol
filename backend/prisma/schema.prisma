@@ -861,6 +861,10 @@ model TeamMember {
 
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en")
 
+  /// Preferencia individual del usuario (HU-N05): reproducir sonido al recibir
+  /// una notificación interna. Es de presentación: no afecta su generación.
+  sonidoNotificaciones Boolean @default(true) @map("sonido_notificaciones")
+
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 

@@ -151,6 +151,37 @@ export class NotificacionesService {
     return { marcadas: pendientes.length };
   }
 
+  /** Preferencia individual de sonido del usuario actual (HU-N05). */
+  async obtenerPreferenciaSonido(): Promise<{ sonido_habilitado: boolean }> {
+    const teamMemberId = this.exigirTeamMember();
+    const miembro = await this.prisma.db.teamMember.findUniqueOrThrow({
+      where: { id: teamMemberId },
+      select: { sonidoNotificaciones: true },
+    });
+    return { sonido_habilitado: miembro.sonidoNotificaciones };
+  }
+
+  /**
+   * Guarda la preferencia de sonido del usuario actual. Es de presentación: no
+   * cambia la generación de notificaciones (HU-N05).
+   */
+  async actualizarPreferenciaSonido(valor: boolean): Promise<{ sonido_habilitado: boolean }> {
+    const teamMemberId = this.exigirTeamMember();
+    await this.prisma.db.teamMember.update({
+      where: { id: teamMemberId },
+      data: { sonidoNotificaciones: valor },
+    });
+    return { sonido_habilitado: valor };
+  }
+
+  private exigirTeamMember(): string {
+    const teamMemberId = this.contexto.teamMemberId;
+    if (!teamMemberId) {
+      throw new ForbiddenException('La preferencia es de un usuario autenticado.');
+    }
+    return teamMemberId;
+  }
+
   private exigirRevendedor(): { empresaRevendedoraId: string; teamMemberId: string } {
     const empresaRevendedoraId = this.contexto.empresaRevendedoraId;
     const teamMemberId = this.contexto.teamMemberId;
