@@ -42,6 +42,7 @@ import {
 } from './cuentas.mapper';
 import { ActualizarCuentaDto } from './dto/actualizar-cuenta.dto';
 import { AjustarSlotVentaDto } from './dto/ajustar-slot.dto';
+import { ConvertirPruebaAPermanenteDto } from './dto/convertir-prueba.dto';
 import { ListarCuentasQueryDto } from './dto/listar-cuentas.query';
 import { CuentasProvisioningService } from './cuentas-provisioning.service';
 import { VentanasCuriosidadService } from './ventanas-curiosidad.service';
@@ -382,6 +383,62 @@ export class CuentasService {
         detalle: { cuenta_id: id, origen: 'manual' },
       });
     });
+
+    return this.obtener(id);
+  }
+
+  /**
+   * Convierte una cuenta de prueba en permanente (HU-P05): conserva la misma
+   * Cuenta, Cliente Final, credenciales y Dispositivos; elimina la condición de
+   * prueba y su vencimiento (deja de ser elegible para el cierre automático de
+   * HU-P06). El cupo mensual ya consumido NO se devuelve.
+   *
+   * En una Cuenta compartida se puede pedir, opcionalmente, una Ventana de Alta:
+   * reutiliza el mismo flujo de apertura manual. En una exclusiva no aplica.
+   */
+  async convertirPruebaAPermanente(id: string, dto: ConvertirPruebaAPermanenteDto) {
+    if (this.contexto.esOperador || !this.contexto.empresaRevendedoraId) {
+      throw new ForbiddenException(
+        'Sólo la Empresa Revendedora dueña puede convertir una cuenta de prueba.',
+      );
+    }
+
+    await this.prisma.transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+      const cuenta = await tx.cuenta.findUnique({ where: { id } });
+      if (!cuenta) throw new NotFoundException('La Cuenta no existe o no está disponible.');
+      if (!cuenta.esPrueba) {
+        throw new BadRequestException('La Cuenta no es una cuenta de prueba.');
+      }
+      if (cuenta.esExclusiva && dto.duracion_ventana_curiosidad_minutos !== undefined) {
+        throw new BadRequestException(
+          'Una Cuenta exclusiva no admite una Ventana de Alta al convertirse en permanente.',
+        );
+      }
+
+      await tx.cuenta.update({
+        where: { id },
+        data: { esPrueba: false, pruebaVenceEn: null },
+      });
+
+      await this.audit.registrarEnTx(tx, {
+        accion: AccionAuditoria.conversion_cuenta_prueba,
+        entidad: EntidadAuditada.Cuenta,
+        entidadId: id,
+        empresaRevendedoraId: cuenta.empresaRevendedoraId,
+        detalle: {
+          cuenta_id: id,
+          es_exclusiva: cuenta.esExclusiva,
+          prueba_vence_en_anterior: cuenta.pruebaVenceEn?.toISOString() ?? null,
+          ventana_curiosidad_minutos: dto.duracion_ventana_curiosidad_minutos ?? null,
+        },
+      });
+    });
+
+    // Ventana de Alta opcional (sólo compartida), con el flujo ya existente.
+    if (dto.duracion_ventana_curiosidad_minutos !== undefined) {
+      await this.ventanasCuriosidad.abrirManualmente(id, dto.duracion_ventana_curiosidad_minutos);
+    }
 
     return this.obtener(id);
   }
