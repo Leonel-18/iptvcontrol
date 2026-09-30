@@ -498,6 +498,14 @@ export interface NotificationCenter {
   data: AppNotification[];
 }
 
+/** Preferencias de notificaciones internas de la Empresa Revendedora (HU-N02). */
+export interface NotificationSettings {
+  dispositivos: { habilitados: boolean; frecuencia_horas: number };
+  ventana_alta: { habilitados: boolean; dias: number[] };
+  /** Hitos de cuentas de prueba: parametrización del Operador Principal (referencia). */
+  pruebas: { habilitadas: boolean; dias: number[] };
+}
+
 export interface IntegrationHealth {
   ventana: string;
   llamadas_exitosas: number;

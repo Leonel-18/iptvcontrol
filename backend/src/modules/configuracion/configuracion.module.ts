@@ -6,6 +6,7 @@ import { ProveedoresController } from './proveedores.controller';
 import { ProveedoresService } from './proveedores.service';
 import { ConfiguracionRevendedorController } from './configuracion-revendedor.controller';
 import { ConfiguracionPlantillaController } from './configuracion-plantilla.controller';
+import { ConfiguracionNotificacionesController } from './configuracion-notificaciones.controller';
 
 @Module({
   imports: [ProveedorModule],
@@ -13,6 +14,7 @@ import { ConfiguracionPlantillaController } from './configuracion-plantilla.cont
     ConfiguracionController,
     ConfiguracionRevendedorController,
     ConfiguracionPlantillaController,
+    ConfiguracionNotificacionesController,
     ProveedoresController,
   ],
   providers: [ConfiguracionService, ProveedoresService],
