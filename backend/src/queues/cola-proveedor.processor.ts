@@ -75,6 +75,8 @@ export class ColaProveedorProcessor extends WorkerHost {
         return this.barrerPruebasVencidas();
       case TRABAJOS_PROVEEDOR.BARRER_PRUEBAS_POR_VENCER:
         return this.barrerPruebasPorVencer();
+      case TRABAJOS_PROVEEDOR.BARRER_VENTANAS_POR_VENCER:
+        return this.barrerVentanasPorVencer();
       default:
         this.logger.warn(`Trabajo desconocido en la cola: ${job.name}`);
         return null;
@@ -670,6 +672,70 @@ export class ColaProveedorProcessor extends WorkerHost {
 
     if (creadas > 0) {
       this.logger.log(`Avisos de cuentas de prueba por vencer: ${creadas} creado(s).`);
+    }
+    return { creadas };
+  }
+
+  /**
+   * Avisos de ventanas de alta próximas a vencer (HU-N04).
+   *
+   * Mismo esquema que los avisos de prueba (HU-N03), pero sobre
+   * `ventana_curiosidad`: por cada Empresa Revendedora toma sus hitos en días
+   * (`notif_ventana_alta_dias`, HU-N02) y crea una notificación por cada hito ya
+   * alcanzado. No altera la ventana en sí: sólo lee. Una ventana revocada o
+   * vencida (`fin_real_en` seteado o `fin_previsto_en` pasado) queda fuera del
+   * filtro, así que deja de generar avisos. Idempotente por hito.
+   */
+  private async barrerVentanasPorVencer(): Promise<{ creadas: number }> {
+    const DIA_MS = 24 * 60 * 60_000;
+    const operadores = await this.prisma.operadorPrincipal.findMany({ select: { id: true } });
+    const ahora = new Date();
+    let creadas = 0;
+
+    for (const operador of operadores) {
+      const ventanas = await this.prisma.transactionComoOperador(operador.id, (tx) =>
+        tx.ventanaCuriosidad.findMany({
+          where: { finRealEn: null, finPrevistoEn: { gt: ahora } },
+          select: {
+            id: true,
+            cuentaId: true,
+            empresaRevendedoraId: true,
+            finPrevistoEn: true,
+            empresaRevendedora: { select: { notifVentanaAlta: true, notifVentanaAltaDias: true } },
+          },
+        }),
+      );
+
+      for (const ventana of ventanas) {
+        const empresa = ventana.empresaRevendedora;
+        if (!empresa.notifVentanaAlta) continue;
+
+        const msFaltantes = ventana.finPrevistoEn.getTime() - ahora.getTime();
+        if (msFaltantes <= 0) continue;
+
+        for (const hito of empresa.notifVentanaAltaDias) {
+          if (msFaltantes > hito * DIA_MS) continue;
+
+          const resultado = await this.prisma.transactionComoOperador(operador.id, (tx) =>
+            this.notificaciones.crearEnTx(tx, {
+              empresaRevendedoraId: ventana.empresaRevendedoraId,
+              tipo: 'ventana_alta_por_vencer',
+              titulo: 'Ventana de alta por vencer',
+              mensaje:
+                `La ventana de alta de una cuenta vence en ${hito} día(s). ` +
+                'Podés revisarla desde la cuenta.',
+              accionTipo: 'ver_cuenta',
+              accionRefId: ventana.cuentaId,
+              clave: `ventana_alta_por_vencer:${ventana.id}:${hito}`,
+            }),
+          );
+          if (resultado.creada) creadas += 1;
+        }
+      }
+    }
+
+    if (creadas > 0) {
+      this.logger.log(`Avisos de ventanas de alta por vencer: ${creadas} creado(s).`);
     }
     return { creadas };
   }
