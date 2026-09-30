@@ -476,6 +476,28 @@ export interface AuditEntry {
   creado_en: string;
 }
 
+export type NotificationType =
+  | "prueba_por_vencer"
+  | "ventana_alta_por_vencer"
+  | "dispositivo_pendiente";
+
+export interface AppNotification {
+  id: string;
+  tipo: NotificationType;
+  titulo: string;
+  mensaje: string;
+  accion_tipo: "ver_cuenta" | null;
+  accion_ref_id: string | null;
+  leida: boolean;
+  leida_en: string | null;
+  creado_en: string;
+}
+
+export interface NotificationCenter {
+  no_leidas: number;
+  data: AppNotification[];
+}
+
 export interface IntegrationHealth {
   ventana: string;
   llamadas_exitosas: number;

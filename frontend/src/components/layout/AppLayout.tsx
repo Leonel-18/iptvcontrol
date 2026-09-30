@@ -17,6 +17,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { navLabels } from '@/i18n/entityLabels';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { useSesion } from '@/lib/session';
 import { useTema } from '@/lib/theme';
 import { cn } from '@/lib/utils';
@@ -248,6 +249,7 @@ export const AppLayout = () => {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            {!esOperador ? <NotificationBell /> : null}
             <ThemeToggle />
             <MenuUsuario />
           </div>

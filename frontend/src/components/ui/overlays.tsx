@@ -124,15 +124,20 @@ export const DropdownMenuTrigger = DropdownPrimitive.Trigger;
 export const DropdownMenuContent = ({
   children,
   align = 'end',
+  className,
 }: {
   children: ReactNode;
   align?: 'start' | 'center' | 'end';
+  className?: string;
 }) => (
   <DropdownPrimitive.Portal>
     <DropdownPrimitive.Content
       align={align}
       sideOffset={6}
-      className="superficie z-50 min-w-48 overflow-hidden rounded-lg border p-1 shadow-pop animate-fade-in"
+      className={cn(
+        'superficie z-50 min-w-48 overflow-hidden rounded-lg border p-1 shadow-pop animate-fade-in',
+        className,
+      )}
     >
       {children}
     </DropdownPrimitive.Content>

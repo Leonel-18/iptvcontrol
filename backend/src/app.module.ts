@@ -27,6 +27,7 @@ import { ModalidadesModule } from './modules/modalidades/modalidades.module';
 import { TeamMembersModule } from './modules/team-members/team-members.module';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module';
 import { PruebasModule } from './modules/pruebas/pruebas.module';
+import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { IntegracionWhatsappModule } from './modules/integracion-whatsapp/integracion-whatsapp.module';
@@ -84,6 +85,7 @@ import { IntegracionWhatsappModule } from './modules/integracion-whatsapp/integr
     TeamMembersModule,
     ConfiguracionModule,
     PruebasModule,
+    NotificacionesModule,
     AuditoriaModule,
     ReportesModule,
     IntegracionWhatsappModule,
