@@ -117,33 +117,17 @@ export const nombresDeServicios = (servicios: string): string[] =>
     .map((codigo) => SENSA_SERVICIOS[codigo] ?? `Servicio ${codigo}`);
 
 /**
- * Condición de aislamiento vigente de una Cuenta compartida (HU-A01 + HU-A04).
+ * Condición de aislamiento vigente de una Cuenta compartida (HU-A01 + HU-A02).
  *
- * La Cuenta sigue siendo compartida: el aislamiento es una condición adicional.
- * Cubre las dos vías:
- *  - `Cuenta.aislada` + `aislamiento_fin_en` futuro (aislar una Cuenta existente, HU-A02).
- *  - una venta `aislada` (alta dedicada, HU-A01) con su Ventana de Alta vigente.
+ * El aislamiento vive SIEMPRE a nivel Cuenta (`Cuenta.aislada` +
+ * `Cuenta.aislamiento_fin_en` futuro), sin importar si la Cuenta se creó ya
+ * aislada desde el wizard o se aisló después. No hay una segunda representación
+ * ligada a la venta ni a la Ventana de Alta.
  */
 export const esAislamientoVigente = (
-  cuenta: {
-    aislada: boolean;
-    aislamientoFinEn: Date | null;
-    ventasCompartidas?: { id: string; aislada: boolean }[];
-    ventanasCuriosidad?: { ventaCompartidaId: string | null }[];
-  },
+  cuenta: { aislada: boolean; aislamientoFinEn: Date | null },
   ahora = new Date(),
-): boolean => {
-  if (cuenta.aislada && cuenta.aislamientoFinEn && cuenta.aislamientoFinEn > ahora) {
-    return true;
-  }
-  const ventasAisladas = new Set(
-    (cuenta.ventasCompartidas ?? []).filter((venta) => venta.aislada).map((venta) => venta.id),
-  );
-  return (cuenta.ventanasCuriosidad ?? []).some(
-    (ventana) =>
-      ventana.ventaCompartidaId !== null && ventasAisladas.has(ventana.ventaCompartidaId),
-  );
-};
+): boolean => Boolean(cuenta.aislada && cuenta.aislamientoFinEn && cuenta.aislamientoFinEn > ahora);
 
 /**
  * Vista para el panel del Operador Principal: sin usuario, contraseña ni PIN.

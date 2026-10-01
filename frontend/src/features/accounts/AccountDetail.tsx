@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { useSesion } from "@/lib/session";
 import { accountModality } from "@/lib/account-modality";
-import { formatearFecha, formatearMac } from "@/lib/utils";
+import { formatearFecha, formatearFechaHora, formatearMac } from "@/lib/utils";
 import type {
   AccountCredentials,
   AccountDetail as AccountDetailData,
@@ -343,6 +343,7 @@ export const AccountDetail = () => {
             {!esOperador &&
             !data.es_exclusiva &&
             !data.es_prueba &&
+            !data.aislada &&
             data.estado === "activa" &&
             data.clientes_activos === 1 ? (
               <Button
@@ -649,7 +650,7 @@ export const AccountDetail = () => {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          {!esOperador && !data.es_exclusiva ? (
+          {!esOperador && !data.es_exclusiva && !data.aislada ? (
             <CuriosityWindowPanel
               currentWindow={data.ventana_curiosidad}
               history={data.historial_ventanas_curiosidad ?? []}
@@ -658,6 +659,24 @@ export const AccountDetail = () => {
               onOpen={(duracionMinutos) => abrirVentanaCuriosidad.mutate(duracionMinutos)}
               opening={abrirVentanaCuriosidad.isPending}
             />
+          ) : null}
+
+          {!esOperador && !data.es_exclusiva && data.aislada ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Cuenta aislada</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm texto-suave">
+                  El aislamiento reemplaza a la Ventana de Alta: la Cuenta no recibe Clientes Finales
+                  nuevos mientras esté vigente
+                  {data.aislamiento_fin_en
+                    ? `, hasta el ${formatearFechaHora(data.aislamiento_fin_en)}`
+                    : ''}
+                  . Usá "Quitar aislamiento" para liberarla antes del vencimiento.
+                </p>
+              </CardContent>
+            </Card>
           ) : null}
 
           <Card>
@@ -733,11 +752,6 @@ export const AccountDetail = () => {
                                     >
                                       {venta.cliente_final.nombre}
                                     </Link>
-                                    {venta.aislada ? (
-                                      <Badge tone="warning" className="ml-2">
-                                        Compartida - Aislada
-                                      </Badge>
-                                    ) : null}
                                   </TD>
                                   <TD align="right">
                                     <span className="tabular-nums">
