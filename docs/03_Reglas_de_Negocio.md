@@ -469,14 +469,18 @@ sin compartir credenciales con otros clientes.
   con `cuenta_id`.
 - El aislamiento se expresa **exclusivamente en días**: un número entero **mayor a 0**. No se
   admiten horas ni minutos. Si falta, es 0, negativo o no entero, el alta se rechaza.
-- El aislamiento **reemplaza conceptualmente a la Ventana de Alta**: internamente se apoya en el
-  mismo mecanismo de bloqueo, con la fecha de fin = ahora + días.
-- La venta queda marcada como **aislada** (`VentaCompartida.aislada`) y la Cuenta se identifica
-  como **`Compartida - Aislada`** mientras el aislamiento esté vigente; ningún otro cliente puede
-  ingresar en ese plazo.
-- Al terminar o revocar el aislamiento, la Cuenta vuelve a `Compartida` sin ventana de alta.
+- **El aislamiento es una sola cosa y vive a nivel Cuenta** (`Cuenta.aislada` +
+  `Cuenta.aislamiento_fin_en`), exactamente igual que al aislar una Cuenta existente (§15.3). No se
+  apoya en la Ventana de Alta ni marca la venta: la Cuenta aislada **no abre ninguna Ventana de
+  Alta** (el aislamiento ya es el mecanismo de bloqueo, con fecha de fin = ahora + días).
+- La Cuenta se identifica como **`Compartida - Aislada`** mientras el aislamiento esté vigente;
+  ningún otro cliente puede ingresar en ese plazo.
+- Al terminar o revocar el aislamiento, la Cuenta vuelve a `Compartida`. El aislamiento y la
+  Ventana de Alta **nunca coexisten**: al aislar se revoca cualquier ventana vigente.
 - El aislamiento es temporal, no un tipo de Cuenta nuevo, y no puede coexistir con una cuenta de
   prueba.
+- Tanto el alta aislada como el aislamiento de una Cuenta existente quedan auditados con
+  `apertura_aislamiento_cuenta` (`detalle.origen` = `alta` o el de la vista de Cuenta).
 
 ### 15.2. Apertura manual de una Ventana de Alta
 

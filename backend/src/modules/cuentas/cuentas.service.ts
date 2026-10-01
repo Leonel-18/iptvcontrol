@@ -107,11 +107,7 @@ export class CuentasService {
         where,
         include: {
           dispositivos: { select: { tipo: true, estado: true, clienteFinalId: true } },
-          ventasCompartidas: { select: { id: true, cuposPorCategoria: true, aislada: true } },
-          ventanasCuriosidad: {
-            where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
-            select: { ventaCompartidaId: true },
-          },
+          ventasCompartidas: { select: { id: true, cuposPorCategoria: true } },
         },
         orderBy: { creadoEn: 'desc' },
         skip: esCsv ? undefined : query.skip,
@@ -121,8 +117,7 @@ export class CuentasService {
 
     const data = cuentas.map((cuenta) => {
       const capacidad = calcularCapacidad(cuenta, umbral);
-      // Condición adicional "Compartida - Aislada" (HU-A04), consistente con el
-      // detalle: cubre el aislamiento de Cuenta y la venta aislada con ventana.
+      // Condición adicional "Compartida - Aislada" (HU-A04): a nivel Cuenta.
       const aislada = esAislamientoVigente(cuenta);
       // En los listados no se descifran credenciales: descifrar 200 filas por
       // pantalla no aporta y multiplica la exposición del dato sensible.
@@ -149,7 +144,6 @@ export class CuentasService {
           select: {
             id: true,
             cuposPorCategoria: true,
-            aislada: true,
             clienteFinalId: true,
             clienteFinal: {
               select: { id: true, numeroCliente: true, nombre: true, apellido: true },
@@ -244,7 +238,6 @@ export class CuentasService {
             .join(' '),
         },
         cupos_por_categoria: venta.cuposPorCategoria,
-        aislada: venta.aislada,
         ocupacion: {
           fijos: contarDispositivosCliente(
             cuenta.dispositivos,

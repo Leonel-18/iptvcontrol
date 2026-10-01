@@ -155,11 +155,6 @@ export class ClientesService {
             aislada: true,
             aislamientoFinEn: true,
             esPrueba: true,
-            ventasCompartidas: { select: { id: true, aislada: true } },
-            ventanasCuriosidad: {
-              where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
-              select: { ventaCompartidaId: true },
-            },
           },
         })
       : [];
@@ -671,13 +666,41 @@ export class ClientesService {
         cuposPorCategoria: dto.cupos_por_categoria,
         duracionVentanaCuriosidadMinutos: duracionVentanaMinutos,
         forzarCuentaNueva: aislarCuenta,
-        ventaAislada: aislarCuenta,
+        // "Aislar Cuenta": la Cuenta queda aislada a nivel Cuenta, así que no se
+        // abre una Ventana de Alta (era lo que confundía: se veía como ventana).
+        omitirVentanaCuriosidad: aislarCuenta,
         // Pieza 4: la venta compartida NO crea una fila de Dispositivo previa.
         abrirVentanaSinFila: dto.tipo_alta === TipoAltaClienteFinal.dispositivo_compartido,
         // Cuenta de prueba (HU-P03): fuerza una Cuenta nueva dedicada.
         esPrueba,
         pruebaVenceEn,
       });
+
+      // "Aislar Cuenta" (HU-A01): el aislamiento es a nivel Cuenta, igual que al
+      // aislar una Cuenta existente (HU-A02). No hay venta "aislada" ni ventana.
+      if (aislarCuenta) {
+        const finAislamiento = new Date(
+          Date.now() + dto.aislamiento_dias! * MINUTOS_POR_DIA * 60_000,
+        );
+        await this.prisma.transaction(async (tx) => {
+          await tx.cuenta.update({
+            where: { id: resultado.cuenta.id },
+            data: { aislada: true, aislamientoFinEn: finAislamiento },
+          });
+          await this.audit.registrarEnTx(tx, {
+            accion: AccionAuditoria.apertura_aislamiento_cuenta,
+            entidad: EntidadAuditada.Cuenta,
+            entidadId: resultado.cuenta.id,
+            empresaRevendedoraId,
+            detalle: {
+              cuenta_id: resultado.cuenta.id,
+              dias: dto.aislamiento_dias,
+              aislamiento_fin_en: finAislamiento.toISOString(),
+              origen: 'alta',
+            },
+          });
+        });
+      }
 
       await this.audit.registrar({
         accion: AccionAuditoria.alta_cliente,
@@ -1053,15 +1076,7 @@ export class ClientesService {
   private async esCuentaAislada(cuentaId: string): Promise<boolean> {
     const cuenta = await this.prisma.db.cuenta.findUnique({
       where: { id: cuentaId },
-      select: {
-        aislada: true,
-        aislamientoFinEn: true,
-        ventasCompartidas: { select: { id: true, aislada: true } },
-        ventanasCuriosidad: {
-          where: { finRealEn: null, finPrevistoEn: { gt: new Date() } },
-          select: { ventaCompartidaId: true },
-        },
-      },
+      select: { aislada: true, aislamientoFinEn: true },
     });
     return cuenta ? esAislamientoVigente(cuenta) : false;
   }

@@ -405,8 +405,11 @@ export class CuentasProvisioningService {
     operadorPrincipalId: string;
     actualizarProveedor: boolean;
     duracionVentanaCuriosidadMinutos?: number;
-    /** "Aislar Cuenta": marca la venta como creada en una Cuenta dedicada. */
-    aislada?: boolean;
+    /**
+     * No abrir una Ventana de Alta. Lo usa el alta aislada: la Cuenta queda
+     * aislada a nivel Cuenta, así que no necesita (ni debe tener) una ventana.
+     */
+    omitirVentana?: boolean;
     teamMemberId?: string;
   }): Promise<boolean> {
     const { cuentaId, clienteFinalId, empresaRevendedoraId, cuposPorCategoria } = params;
@@ -439,17 +442,18 @@ export class CuentasProvisioningService {
           clienteFinalId,
           empresaRevendedoraId,
           cuposPorCategoria,
-          aislada: params.aislada === true,
         },
       });
-      await this.ventanasCuriosidad.abrirPorNuevaVentaEnTx(tx, {
-        cuentaId,
-        clienteFinalId,
-        empresaRevendedoraId,
-        ventaCompartidaId: venta.id,
-        duracionSolicitadaMinutos: params.duracionVentanaCuriosidadMinutos,
-        teamMemberId: params.teamMemberId,
-      });
+      if (params.omitirVentana !== true) {
+        await this.ventanasCuriosidad.abrirPorNuevaVentaEnTx(tx, {
+          cuentaId,
+          clienteFinalId,
+          empresaRevendedoraId,
+          ventaCompartidaId: venta.id,
+          duracionSolicitadaMinutos: params.duracionVentanaCuriosidadMinutos,
+          teamMemberId: params.teamMemberId,
+        });
+      }
       return { cuenta, nuevoValor, creada: true };
     });
 

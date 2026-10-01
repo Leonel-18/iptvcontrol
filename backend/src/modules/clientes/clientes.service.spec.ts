@@ -541,6 +541,71 @@ describe('ClientesService — validación de Aislar Cuenta', () => {
       servicio.crear(dtoAislado({ cuenta_id: '11111111-1111-1111-1111-111111111111' }) as never),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('crea la Cuenta y le aplica el aislamiento A NIVEL CUENTA (sin ventana)', async () => {
+    const clienteCreate = jest
+      .fn()
+      .mockImplementation(({ data }: { data: Record<string, unknown> }) => ({
+        id: 'cliente-1',
+        ...data,
+      }));
+    const cuentaUpdate = jest.fn().mockResolvedValue({});
+    const registrarEnTx = jest.fn().mockResolvedValue(undefined);
+    const tx = {
+      clienteFinal: { create: clienteCreate },
+      cuenta: { update: cuentaUpdate },
+    };
+    const prisma = {
+      transaction: jest.fn().mockImplementation((fn: (t: unknown) => unknown) => fn(tx)),
+      db: {},
+    } as unknown as PrismaService;
+    const dispositivos = {
+      operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
+      alta: jest.fn().mockResolvedValue({
+        cuenta: { id: 'cuenta-1' },
+        cuentaCreada: true,
+        pendienteDeAutoprovision: true,
+        solicitudVinculacionId: 'sol-1',
+      }),
+    } as unknown as DispositivosService;
+    const proveedor = {
+      consultarLicencias: jest.fn().mockResolvedValue({ compradas: { '1': 1 }, usadas: {} }),
+    } as unknown as ProveedorService;
+    const contexto = {
+      esOperador: false,
+      empresaRevendedoraId: 'empresa-1',
+    } as unknown as RequestContextService;
+    const servicio = new ClientesService(
+      prisma,
+      { registrarEnTx, registrar: jest.fn() } as unknown as AuditService,
+      {} as CryptoService,
+      contexto,
+      dispositivos,
+      {
+        siguienteNumeroCliente: jest.fn().mockResolvedValue(1),
+      } as unknown as IdentificadoresService,
+      proveedor,
+      {} as PruebasService,
+    );
+    jest.spyOn(servicio, 'obtener').mockResolvedValue({ id: 'cliente-1' } as never);
+
+    await servicio.crear(dtoAislado({ servicios: ['1'] }) as never);
+
+    expect(dispositivos.alta).toHaveBeenCalledWith(
+      expect.objectContaining({ forzarCuentaNueva: true, omitirVentanaCuriosidad: true }),
+    );
+    expect(cuentaUpdate).toHaveBeenCalledWith({
+      where: { id: 'cuenta-1' },
+      data: { aislada: true, aislamientoFinEn: expect.any(Date) },
+    });
+    expect(registrarEnTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        accion: 'apertura_aislamiento_cuenta',
+        detalle: expect.objectContaining({ origen: 'alta' }),
+      }),
+    );
+  });
 });
 
 /**

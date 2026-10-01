@@ -70,6 +70,9 @@ Cuenta
 │                                    igual a los cupos comprometidos, ver sección 2.2 de
 │                                    03_Reglas_de_Negocio.md)
 ├── dispositivos_moviles_habilitados (ídem, para la categoría móvil)
+├── aislada / aislamiento_fin_en (aislamiento temporal de una Cuenta compartida: es UNA sola
+│                                  cosa y vive acá, tanto si la Cuenta se creó aislada como si
+│                                  se aisló después — ver 03_Reglas_de_Negocio.md, sección 15.1)
 └── estado (activa/cerrada)
 
 VentaCompartida

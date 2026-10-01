@@ -222,8 +222,8 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
 });
 
 /**
- * HU-A04 — condición de aislamiento vigente de una Cuenta compartida. Cubre las
- * dos vías: aislamiento de Cuenta (HU-A02) y venta aislada con ventana (HU-A01).
+ * HU-A04 — condición de aislamiento vigente de una Cuenta compartida. El
+ * aislamiento vive SIEMPRE a nivel Cuenta (HU-A01 y HU-A02 por igual).
  */
 describe('esAislamientoVigente', () => {
   const ahora = new Date('2026-09-29T12:00:00Z');
@@ -243,29 +243,10 @@ describe('esAislamientoVigente', () => {
     );
   });
 
-  it('es true si hay una venta aislada con su Ventana de Alta vigente', () => {
-    expect(
-      esAislamientoVigente(
-        {
-          ...base,
-          ventasCompartidas: [{ id: 'venta-1', aislada: true }],
-          ventanasCuriosidad: [{ ventaCompartidaId: 'venta-1' }],
-        },
-        ahora,
-      ),
-    ).toBe(true);
-  });
-
-  it('es false si la venta aislada no tiene Ventana vigente', () => {
-    expect(
-      esAislamientoVigente(
-        {
-          ...base,
-          ventasCompartidas: [{ id: 'venta-1', aislada: true }],
-          ventanasCuriosidad: [],
-        },
-        ahora,
-      ),
-    ).toBe(false);
+  it('es false si la Cuenta no está marcada como aislada', () => {
+    const fin = new Date(ahora.getTime() + 86_400_000);
+    expect(esAislamientoVigente({ ...base, aislada: false, aislamientoFinEn: fin }, ahora)).toBe(
+      false,
+    );
   });
 });

@@ -48,8 +48,8 @@ export interface AltaDispositivoParams {
   duracionVentanaCuriosidadMinutos?: number;
   /** "Aislar Cuenta": fuerza una Cuenta compartida nueva, sin buscar compatible. */
   forzarCuentaNueva?: boolean;
-  /** Marca la venta compartida como aislada (Cuenta de prueba). */
-  ventaAislada?: boolean;
+  /** "Aislar Cuenta": no abrir Ventana de Alta (el aislamiento es a nivel Cuenta). */
+  omitirVentanaCuriosidad?: boolean;
   /** true sólo en el alta wizard de una venta COMPARTIDA: no se crea la fila de
    *  Dispositivo previa (Pieza 4); la ventana de detección queda asociada al
    *  Cliente Final y el equipo se materializa al primer login. */
@@ -135,7 +135,7 @@ export class DispositivosService {
           operadorPrincipalId,
           actualizarProveedor,
           duracionVentanaCuriosidadMinutos: params.duracionVentanaCuriosidadMinutos,
-          aislada: params.ventaAislada === true,
+          omitirVentana: params.omitirVentanaCuriosidad === true,
           teamMemberId: this.contexto.teamMemberId,
         });
       } catch (error) {
