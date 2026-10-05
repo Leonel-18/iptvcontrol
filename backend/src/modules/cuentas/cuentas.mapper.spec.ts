@@ -63,6 +63,8 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
     mac: '03AC1AE60CA7',
     tipo: TipoDispositivo.fijo,
     tipoProveedor: 'stationary',
+    modelo: 'FlowBox-F2',
+    ultimoInicio: new Date('2026-09-26T16:07:00Z'),
     estado: EstadoDispositivo.activo,
     estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
     notaDescriptiva: 'TV living',
@@ -119,6 +121,8 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
       expect(Object.keys(vistaDispositivo)).not.toContain('nota_descriptiva');
       expect(Object.keys(vistaDispositivo)).not.toContain('cliente_final');
       expect(Object.keys(vistaDispositivo)).not.toContain('mac');
+      expect(Object.keys(vistaDispositivo)).not.toContain('modelo');
+      expect(Object.keys(vistaDispositivo)).not.toContain('ultimo_inicio');
       // Sí expone el ID del dispositivo en el proveedor, tipo y estado.
       expect(vistaDispositivo.proveedor_device_id).toBe('830792');
       expect(vistaDispositivo.tipo).toBe(TipoDispositivo.fijo);
@@ -186,7 +190,7 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
       expect(vista.servicios_nombres).toEqual(['Básico', 'Universal Plus', 'HBO Premium']);
     });
 
-    it('en Dispositivos incluye nota, MAC y el cliente asociado', () => {
+    it('en Dispositivos incluye metadatos, nota, MAC y el cliente asociado', () => {
       const vista = mapDispositivoParaRevendedora({
         ...dispositivo,
         clienteFinal: { id: 'cliente-1', numeroCliente: 42, nombre: 'Juan', apellido: 'Pérez' },
@@ -194,6 +198,8 @@ describe('serialización de Cuentas y Dispositivos según el rol', () => {
 
       expect(vista.nota_descriptiva).toBe('TV living');
       expect(vista.mac).toBe('03AC1AE60CA7');
+      expect(vista.modelo).toBe('FlowBox-F2');
+      expect(vista.ultimo_inicio).toEqual(new Date('2026-09-26T16:07:00Z'));
       expect(vista.cliente_final).toEqual({
         id: 'cliente-1',
         numero_cliente: 42,

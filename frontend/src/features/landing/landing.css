@@ -11,7 +11,7 @@
     overflow-x: hidden;
     background: var(--landing-bg);
     color: var(--landing-ink);
-    font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
     -webkit-tap-highlight-color: rgb(30 136 229 / 18%);
   }
 
@@ -103,7 +103,7 @@
   }
 
   .landing-brand strong {
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.94rem;
     letter-spacing: -0.025em;
   }
@@ -111,7 +111,7 @@
   .landing-brand small {
     margin-top: 6px;
     color: var(--landing-muted);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.5rem;
     letter-spacing: 0.13em;
     text-transform: uppercase;
@@ -257,7 +257,7 @@
     align-items: center;
     gap: 9px;
     color: var(--landing-blue-deep);
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.1em;
@@ -274,7 +274,7 @@
   .landing-hero h1 {
     max-width: 660px;
     margin-top: 22px;
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: clamp(3.25rem, 5.7vw, 5.65rem);
     font-weight: 700;
     letter-spacing: -0.07em;
@@ -440,7 +440,7 @@
 
   .signal-console__title {
     gap: 10px;
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.88rem;
     font-weight: 650;
   }
@@ -454,7 +454,7 @@
   .signal-console__live {
     gap: 7px;
     color: var(--landing-muted);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.62rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -618,7 +618,7 @@
     border-radius: 999px;
     padding: 7px 10px;
     color: #b4d9fa;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.58rem;
     letter-spacing: 0.03em;
     white-space: nowrap;
@@ -632,7 +632,7 @@
     gap: 12px;
     margin: 22px 0 0 32px;
     color: var(--landing-muted);
-    font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.7rem;
     letter-spacing: 0.01em;
   }
@@ -667,7 +667,7 @@
   .landing-section-heading h2,
   .landing-workflow h2,
   .landing-contact h2 {
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: clamp(2.2rem, 4vw, 3.65rem);
     font-weight: 700;
     letter-spacing: -0.055em;
@@ -716,7 +716,7 @@
 
   .landing-capability h3 {
     margin-top: 43px;
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 1.03rem;
     font-weight: 650;
     letter-spacing: -0.025em;
@@ -819,7 +819,7 @@
 
   .landing-step__number {
     color: var(--landing-blue);
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -832,7 +832,7 @@
   }
 
   .landing-steps h3 {
-    font-family: Archivo, 'Segoe UI', sans-serif;
+    font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
     font-size: 1.18rem;
     font-weight: 650;
     letter-spacing: -0.025em;

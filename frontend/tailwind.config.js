@@ -11,15 +11,8 @@
  *   slate  #5B6B7F  → texto secundario (el gris del tagline)
  *   signal #17B26A / warn #E8A93A / alert #E5484D → semáforo de estados
  *
- * Tipografías:
- *   Archivo        → títulos (grotesca técnica, ancha, cercana al lettering)
- *   IBM Plex Sans  → interfaz y tablas densas
- *   IBM Plex Mono  → TODOS los identificadores técnicos (DNI de alta, ID de
- *                    Cuenta en el proveedor, MAC, PIN, contraseña). Es la
- *                    decisión de diseño más deliberada del panel: son datos que
- *                    la gente lee en voz alta por teléfono y copia y pega en
- *                    soporte, así que se leen en monoespaciada con cifras
- *                    tabulares en lugar de perderse dentro de un párrafo.
+ * Source Sans 3 se usa en toda la interfaz. Los identificadores técnicos
+ * conservan cifras tabulares y espaciado propio mediante sus clases existentes.
  */
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -59,9 +52,9 @@ export default {
         alert: '#E5484D',
       },
       fontFamily: {
-        display: ['Archivo', 'Segoe UI', 'system-ui', 'sans-serif'],
-        sans: ['"IBM Plex Sans"', 'Segoe UI', 'system-ui', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'Consolas', 'ui-monospace', 'monospace'],
+        display: ['"Source Sans 3"', 'Segoe UI', 'system-ui', 'sans-serif'],
+        sans: ['"Source Sans 3"', 'Segoe UI', 'system-ui', 'sans-serif'],
+        mono: ['"Source Sans 3"', 'Segoe UI', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         // Escala compacta: es un panel de trabajo, no una landing.
