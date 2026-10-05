@@ -139,6 +139,17 @@ export class CuentasProvisioningService {
     const esPrueba = opciones.esPrueba === true;
     const config = await this.configuracion.obtener(operadorPrincipalId);
 
+    if (empresaRevendedora.validarLicenciasDisponibles) {
+      const licencias = await this.proveedor.consultarLicencias(operadorPrincipalId);
+      const compradas = licencias.compradas['1'] ?? 0;
+      const usadas = licencias.usadas['1'] ?? 0;
+      if (compradas - usadas <= 0) {
+        throw new BadRequestException(
+          'No hay licencias/cuentas disponibles para crear. Consulte con el proveedor.',
+        );
+      }
+    }
+
     const limiteDispositivos = LIMITE_POR_CATEGORIA_COMPARTIDA;
     const dispositivosPorDefecto = esExclusiva ? LIMITE_POR_CATEGORIA_COMPARTIDA : 1;
     const dispositivosFijos = opciones.dispositivosFijos ?? dispositivosPorDefecto;

@@ -330,6 +330,10 @@ model EmpresaRevendedora {
   /// una Cuenta nueva (las importadas no consumen cupo: docs/03, sección 2.4).
   cuentasMaxCrearMensual Int @default(10) @map("cuentas_max_crear_mensual")
 
+  /// Control interno administrado únicamente por base de datos. Cuando está
+  /// activo, exige disponibilidad del servicio básico antes de crear una Cuenta.
+  validarLicenciasDisponibles Boolean @default(false) @map("validar_licencias_disponibles")
+
   estado EstadoEmpresaRevendedora @default(activa)
 
   /// Correlativo interno para `numero_cliente` de Clientes Finales.
