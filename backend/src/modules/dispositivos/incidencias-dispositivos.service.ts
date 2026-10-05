@@ -153,6 +153,16 @@ export class IncidenciasDispositivosService {
       },
     });
     if (yaVinculado) {
+      const metadatos = {
+        ...(incidencia.modelo ? { modelo: incidencia.modelo } : {}),
+        ...(incidencia.ultimoInicio ? { ultimoInicio: incidencia.ultimoInicio } : {}),
+      };
+      if (Object.keys(metadatos).length > 0) {
+        await this.prisma.db.dispositivo.update({
+          where: { id: yaVinculado.id },
+          data: metadatos,
+        });
+      }
       await this.prisma.db.incidenciaDispositivoProveedor.update({
         where: { id },
         data: { estado: EstadoIncidenciaDispositivo.reconocido, resueltaEn: new Date() },
@@ -240,7 +250,16 @@ export class IncidenciasDispositivosService {
             where: { id },
             data: { estado: EstadoIncidenciaDispositivo.reconocido, resueltaEn: new Date() },
           });
-          return vinculadoDuranteBloqueo;
+          const metadatos = {
+            ...(incidencia.modelo ? { modelo: incidencia.modelo } : {}),
+            ...(incidencia.ultimoInicio ? { ultimoInicio: incidencia.ultimoInicio } : {}),
+          };
+          return Object.keys(metadatos).length > 0
+            ? tx.dispositivo.update({
+                where: { id: vinculadoDuranteBloqueo.id },
+                data: metadatos,
+              })
+            : vinculadoDuranteBloqueo;
         }
         const venta = incidencia.cuenta.esExclusiva
           ? null
@@ -286,6 +305,8 @@ export class IncidenciasDispositivosService {
                 mac: incidencia.mac,
                 tipo,
                 tipoProveedor: incidencia.tipoProveedor,
+                modelo: incidencia.modelo,
+                ultimoInicio: incidencia.ultimoInicio,
                 estado: EstadoDispositivo.activo,
                 estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
               },
@@ -299,6 +320,8 @@ export class IncidenciasDispositivosService {
                 mac: incidencia.mac,
                 tipo,
                 tipoProveedor: incidencia.tipoProveedor,
+                modelo: incidencia.modelo,
+                ultimoInicio: incidencia.ultimoInicio,
                 estado: EstadoDispositivo.activo,
                 estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
               },

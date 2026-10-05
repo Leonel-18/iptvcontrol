@@ -10,7 +10,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
-import { formatearFecha, formatearMac } from "@/lib/utils";
+import { formatearFecha, formatearFechaHora, formatearMac } from "@/lib/utils";
 import type {
   AccountDetail,
   AccountProviderDevice,
@@ -240,8 +240,14 @@ export const AccountDevicesTab = ({
             </TR>
           </THead>
           <TBody>
-            {cuenta.dispositivos.map((dispositivo) => (
-              <TR key={`local:${dispositivo.id}`}>
+            {cuenta.dispositivos.map((dispositivo) => {
+              const datosProveedor = inventario?.dispositivos.find(
+                (item) => item.proveedor_device_id === dispositivo.proveedor_device_id,
+              );
+              const modelo = datosProveedor?.modelo ?? dispositivo.modelo;
+              const ultimoInicio = datosProveedor?.ultimo_inicio ?? dispositivo.ultimo_inicio;
+              return (
+                <TR key={`local:${dispositivo.id}`}>
                 <TD>
                   <div className="flex flex-col gap-0.5">
                     <Link
@@ -290,13 +296,16 @@ export const AccountDevicesTab = ({
                           etiqueta="MAC"
                         />
                       ) : null}
+                      <span className="text-xs texto-suave">
+                        Modelo: {modelo || "—"}
+                      </span>
+                      <span className="text-xs texto-suave">
+                        Último inicio: {formatearFechaHora(ultimoInicio)}
+                      </span>
                       {dispositivo.nota_descriptiva ? (
                         <span className="text-xs texto-suave">
                           {dispositivo.nota_descriptiva}
                         </span>
-                      ) : null}
-                      {!dispositivo.mac && !dispositivo.nota_descriptiva ? (
-                        <span className="text-sm texto-suave">—</span>
                       ) : null}
                     </div>
                   </TD>
@@ -330,8 +339,9 @@ export const AccountDevicesTab = ({
                     </div>
                   </TD>
                 ) : null}
-              </TR>
-            ))}
+                </TR>
+              );
+            })}
 
             {dispositivosProveedor.map((dispositivo) => (
               <TR key={`provider:${dispositivo.proveedor_device_id}`}>
@@ -375,11 +385,12 @@ export const AccountDevicesTab = ({
                       ) : (
                         <span className="text-sm texto-suave">—</span>
                       )}
-                      {dispositivo.ultimo_inicio ? (
-                        <span className="text-2xs texto-suave">
-                          Último inicio: {formatearFecha(dispositivo.ultimo_inicio)}
-                        </span>
-                      ) : null}
+                      <span className="text-xs texto-suave">
+                        Modelo: {dispositivo.modelo || "—"}
+                      </span>
+                      <span className="text-xs texto-suave">
+                        Último inicio: {formatearFechaHora(dispositivo.ultimo_inicio)}
+                      </span>
                     </div>
                   </TD>
                 ) : null}

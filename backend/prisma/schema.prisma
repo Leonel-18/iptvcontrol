@@ -744,6 +744,11 @@ model Dispositivo {
   tipo          TipoDispositivo?
   tipoProveedor String?          @map("tipo_proveedor") @db.VarChar(40)
 
+  /// Metadatos informados por el Proveedor. Se conservan localmente para que
+  /// sigan visibles aunque la pantalla no consulte SENSA en ese momento.
+  modelo       String?   @db.VarChar(200)
+  ultimoInicio DateTime? @map("ultimo_inicio")
+
   estado            EstadoDispositivo            @default(activo)
   estadoVinculacion EstadoVinculacionDispositivo @default(pendiente) @map("estado_vinculacion")
 
@@ -820,6 +825,8 @@ model IncidenciaDispositivoProveedor {
   proveedorDeviceId   String                      @map("proveedor_device_id") @db.VarChar(60)
   mac                 String?                     @db.VarChar(40)
   tipoProveedor       String?                     @map("tipo_proveedor") @db.VarChar(40)
+  modelo              String?                     @db.VarChar(200)
+  ultimoInicio        DateTime?                   @map("ultimo_inicio")
   estado              EstadoIncidenciaDispositivo @default(pendiente)
   /// Cuántos Clientes Finales ACTIVOS tenía la Cuenta al detectar el Dispositivo
   /// sin dueño (HU-D01). Los dados de baja y los suspendidos no cuentan. Es el

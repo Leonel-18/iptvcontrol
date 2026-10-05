@@ -85,6 +85,8 @@ export interface AccountDevice {
   cliente_final_id?: string | null;
   cliente_final?: { id: string; numero_cliente: number; nombre: string } | null;
   mac?: string | null;
+  modelo?: string | null;
+  ultimo_inicio?: string | null;
   nota_descriptiva?: string | null;
   proveedor_cuenta_id?: string | null;
   /**

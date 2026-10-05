@@ -52,6 +52,7 @@ describe('InventarioProveedorService — sincronizar', () => {
       .fn()
       .mockResolvedValue({ id: 'incidencia-nueva', estado: EstadoIncidenciaDispositivo.pendiente });
     const findManyIncidencias = jest.fn().mockResolvedValue(overrides?.pendientesConDueno ?? []);
+    const updateDispositivo = jest.fn().mockResolvedValue({ id: 'dispositivo-1' });
 
     const tx = {
       incidenciaDispositivoProveedor: {
@@ -64,6 +65,7 @@ describe('InventarioProveedorService — sincronizar', () => {
     const prisma = {
       db: {
         cuenta: { findUnique: findUniqueCuenta },
+        dispositivo: { update: updateDispositivo },
         incidenciaDispositivoProveedor: { findMany: findManyIncidencias },
       },
       transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) => fn(tx)),
@@ -83,6 +85,8 @@ describe('InventarioProveedorService — sincronizar', () => {
           tipo: 'cloud_client',
           activo: true,
           nombre: 'Chrome',
+          modelo: 'Chrome Web',
+          ultimoInicio: '09/09/2026 00:10',
         },
       ],
     );
@@ -96,8 +100,34 @@ describe('InventarioProveedorService — sincronizar', () => {
       updateIncidencia,
       findUniqueIncidencia,
       findManyIncidencias,
+      updateDispositivo,
     };
   };
+
+  it('persiste modelo y último inicio de un Dispositivo ya vinculado', async () => {
+    const { servicio, updateDispositivo } = crearServicio(false, {
+      inventario: [
+        {
+          proveedorDeviceId: 'sensa-vinculado',
+          mac: 'B17580A62BFC',
+          tipo: 'stationary',
+          modelo: 'FlowBox-F2',
+          ultimoInicio: '26/09/2026 13:07',
+          activo: true,
+        },
+      ],
+    });
+
+    await servicio.sincronizar('cuenta-1');
+
+    expect(updateDispositivo).toHaveBeenCalledWith({
+      where: { id: 'dispositivo-1' },
+      data: {
+        modelo: 'FlowBox-F2',
+        ultimoInicio: new Date('2026-09-26T16:07:00.000Z'),
+      },
+    });
+  });
 
   it('clasifica vinculado y desconocido, y crea la incidencia del desconocido', async () => {
     const { servicio, createIncidencia } = crearServicio(false);
@@ -120,6 +150,8 @@ describe('InventarioProveedorService — sincronizar', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           mac: '0123456789012345678901234567890123456789',
+          modelo: 'Chrome Web',
+          ultimoInicio: new Date('2026-09-09T03:10:00.000Z'),
         }),
       }),
     );

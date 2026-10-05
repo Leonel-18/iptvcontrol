@@ -211,6 +211,8 @@ export const mapDispositivoParaRevendedora = (
   },
 ) => ({
   ...mapDispositivoParaOperador(dispositivo),
+  modelo: dispositivo.modelo,
+  ultimo_inicio: dispositivo.ultimoInicio,
   cliente_final_id: dispositivo.clienteFinalId,
   cliente_final: dispositivo.clienteFinal
     ? {

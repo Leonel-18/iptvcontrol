@@ -14,6 +14,8 @@ import {
 import { Job } from 'bullmq';
 import { AuditService } from '../common/audit/audit.service';
 import { PrismaService, TransactionClient } from '../common/prisma/prisma.service';
+import { DispositivoProveedor } from '../proveedor/proveedor-adapter.interface';
+import { metadatosDispositivoProveedor } from '../proveedor/metadatos-dispositivo.util';
 import { ProveedorService } from '../proveedor/proveedor.service';
 import { CuentasProvisioningService } from '../modules/cuentas/cuentas-provisioning.service';
 import { NotificacionesService } from '../modules/notificaciones/notificaciones.service';
@@ -166,6 +168,8 @@ export class ColaProveedorProcessor extends WorkerHost {
           data: {
             proveedorDeviceId: encontrado.proveedorDeviceId,
             mac: encontrado.mac ?? pendiente.mac,
+            tipoProveedor: encontrado.tipo,
+            ...metadatosDispositivoProveedor(encontrado),
           },
         });
       });
@@ -836,7 +840,7 @@ export class ColaProveedorProcessor extends WorkerHost {
       const [conocidos, ventanasAbiertas] = await Promise.all([
         tx.dispositivo.findMany({
           where: { cuentaId, proveedorDeviceId: { not: null } },
-          select: { proveedorDeviceId: true },
+          select: { id: true, proveedorDeviceId: true },
         }),
         tx.solicitudVinculacionDispositivo.count({
           where: {
@@ -853,6 +857,17 @@ export class ColaProveedorProcessor extends WorkerHost {
       ]);
 
       const permitidos = new Set(conocidos.map((d) => d.proveedorDeviceId));
+      const inventarioPorId = new Map(inventario.map((item) => [item.proveedorDeviceId, item]));
+      for (const conocido of conocidos) {
+        const item = conocido.proveedorDeviceId
+          ? inventarioPorId.get(conocido.proveedorDeviceId)
+          : undefined;
+        if (!item) continue;
+        const metadatos = metadatosDispositivoProveedor(item);
+        if (Object.keys(metadatos).length > 0) {
+          await tx.dispositivo.update({ where: { id: conocido.id }, data: metadatos });
+        }
+      }
 
       // Autocuración: una incidencia pendiente cuyo Dispositivo ya está
       // vinculado quedó huérfana de una carrera anterior (la consulta manual o
@@ -913,6 +928,8 @@ export class ColaProveedorProcessor extends WorkerHost {
           proveedorDeviceId: string;
           mac: string | null;
           tipoProveedor: string | null;
+          modelo: string | null;
+          ultimoInicio: Date | null;
         };
 
         if (existente?.estado === EstadoIncidenciaDispositivo.pendiente) {
@@ -922,6 +939,9 @@ export class ColaProveedorProcessor extends WorkerHost {
               cantidadDetecciones: { increment: 1 },
               ultimaDeteccionEn: new Date(),
               clientesActivosAlDetectar: clientesActivos.length,
+              mac: item.mac,
+              tipoProveedor: item.tipo,
+              ...metadatosDispositivoProveedor(item),
             },
           });
         } else {
@@ -932,6 +952,7 @@ export class ColaProveedorProcessor extends WorkerHost {
                   estado: EstadoIncidenciaDispositivo.pendiente,
                   mac: item.mac,
                   tipoProveedor: item.tipo,
+                  ...metadatosDispositivoProveedor(item),
                   cantidadDetecciones: { increment: 1 },
                   ultimaDeteccionEn: new Date(),
                   resueltaEn: null,
@@ -945,6 +966,7 @@ export class ColaProveedorProcessor extends WorkerHost {
                   proveedorDeviceId: item.proveedorDeviceId,
                   mac: item.mac,
                   tipoProveedor: item.tipo,
+                  ...metadatosDispositivoProveedor(item),
                   clientesActivosAlDetectar: clientesActivos.length,
                 },
               });
@@ -1033,6 +1055,8 @@ export class ColaProveedorProcessor extends WorkerHost {
         proveedorDeviceId: string;
         mac: string | null;
         tipoProveedor: string | null;
+        modelo: string | null;
+        ultimoInicio: Date | null;
       };
       clientesActivos: { id: string }[];
     },
@@ -1081,6 +1105,8 @@ export class ColaProveedorProcessor extends WorkerHost {
       mac: params.incidencia.mac,
       tipo,
       tipoProveedor: params.incidencia.tipoProveedor,
+      modelo: params.incidencia.modelo,
+      ultimoInicio: params.incidencia.ultimoInicio,
       estado: EstadoDispositivo.activo,
       estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
     };
@@ -1223,11 +1249,7 @@ export class ColaProveedorProcessor extends WorkerHost {
       } | null;
       cuenta: { esExclusiva: boolean };
     },
-    candidatos: {
-      proveedorDeviceId: string;
-      mac?: string;
-      tipo?: string;
-    }[],
+    candidatos: DispositivoProveedor[],
     operadorPrincipalId: string,
     ahora: Date,
     intento: number,
@@ -1293,6 +1315,7 @@ export class ColaProveedorProcessor extends WorkerHost {
               mac: primero.mac ?? null,
               tipo: this.tipoLocal(primero.tipo),
               tipoProveedor: primero.tipo ?? null,
+              ...metadatosDispositivoProveedor(primero),
               estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
             },
           });
@@ -1309,6 +1332,7 @@ export class ColaProveedorProcessor extends WorkerHost {
               mac: primero.mac ?? null,
               tipo: this.tipoLocal(primero.tipo),
               tipoProveedor: primero.tipo ?? null,
+              ...metadatosDispositivoProveedor(primero),
               estado: EstadoDispositivo.activo,
               estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
               notaDescriptiva: solicitud.dispositivo?.notaDescriptiva ?? null,
@@ -1329,6 +1353,7 @@ export class ColaProveedorProcessor extends WorkerHost {
               mac: adicional.mac ?? null,
               tipo: this.tipoLocal(adicional.tipo),
               tipoProveedor: adicional.tipo ?? null,
+              ...metadatosDispositivoProveedor(adicional),
               estado: EstadoDispositivo.activo,
               estadoVinculacion: EstadoVinculacionDispositivo.vinculado,
             },
@@ -1374,8 +1399,15 @@ export class ColaProveedorProcessor extends WorkerHost {
             proveedorDeviceId: descartado.proveedorDeviceId,
             mac: descartado.mac,
             tipoProveedor: descartado.tipo,
+            ...metadatosDispositivoProveedor(descartado),
           },
-          update: { cantidadDetecciones: { increment: 1 }, ultimaDeteccionEn: ahora },
+          update: {
+            mac: descartado.mac,
+            tipoProveedor: descartado.tipo,
+            ...metadatosDispositivoProveedor(descartado),
+            cantidadDetecciones: { increment: 1 },
+            ultimaDeteccionEn: ahora,
+          },
         });
         await this.audit.registrarEnTx(tx, {
           accion: AccionAuditoria.deteccion_dispositivo_no_autorizado,

@@ -10,6 +10,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { ProveedorService } from '../../proveedor/proveedor.service';
 import { DispositivoProveedor } from '../../proveedor/proveedor-adapter.interface';
+import { metadatosDispositivoProveedor } from '../../proveedor/metadatos-dispositivo.util';
 
 export type ClasificacionDispositivoProveedor = 'vinculado' | 'desconocido';
 
@@ -148,6 +149,13 @@ export class InventarioProveedorService {
       const vinculado = vinculadosPorId.get(item.proveedorDeviceId);
 
       if (vinculado) {
+        const metadatos = metadatosDispositivoProveedor(item);
+        if (Object.keys(metadatos).length > 0) {
+          await this.prisma.db.dispositivo.update({
+            where: { id: vinculado.id },
+            data: metadatos,
+          });
+        }
         dispositivos.push({
           proveedor_device_id: item.proveedorDeviceId,
           mac: esOperador ? undefined : item.mac,
@@ -286,7 +294,13 @@ export class InventarioProveedorService {
       if (existente?.estado === EstadoIncidenciaDispositivo.pendiente) {
         return tx.incidenciaDispositivoProveedor.update({
           where: { id: existente.id },
-          data: { cantidadDetecciones: { increment: 1 }, ultimaDeteccionEn: new Date() },
+          data: {
+            mac: item.mac,
+            tipoProveedor: item.tipo,
+            ...metadatosDispositivoProveedor(item),
+            cantidadDetecciones: { increment: 1 },
+            ultimaDeteccionEn: new Date(),
+          },
         });
       }
 
@@ -304,6 +318,7 @@ export class InventarioProveedorService {
             estado: EstadoIncidenciaDispositivo.pendiente,
             mac: item.mac,
             tipoProveedor: item.tipo,
+            ...metadatosDispositivoProveedor(item),
             cantidadDetecciones: { increment: 1 },
             ultimaDeteccionEn: new Date(),
             resueltaEn: null,
@@ -331,6 +346,7 @@ export class InventarioProveedorService {
           proveedorDeviceId: item.proveedorDeviceId,
           mac: item.mac,
           tipoProveedor: item.tipo,
+          ...metadatosDispositivoProveedor(item),
         },
       });
       await this.audit.registrarEnTx(tx, {
