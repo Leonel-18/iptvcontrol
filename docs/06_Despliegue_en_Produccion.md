@@ -134,10 +134,85 @@ Valores de referencia actuales (Auth0, públicos y ya usados): Client ID de la S
 
 ### 4.2. Actualización de código
 
-1. `git pull --ff-only origin main` en la VPS.
-2. `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build` (el
-   entrypoint aplica las migraciones nuevas antes de arrancar el backend).
-3. En el caso de modificar `VITE_AUTH0_*` o `VITE_API_BASE_URL` → reconstruir frontend (build-time).
+#### Antes de ingresar a la VPS
+
+1. Ejecutar en la rama de trabajo:
+
+   ```bash
+   cd backend && npm test && npm run typecheck && npm run build
+   cd ../frontend && npm test && npm run typecheck && npm run build
+   ```
+
+2. Subir la rama, crear el Pull Request y fusionarlo a `main`. Producción siempre se actualiza
+   desde `main`, nunca directamente desde una rama de trabajo.
+3. Si la versión incluye una migración, confirmar con infraestructura que existe un respaldo
+   reciente de PostgreSQL antes de continuar. Los backups se administran fuera de IPTVControl.
+
+#### Actualización en la VPS
+
+Desde la carpeta donde está clonado IPTVControl:
+
+```bash
+# El repositorio de producción debe estar limpio. Si este comando muestra algo,
+# detenerse y revisar antes de hacer pull: no descartar archivos de la VPS.
+git status --short
+
+git switch main
+git pull --ff-only origin main
+
+# Reconstruye backend y frontend. El entrypoint del backend ejecuta
+# `prisma migrate deploy` antes de iniciar la API.
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+```
+
+`VITE_AUTH0_*` y `VITE_API_BASE_URL` son variables de build: cualquier cambio en ellas requiere
+reconstruir el frontend. El comando anterior ya lo hace.
+
+#### Verificación posterior
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
+docker compose --env-file .env.production -f docker-compose.prod.yml logs --since=10m backend
+curl -fsS https://iptvcontrol.com.ar/api/v1/health
+```
+
+Confirmar además desde el panel:
+
+1. Login con un Team Member autorizado.
+2. Apertura del dashboard y de una Cuenta existente.
+3. Ejecución de la operación puntual modificada por la versión desplegada.
+4. Ausencia de errores nuevos en los logs del backend.
+
+No ejecutar nuevamente `seed:root` durante una actualización normal.
+
+#### Verificación de la versión `feature/device-metadata-source-sans`
+
+Esta versión incorpora la migración `20261005120000_modelo_ultimo_inicio_dispositivo`, que agrega
+columnas nullable y no elimina ni transforma datos existentes. Después del despliegue:
+
+1. Abrir **Cuentas → una Cuenta → Dispositivos** como Empresa Revendedora.
+2. Pulsar **Consultar dispositivos en el proveedor** para completar los registros históricos.
+3. Verificar que cada fila muestre **Modelo** y **Último inicio** dentro de **Equipo / nota**.
+4. Recargar la página y confirmar que ambos valores permanezcan visibles.
+5. Comprobar que toda la interfaz utilice **Source Sans 3**.
+
+Los Dispositivos que todavía no hayan sido informados por SENSA muestran `—` hasta su primera
+sincronización. El barrido periódico también completa estos datos, pero la consulta manual permite
+validar el despliegue inmediatamente.
+
+#### Reversión del código
+
+Si la aplicación falla después del despliegue, volver al commit anterior conocido y reconstruir:
+
+```bash
+git log --oneline -10
+git switch --detach <commit-anterior-verificado>
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+```
+
+La reversión de código no elimina migraciones ya aplicadas. En esta versión, las columnas nuevas
+son nullable y el código anterior puede ignorarlas. No ejecutar SQL destructivo ni borrar columnas
+sin un procedimiento de recuperación acordado con infraestructura.
 
 ### 4.3. Cambio de datos de conexión SENSA / planes / modalidades
 
