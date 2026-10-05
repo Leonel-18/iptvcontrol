@@ -32,6 +32,7 @@ describe('CuentasProvisioningService — crearCuenta', () => {
     nombreContacto: 'Bruno',
     apellidoContacto: 'Contacto',
     cuentasMaxCrearMensual: 10,
+    validarLicenciasDisponibles: false,
     direccion: 'Echeverría 1776',
     telefonoContacto: '2615550000',
   } as any;
@@ -60,6 +61,10 @@ describe('CuentasProvisioningService — crearCuenta', () => {
       dispositivosMoviles: 3,
       activa: true,
     });
+    const consultarLicencias = jest.fn().mockResolvedValue({
+      compradas: { '1': 210 },
+      usadas: { '1': 209 },
+    });
 
     const tx = {
       $executeRaw: jest.fn().mockResolvedValue(1),
@@ -87,7 +92,10 @@ describe('CuentasProvisioningService — crearCuenta', () => {
       encrypt: jest.fn().mockReturnValue('v1:cifrado'),
     } as unknown as CryptoService;
 
-    const proveedor = { crearCuenta: crearCuentaProveedor } as unknown as ProveedorService;
+    const proveedor = {
+      crearCuenta: crearCuentaProveedor,
+      consultarLicencias,
+    } as unknown as ProveedorService;
 
     const configuracion = {
       obtener: jest.fn().mockResolvedValue({
@@ -128,6 +136,7 @@ describe('CuentasProvisioningService — crearCuenta', () => {
     return {
       servicio,
       crearCuentaProveedor,
+      consultarLicencias,
       identidad,
       pruebas,
       audit,
@@ -172,6 +181,51 @@ describe('CuentasProvisioningService — crearCuenta', () => {
     });
 
     expect(pruebas.consumirCupoDelPeriodo).not.toHaveBeenCalled();
+  });
+
+  it('no consulta licencias si el control interno de la Empresa está desactivado', async () => {
+    const { servicio, consultarLicencias } = crearServicio();
+
+    await servicio.crearCuenta({
+      empresaRevendedora,
+      operadorPrincipalId: 'operador-1',
+      esExclusiva: false,
+    });
+
+    expect(consultarLicencias).not.toHaveBeenCalled();
+  });
+
+  it('permite crear si la Empresa controla licencias y el servicio básico tiene disponibilidad', async () => {
+    const { servicio, consultarLicencias, crearCuentaProveedor } = crearServicio();
+
+    await servicio.crearCuenta({
+      empresaRevendedora: { ...empresaRevendedora, validarLicenciasDisponibles: true },
+      operadorPrincipalId: 'operador-1',
+      esExclusiva: false,
+    });
+
+    expect(consultarLicencias).toHaveBeenCalledWith('operador-1');
+    expect(crearCuentaProveedor).toHaveBeenCalledTimes(1);
+  });
+
+  it('bloquea antes de reservar datos si el servicio básico no tiene licencias disponibles', async () => {
+    const { servicio, consultarLicencias, crearCuentaProveedor, cuentaCreate } = crearServicio();
+    consultarLicencias.mockResolvedValue({
+      compradas: { '1': 210 },
+      usadas: { '1': 211 },
+    });
+
+    await expect(
+      servicio.crearCuenta({
+        empresaRevendedora: { ...empresaRevendedora, validarLicenciasDisponibles: true },
+        operadorPrincipalId: 'operador-1',
+        esExclusiva: false,
+      }),
+    ).rejects.toThrow(
+      'No hay licencias/cuentas disponibles para crear. Consulte con el proveedor.',
+    );
+    expect(cuentaCreate).not.toHaveBeenCalled();
+    expect(crearCuentaProveedor).not.toHaveBeenCalled();
   });
 
   it('envía referenciaExterna igual al DNI generado, no al UUID de la Cuenta', async () => {
