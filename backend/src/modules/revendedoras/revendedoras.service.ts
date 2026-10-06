@@ -506,14 +506,8 @@ export class RevendedorasService {
         if (resultado.estado === 'importada' && remota.activa) {
           try {
             await this.inventario.sincronizar(resultado.id);
-            // La conciliación inicial quedó hecha. La Cuenta igual queda sin
-            // vender hasta que la Empresa Revendedora (a) resuelva las
-            // incidencias de Dispositivos desconocidos y (b) cargue la
-            // contraseña real por el flujo de cambio manual.
-            await this.prisma.db.cuenta.update({
-              where: { id: resultado.id },
-              data: { inventarioConciliadoEn: new Date() },
-            });
+            // La consulta inicial quedó registrada por InventarioProveedorService.
+            // Los equipos detectados se vinculan después de cargar el Cliente.
           } catch {
             mensaje =
               'La Cuenta se importó, pero el inventario de Dispositivos quedó pendiente de consulta.';

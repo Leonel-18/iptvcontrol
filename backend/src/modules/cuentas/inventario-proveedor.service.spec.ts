@@ -53,6 +53,7 @@ describe('InventarioProveedorService — sincronizar', () => {
       .mockResolvedValue({ id: 'incidencia-nueva', estado: EstadoIncidenciaDispositivo.pendiente });
     const findManyIncidencias = jest.fn().mockResolvedValue(overrides?.pendientesConDueno ?? []);
     const updateDispositivo = jest.fn().mockResolvedValue({ id: 'dispositivo-1' });
+    const updateManyCuenta = jest.fn().mockResolvedValue({ count: 1 });
 
     const tx = {
       incidenciaDispositivoProveedor: {
@@ -64,7 +65,7 @@ describe('InventarioProveedorService — sincronizar', () => {
 
     const prisma = {
       db: {
-        cuenta: { findUnique: findUniqueCuenta },
+        cuenta: { findUnique: findUniqueCuenta, updateMany: updateManyCuenta },
         dispositivo: { update: updateDispositivo },
         incidenciaDispositivoProveedor: { findMany: findManyIncidencias },
       },
@@ -101,6 +102,7 @@ describe('InventarioProveedorService — sincronizar', () => {
       findUniqueIncidencia,
       findManyIncidencias,
       updateDispositivo,
+      updateManyCuenta,
     };
   };
 
@@ -156,6 +158,29 @@ describe('InventarioProveedorService — sincronizar', () => {
       }),
     );
     expect(createIncidencia).toHaveBeenCalledTimes(1);
+  });
+
+  it('marca una Cuenta importada como consultada aunque el Proveedor no informe Dispositivos', async () => {
+    const { servicio, updateManyCuenta } = crearServicio(false, {
+      cuenta: {
+        ...cuentaBase,
+        procedencia: 'importada_proveedor',
+        inventarioConciliadoEn: null,
+        dispositivos: [],
+      },
+      inventario: [],
+    });
+
+    await servicio.sincronizar('cuenta-1');
+
+    expect(updateManyCuenta).toHaveBeenCalledWith({
+      where: {
+        id: 'cuenta-1',
+        procedencia: 'importada_proveedor',
+        inventarioConciliadoEn: null,
+      },
+      data: { inventarioConciliadoEn: expect.any(Date) },
+    });
   });
 
   it('el Operador Principal no recibe nombre de cliente ni MAC (regla 4.2)', async () => {

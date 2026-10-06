@@ -269,7 +269,7 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
     dispositivo: {},
   };
 
-  const crearServicio = (cuenta: Record<string, unknown> | null) => {
+  const crearServicio = (cuenta: Record<string, unknown> | null, incidenciasPendientes = 0) => {
     const cuentaPersistida = cuenta ? { passwordCifrado: 'password-cifrado', ...cuenta } : null;
     const clienteCreado = {
       id: 'cliente-nuevo',
@@ -286,6 +286,9 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
       db: {
         cuenta: { findUnique: jest.fn().mockResolvedValue(cuentaPersistida) },
         clienteFinal: { delete: jest.fn().mockResolvedValue(undefined) },
+        incidenciaDispositivoProveedor: {
+          count: jest.fn().mockResolvedValue(incidenciasPendientes),
+        },
       },
       transaction: jest.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
     } as unknown as PrismaService;
@@ -460,6 +463,50 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
       expect.objectContaining({
         detalle: expect.objectContaining({ cargado_manualmente_en_cuenta: true }),
       }),
+    );
+  });
+
+  it('permite cargar el primer cliente de una Cuenta importada con Dispositivos pendientes', async () => {
+    const { servicio, reservarVentaContextual } = crearServicio(
+      {
+        id: 'cuenta-vacia',
+        esExclusiva: false,
+        estado: EstadoCuenta.activa,
+        proveedorCuentaId: 'proveedor-cuenta-1',
+        procedencia: 'importada_proveedor',
+        inventarioConciliadoEn: new Date('2026-10-06T12:00:00.000Z'),
+        servicios: '1|3',
+        dispositivos: [],
+        ventasCompartidas: [],
+      },
+      2,
+    );
+
+    await servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' });
+
+    expect(reservarVentaContextual).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cuentaId: 'cuenta-vacia',
+        clienteFinalId: 'cliente-nuevo',
+      }),
+    );
+  });
+
+  it('rechaza una Cuenta importada cuyo inventario nunca se consultó correctamente', async () => {
+    const { servicio } = crearServicio({
+      id: 'cuenta-vacia',
+      esExclusiva: false,
+      estado: EstadoCuenta.activa,
+      proveedorCuentaId: 'proveedor-cuenta-1',
+      procedencia: 'importada_proveedor',
+      inventarioConciliadoEn: null,
+      servicios: '1|3',
+      dispositivos: [],
+      ventasCompartidas: [],
+    });
+
+    await expect(servicio.crear({ ...dtoBase, cuenta_id: 'cuenta-vacia' })).rejects.toThrow(
+      'Consulte los Dispositivos en el Proveedor',
     );
   });
 });
