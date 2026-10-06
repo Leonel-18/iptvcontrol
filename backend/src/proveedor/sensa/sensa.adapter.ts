@@ -275,8 +275,8 @@ export class SensaAdapter implements ProveedorAdapter {
 
     await this.llamar<SensaUser>(credenciales, {
       operacion: 'edit_user_services',
-      metodo: 'PATCH',
-      ruta: `/v4/user/${encodeURIComponent(params.proveedorCuentaId)}`,
+      metodo: 'POST',
+      ruta: `/v4/user_services/${encodeURIComponent(params.proveedorCuentaId)}`,
       body,
       // 820: "user data was not modified" — si ya tenía esos mismos servicios,
       // para IPTVControl el resultado deseado igual se cumplió.
