@@ -250,6 +250,24 @@ describe('SensaAdapter', () => {
     expect(String(fetchMock.mock.calls[0][0])).not.toContain('token-secreto');
   });
 
+  it('reemplaza los servicios mediante el endpoint específico de SENSA', async () => {
+    const { adapter } = crearAdapter();
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(() => responder(envelope(200, '')));
+
+    await adapter.actualizarServicios(credenciales, {
+      proveedorCuentaId: '30000001',
+      servicios: '1|3',
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.sensa.test/v4/user_services/30000001');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ services: '1|3' }),
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Traducción de códigos de error
   // ---------------------------------------------------------------------------
