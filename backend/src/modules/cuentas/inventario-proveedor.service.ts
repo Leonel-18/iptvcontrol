@@ -218,6 +218,18 @@ export class InventarioProveedorService {
       );
     }
 
+    // Una consulta exitosa habilita la carga del primer Cliente en una Cuenta
+    // importada. Los equipos desconocidos siguen como incidencias para que se
+    // vinculen al Cliente después, sin eliminarlos del Proveedor.
+    await this.prisma.db.cuenta.updateMany({
+      where: {
+        id: cuenta.id,
+        procedencia: 'importada_proveedor',
+        inventarioConciliadoEn: null,
+      },
+      data: { inventarioConciliadoEn: new Date() },
+    });
+
     return {
       cuenta_id: cuenta.id,
       proveedor_cuenta_id: cuenta.proveedorCuentaId,

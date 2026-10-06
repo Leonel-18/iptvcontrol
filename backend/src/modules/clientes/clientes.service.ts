@@ -519,18 +519,10 @@ export class ClientesService {
         );
       }
       if (cuenta.procedencia === 'importada_proveedor') {
-        const tieneIncidenciasPendientes =
-          await this.prisma.db.incidenciaDispositivoProveedor.count({
-            where: {
-              cuentaId: cuenta.id,
-              estado: { in: ['pendiente', 'reconocido'] },
-            },
-          });
-        if (!cuenta.inventarioConciliadoEn || tieneIncidenciasPendientes > 0) {
+        if (!cuenta.inventarioConciliadoEn) {
           throw new BadRequestException(
-            'La Cuenta importada todavía tiene Dispositivos del Proveedor sin conciliar. ' +
-              'Revise su inventario, resuelva las incidencias pendientes y recién entonces podrá ' +
-              'cargar Clientes Finales.',
+            'La Cuenta importada todavía no tiene un inventario confirmado. ' +
+              'Consulte los Dispositivos en el Proveedor y vuelva a intentar.',
           );
         }
       }
