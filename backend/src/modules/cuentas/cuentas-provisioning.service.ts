@@ -417,8 +417,8 @@ export class CuentasProvisioningService {
     actualizarProveedor: boolean;
     duracionVentanaCuriosidadMinutos?: number;
     /**
-     * No abrir una Ventana de Alta. Lo usa el alta aislada: la Cuenta queda
-     * aislada a nivel Cuenta, así que no necesita (ni debe tener) una ventana.
+     * No abrir una Ventana de Alta. Lo usan las Cuentas aisladas y de prueba,
+     * que tienen su propio mecanismo de vencimiento y no deben tener ventana.
      */
     omitirVentana?: boolean;
     teamMemberId?: string;

@@ -221,6 +221,9 @@ export class VentanasCuriosidadService {
       if (cuenta.esExclusiva) {
         throw new BadRequestException('La Ventana de Alta sólo aplica a Cuentas compartidas.');
       }
+      if (cuenta.esPrueba) {
+        throw new BadRequestException('Una Cuenta de prueba no admite una Ventana de Alta.');
+      }
 
       await this.cerrarVencidasEnTx(tx, cuentaId, ahora);
       const activa = await tx.ventanaCuriosidad.findFirst({
