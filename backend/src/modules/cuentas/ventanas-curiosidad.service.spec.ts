@@ -135,7 +135,12 @@ describe('VentanasCuriosidadService', () => {
 
 describe('VentanasCuriosidadService — apertura manual', () => {
   const crear = (
-    opciones: { esExclusiva?: boolean; ventaActiva?: boolean; hayCliente?: boolean } = {},
+    opciones: {
+      esExclusiva?: boolean;
+      esPrueba?: boolean;
+      ventaActiva?: boolean;
+      hayCliente?: boolean;
+    } = {},
   ) => {
     const ventanaCreate = jest
       .fn()
@@ -146,6 +151,7 @@ describe('VentanasCuriosidadService — apertura manual', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 'cuenta-1',
           esExclusiva: opciones.esExclusiva ?? false,
+          esPrueba: opciones.esPrueba ?? false,
           empresaRevendedoraId: 'empresa-1',
         }),
       },
@@ -214,6 +220,13 @@ describe('VentanasCuriosidadService — apertura manual', () => {
     await expect(servicio.abrirManualmente('cuenta-1', 1440)).rejects.toThrow(
       'al menos un Cliente',
     );
+  });
+
+  it('rechaza abrir una ventana manual en una Cuenta de prueba', async () => {
+    const { servicio, ventanaCreate } = crear({ esPrueba: true });
+
+    await expect(servicio.abrirManualmente('cuenta-1', 1440)).rejects.toThrow('Cuenta de prueba');
+    expect(ventanaCreate).not.toHaveBeenCalled();
   });
 
   it('rechaza una duración de 0', async () => {

@@ -648,9 +648,16 @@ export const AccountDetail = () => {
         </Alert>
       ) : null}
 
+      {!esOperador && data.es_prueba && data.prueba_vence_en ? (
+        <Alert tone="info" titulo="Cuenta de prueba">
+          Esta Cuenta se cerrará automáticamente el {formatearFechaHora(data.prueba_vence_en)},
+          según la duración definida por el Operador Principal.
+        </Alert>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          {!esOperador && !data.es_exclusiva && !data.aislada ? (
+          {!esOperador && !data.es_exclusiva && !data.es_prueba && !data.aislada ? (
             <CuriosityWindowPanel
               currentWindow={data.ventana_curiosidad}
               history={data.historial_ventanas_curiosidad ?? []}

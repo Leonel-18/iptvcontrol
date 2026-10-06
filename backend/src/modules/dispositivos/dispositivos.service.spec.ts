@@ -627,4 +627,28 @@ describe('DispositivosService — ubicación automática de una venta compartida
     expect(crearCuenta).toHaveBeenCalled();
     expect(resultado.cuentaCreada).toBe(true);
   });
+
+  it('una Cuenta de prueba compartida no abre una Ventana de Alta', async () => {
+    const { servicio, buscarCuentaConLugar, crearCuenta, reservarCapacidadPorNuevaVenta } =
+      crearServicio({ cuentaDestino: null });
+    const pruebaVenceEn = new Date('2026-11-04T12:00:00Z');
+
+    await servicio.alta({
+      clienteFinal,
+      operadorPrincipalId: 'operador-1',
+      servicios: '1',
+      cuposPorCategoria: 1,
+      abrirVentanaSinFila: true,
+      esPrueba: true,
+      pruebaVenceEn,
+    });
+
+    expect(buscarCuentaConLugar).not.toHaveBeenCalled();
+    expect(crearCuenta).toHaveBeenCalledWith(
+      expect.objectContaining({ esPrueba: true, pruebaVenceEn }),
+    );
+    expect(reservarCapacidadPorNuevaVenta).toHaveBeenCalledWith(
+      expect.objectContaining({ omitirVentana: true }),
+    );
+  });
 });

@@ -135,7 +135,7 @@ export class DispositivosService {
           operadorPrincipalId,
           actualizarProveedor,
           duracionVentanaCuriosidadMinutos: params.duracionVentanaCuriosidadMinutos,
-          omitirVentana: params.omitirVentanaCuriosidad === true,
+          omitirVentana: params.omitirVentanaCuriosidad === true || params.esPrueba === true,
           teamMemberId: this.contexto.teamMemberId,
         });
       } catch (error) {
