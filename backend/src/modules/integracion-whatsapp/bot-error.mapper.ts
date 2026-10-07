@@ -15,6 +15,9 @@ export type CodigoErrorBot =
   | 'PROVIDER_AUTH'
   | 'PROVIDER_UNAVAILABLE'
   | 'RATE_LIMITED'
+  | 'IDEMPOTENCY_KEY_REQUIRED'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'REQUEST_IN_PROGRESS'
   | 'INTERNAL_ERROR';
 
 export interface ErrorBotMapeado {
@@ -24,6 +27,13 @@ export interface ErrorBotMapeado {
   /** Detalle para los logs internos. */
   detalle: string;
   nivelLog: 'warn' | 'error';
+}
+
+export interface RespuestaErrorBot {
+  success: false;
+  whatsapp: { mensaje: string };
+  cuenta: { usuario: null; password: null; pin: null };
+  error: { code: CodigoErrorBot; message: string };
 }
 
 /**
@@ -36,6 +46,9 @@ export const MENSAJES_ERROR_BOT: Record<CodigoErrorBot, string> = {
   PROVIDER_AUTH: 'Tenemos un error al conectarnos con nuestros servicios.',
   PROVIDER_UNAVAILABLE: 'Tenemos un error al conectarnos con nuestros servicios.',
   RATE_LIMITED: 'Estamos recibiendo muchas solicitudes en este momento.',
+  IDEMPOTENCY_KEY_REQUIRED: 'No se pudo identificar de forma única la solicitud.',
+  IDEMPOTENCY_CONFLICT: 'El identificador de la solicitud ya fue utilizado con otros datos.',
+  REQUEST_IN_PROGRESS: 'La solicitud todavía se está procesando.',
   INTERNAL_ERROR: 'No pudimos procesar la solicitud.',
 };
 
@@ -47,6 +60,19 @@ export const MENSAJES_ERROR_BOT: Record<CodigoErrorBot, string> = {
  */
 export function mapearErrorBot(exception: unknown): ErrorBotMapeado {
   const detalle = exception instanceof Error ? exception.message : String(exception);
+
+  if (esErrorDeRespuesta(exception, 'IdempotencyKeyRequired')) {
+    return conCodigo('IDEMPOTENCY_KEY_REQUIRED', detalle, 'warn');
+  }
+  if (esErrorDeRespuesta(exception, 'IdempotencyConflict')) {
+    return conCodigo('IDEMPOTENCY_CONFLICT', detalle, 'warn');
+  }
+  if (esErrorDeRespuesta(exception, 'RequestInProgress')) {
+    return conCodigo('REQUEST_IN_PROGRESS', detalle, 'warn');
+  }
+  if (esErrorDeRespuesta(exception, 'BotRateLimited')) {
+    return conCodigo('RATE_LIMITED', detalle, 'warn');
+  }
 
   // Cuenta ya existente en el Proveedor (exclusiva: DNI o correo reales ya usados).
   if (esErrorDeRespuesta(exception, 'CuentaDuplicadaEnProveedor')) {
@@ -94,6 +120,16 @@ export function mapearErrorBot(exception: unknown): ErrorBotMapeado {
 
   // Cualquier otra cosa (bug, error de base, etc.): genérico y se loguea como error.
   return conCodigo('INTERNAL_ERROR', detalle, 'error');
+}
+
+export function crearRespuestaErrorBot(exception: unknown): RespuestaErrorBot {
+  const { code, mensajeUsuario } = mapearErrorBot(exception);
+  return {
+    success: false,
+    whatsapp: { mensaje: mensajeUsuario },
+    cuenta: { usuario: null, password: null, pin: null },
+    error: { code, message: mensajeUsuario },
+  };
 }
 
 function conCodigo(

@@ -105,6 +105,8 @@ necesitan **sí o sí** definirse en producción:
 | `WSP_BOT_EMPRESA_REVENDEDORA_ID` | UUID de la Empresa Revendedora para la que opera el bot (ej. MDZINTERNET). Se saca del panel, de `/resellers` (ver §4.4) |
 | `WSP_BOT_TEAM_MEMBER_ID` | **Opcional.** Team Member que figura como autor en el Audit Log. Sin él, las altas del bot quedan sin autor |
 | `WSP_BOT_VENTANA_MINUTOS` | Duración de la Ventana de Alta que aplica el bot en cada venta compartida. Default `5760` (96 h) |
+| `WSP_BOT_RATE_LIMIT` | Máximo de solicitudes del bot por ventana. Default `30` |
+| `WSP_BOT_RATE_WINDOW_SECONDS` | Duración de la ventana del rate limit. Default `60` segundos |
 | `SEED_ROOT_EMAIL`, `SEED_ROOT_AUTH0_USER_ID` | Ya usados; en prod el seed se corre UNA vez (ver §4.1) |
 | `VITE_API_BASE_URL`, `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE` | Build args del frontend (tiempo de build) |
 | `PGADMIN_*` | **Solo dev**; no habilitar en producción |
@@ -260,6 +262,7 @@ Reglas que impone el servidor (el bot no las elige):
 ```http
 POST /api/v1/integration/whatsapp/customers
 x-api-key: <WSP_BOT_API_KEY>
+Idempotency-Key: <UUID único de la operación>
 Content-Type: application/json
 
 {
@@ -271,13 +274,18 @@ Content-Type: application/json
 }
 ```
 
+`Idempotency-Key` es obligatorio. El sistema externo genera un UUID por alta y reutiliza la misma
+clave y el mismo JSON ante un timeout o reintento. Generar otra clave para un reintento puede crear
+una segunda Cuenta. La respuesta se guarda cifrada y una repetición devuelve el resultado original
+sin volver a ejecutar el alta.
+
 La respuesta exitosa trae `success: true`, el número de cliente, las credenciales (`usuario`,
 `password`, `pin`) y el campo `whatsapp.mensaje` con el texto ya renderizado con la plantilla de la
 empresa, listo para enviar.
 
 **Errores (respuesta consistente para ManyChat):** ante un error de negocio/controlado el endpoint
 responde **HTTP 200** con `success: false`, `whatsapp.mensaje` (texto entendible para el Cliente
-Final), `cuenta` en null y `error.code`. Se hace así porque ManyChat sólo mapea los "Campos de
+Final), las credenciales de `cuenta` en null y `error.code`. Se hace así porque ManyChat sólo mapea los "Campos de
 respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. Códigos posibles:
 
 | `error.code` | Qué significa | Mensaje al Cliente Final |
@@ -287,6 +295,9 @@ respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. C
 | `PROVIDER_AUTH` | Credenciales de SENSA rechazadas | "No pudimos conectarnos con el servicio de IPTV…" |
 | `PROVIDER_UNAVAILABLE` | SENSA caída, timeout o sin conexión | "El servicio de IPTV está demorando más de lo normal…" |
 | `RATE_LIMITED` | Muchas solicitudes | "Estamos recibiendo muchas solicitudes…" |
+| `IDEMPOTENCY_KEY_REQUIRED` | Falta `Idempotency-Key` o no es un UUID | "No se pudo identificar de forma única la solicitud." |
+| `IDEMPOTENCY_CONFLICT` | La clave se reutilizó con otro JSON | "El identificador de la solicitud ya fue utilizado con otros datos." |
+| `REQUEST_IN_PROGRESS` | La primera ejecución todavía no terminó | "La solicitud todavía se está procesando." |
 | `INTERNAL_ERROR` | Error inesperado | "No pudimos procesar la solicitud…" |
 
 El mensaje nunca expone stack traces, credenciales ni respuestas crudas de SENSA; el detalle queda

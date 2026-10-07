@@ -56,6 +56,8 @@ export interface AppConfig {
     empresaRevendedoraId?: string;
     teamMemberId?: string;
     ventanaMinutos: number;
+    rateLimit: number;
+    rateWindowSeconds: number;
   };
 }
 
@@ -116,6 +118,8 @@ export const configuration = (): AppConfig => ({
     teamMemberId: process.env.WSP_BOT_TEAM_MEMBER_ID || undefined,
     // 96 h por defecto: duración de la Ventana que el bot aplica a la Cuenta elegida.
     ventanaMinutos: toInt(process.env.WSP_BOT_VENTANA_MINUTOS, 5760),
+    rateLimit: toInt(process.env.WSP_BOT_RATE_LIMIT, 30),
+    rateWindowSeconds: toInt(process.env.WSP_BOT_RATE_WINDOW_SECONDS, 60),
   },
 });
 
