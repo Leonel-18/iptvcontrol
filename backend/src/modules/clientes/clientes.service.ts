@@ -363,6 +363,53 @@ export class ClientesService {
     }));
   }
 
+  private async asegurarContactoUnico(
+    dni?: string,
+    telefono?: string,
+    excluirClienteId?: string,
+  ): Promise<void> {
+    const empresaRevendedoraId = this.contexto.empresaRevendedoraId;
+    if (!empresaRevendedoraId) {
+      throw new ForbiddenException(
+        'La validación de datos de contacto corresponde a la Empresa Revendedora.',
+      );
+    }
+
+    const alcance = {
+      empresaRevendedoraId,
+      estado: { in: [EstadoClienteFinal.activo, EstadoClienteFinal.suspendido] },
+      ...(excluirClienteId ? { id: { not: excluirClienteId } } : {}),
+    };
+
+    if (dni) {
+      const duplicado = await this.prisma.db.clienteFinal.findFirst({
+        where: { ...alcance, dni },
+        select: { id: true },
+      });
+      if (duplicado) {
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'DniDuplicado',
+          message: 'Ya existe otro Cliente Final con ese DNI.',
+        });
+      }
+    }
+
+    if (telefono) {
+      const duplicado = await this.prisma.db.clienteFinal.findFirst({
+        where: { ...alcance, telefono },
+        select: { id: true },
+      });
+      if (duplicado) {
+        throw new ConflictException({
+          statusCode: 409,
+          error: 'TelefonoDuplicado',
+          message: 'Ya existe otro Cliente Final con ese teléfono.',
+        });
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Alta (flujo 4.1)
   // ---------------------------------------------------------------------------
@@ -374,8 +421,6 @@ export class ClientesService {
         'El alta de Clientes Finales la realiza la Empresa Revendedora desde su panel.',
       );
     }
-
-    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(empresaRevendedoraId);
 
     // --- Validación de ID de gestión externo (regla 2.4) ---------------------
     if (dto.id_gestion_externo && !dto.confirmar_duplicado && !dto.agrupar_en_cliente_id) {
@@ -396,6 +441,7 @@ export class ClientesService {
 
     // --- Opción "agrupar": deriva al alta de Dispositivo adicional (flujo 4.4) --
     if (dto.agrupar_en_cliente_id) {
+      const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(empresaRevendedoraId);
       const resultado = await this.dispositivos.altaAdicional(dto.agrupar_en_cliente_id, {
         notaDescriptiva: dto.dispositivo.nota_descriptiva,
         operadorPrincipalId,
@@ -481,6 +527,12 @@ export class ClientesService {
         'La cantidad de días de aislamiento sólo aplica cuando se elige Aislar Cuenta.',
       );
     }
+
+    // Un mismo DNI o teléfono no puede repetirse dentro de la Empresa
+    // Revendedora: la "agrupación" de arriba ya salió por su propio flujo.
+    await this.asegurarContactoUnico(dto.dni.trim(), dto.telefono?.trim() || undefined);
+
+    const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(empresaRevendedoraId);
 
     let servicios: string;
     let cuentaForzadaId: string | undefined;
@@ -769,41 +821,11 @@ export class ClientesService {
       }
     }
 
-    if (dni && actual && actual.dni !== dni) {
-      const duplicado = await this.prisma.db.clienteFinal.findFirst({
-        where: {
-          dni,
-          id: { not: id },
-          estado: { in: [EstadoClienteFinal.activo, EstadoClienteFinal.suspendido] },
-        },
-        select: { id: true },
-      });
-      if (duplicado) {
-        throw new ConflictException({
-          statusCode: 409,
-          error: 'DniDuplicado',
-          message: 'Ya existe otro Cliente Final con ese DNI.',
-        });
-      }
-    }
-
-    if (telefono && actual && actual.telefono !== telefono) {
-      const duplicado = await this.prisma.db.clienteFinal.findFirst({
-        where: {
-          telefono,
-          id: { not: id },
-          estado: { in: [EstadoClienteFinal.activo, EstadoClienteFinal.suspendido] },
-        },
-        select: { id: true },
-      });
-      if (duplicado) {
-        throw new ConflictException({
-          statusCode: 409,
-          error: 'TelefonoDuplicado',
-          message: 'Ya existe otro Cliente Final con ese teléfono.',
-        });
-      }
-    }
+    await this.asegurarContactoUnico(
+      dni && actual?.dni !== dni ? dni : undefined,
+      telefono && actual?.telefono !== telefono ? telefono : undefined,
+      id,
+    );
 
     return this.prisma.db.clienteFinal.update({
       where: { id },

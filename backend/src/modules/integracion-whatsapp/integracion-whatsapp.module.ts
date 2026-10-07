@@ -5,7 +5,6 @@ import { BotApiKeyGuard } from './bot-api-key.guard';
 import { BotErrorFilter } from './bot-error.filter';
 import { WhatsappBotController } from './whatsapp-bot.controller';
 import { WhatsappBotService } from './whatsapp-bot.service';
-import { BotIdempotenciaService } from './bot-idempotencia.service';
 import { BOT_REDIS_CLIENT, BotRateLimitService } from './bot-rate-limit.service';
 import { BotRedisService } from './bot-redis.service';
 
@@ -23,7 +22,6 @@ import { BotRedisService } from './bot-redis.service';
     WhatsappBotService,
     BotApiKeyGuard,
     BotErrorFilter,
-    BotIdempotenciaService,
     BotRateLimitService,
     BotRedisService,
     { provide: BOT_REDIS_CLIENT, useExisting: BotRedisService },

@@ -15,9 +15,6 @@ export type CodigoErrorBot =
   | 'PROVIDER_AUTH'
   | 'PROVIDER_UNAVAILABLE'
   | 'RATE_LIMITED'
-  | 'IDEMPOTENCY_KEY_REQUIRED'
-  | 'IDEMPOTENCY_CONFLICT'
-  | 'REQUEST_IN_PROGRESS'
   | 'INTERNAL_ERROR';
 
 export interface ErrorBotMapeado {
@@ -46,9 +43,6 @@ export const MENSAJES_ERROR_BOT: Record<CodigoErrorBot, string> = {
   PROVIDER_AUTH: 'Tenemos un error al conectarnos con nuestros servicios.',
   PROVIDER_UNAVAILABLE: 'Tenemos un error al conectarnos con nuestros servicios.',
   RATE_LIMITED: 'Estamos recibiendo muchas solicitudes en este momento.',
-  IDEMPOTENCY_KEY_REQUIRED: 'No se pudo identificar de forma única la solicitud.',
-  IDEMPOTENCY_CONFLICT: 'El identificador de la solicitud ya fue utilizado con otros datos.',
-  REQUEST_IN_PROGRESS: 'La solicitud todavía se está procesando.',
   INTERNAL_ERROR: 'No pudimos procesar la solicitud.',
 };
 
@@ -61,17 +55,17 @@ export const MENSAJES_ERROR_BOT: Record<CodigoErrorBot, string> = {
 export function mapearErrorBot(exception: unknown): ErrorBotMapeado {
   const detalle = exception instanceof Error ? exception.message : String(exception);
 
-  if (esErrorDeRespuesta(exception, 'IdempotencyKeyRequired')) {
-    return conCodigo('IDEMPOTENCY_KEY_REQUIRED', detalle, 'warn');
-  }
-  if (esErrorDeRespuesta(exception, 'IdempotencyConflict')) {
-    return conCodigo('IDEMPOTENCY_CONFLICT', detalle, 'warn');
-  }
-  if (esErrorDeRespuesta(exception, 'RequestInProgress')) {
-    return conCodigo('REQUEST_IN_PROGRESS', detalle, 'warn');
-  }
   if (esErrorDeRespuesta(exception, 'BotRateLimited')) {
     return conCodigo('RATE_LIMITED', detalle, 'warn');
+  }
+
+  // Duplicado local por DNI, teléfono o ID de gestión externo dentro de la
+  // misma Empresa Revendedora (reglas 2.4 y 2.5).
+  if (
+    esErrorDeRespuesta(exception, 'DniDuplicado') ||
+    esErrorDeRespuesta(exception, 'TelefonoDuplicado')
+  ) {
+    return conCodigo('ACCOUNT_ALREADY_EXISTS', detalle, 'warn');
   }
 
   // Cuenta ya existente en el Proveedor (exclusiva: DNI o correo reales ya usados).

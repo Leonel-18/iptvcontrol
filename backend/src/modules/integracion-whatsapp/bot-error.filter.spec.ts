@@ -40,13 +40,18 @@ describe('BotErrorFilter / mapearErrorBot', () => {
       );
     });
 
-    it('distingue los conflictos de idempotencia', () => {
-      const error = new ConflictException({
-        error: 'IdempotencyConflict',
-        message: 'La clave ya fue utilizada con otros datos.',
+    it('clasifica el duplicado local de DNI o teléfono como cuenta ya existente', () => {
+      const porDni = new ConflictException({
+        error: 'DniDuplicado',
+        message: 'Ya existe otro Cliente Final con ese DNI.',
+      });
+      const porTelefono = new ConflictException({
+        error: 'TelefonoDuplicado',
+        message: 'Ya existe otro Cliente Final con ese teléfono.',
       });
 
-      expect(mapearErrorBot(error).code).toBe('IDEMPOTENCY_CONFLICT');
+      expect(mapearErrorBot(porDni).code).toBe('ACCOUNT_ALREADY_EXISTS');
+      expect(mapearErrorBot(porTelefono).code).toBe('ACCOUNT_ALREADY_EXISTS');
     });
 
     it('distingue el rate limit específico del bot', () => {

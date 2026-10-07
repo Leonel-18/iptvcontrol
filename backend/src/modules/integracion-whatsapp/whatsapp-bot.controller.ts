@@ -1,11 +1,10 @@
-import { Body, Controller, Headers, Post, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseFilters, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/auth/decorators';
 import { BotApiKeyGuard } from './bot-api-key.guard';
 import { BotErrorFilter } from './bot-error.filter';
 import { CrearClienteBotDto } from './dto/crear-cliente-bot.dto';
 import { WhatsappBotService } from './whatsapp-bot.service';
-import { BotIdempotenciaService } from './bot-idempotencia.service';
 
 /**
  * Integración para el bot de WhatsApp.
@@ -20,21 +19,13 @@ import { BotIdempotenciaService } from './bot-idempotencia.service';
 @UseGuards(BotApiKeyGuard)
 @UseFilters(BotErrorFilter)
 export class WhatsappBotController {
-  constructor(
-    private readonly bot: WhatsappBotService,
-    private readonly idempotencia: BotIdempotenciaService,
-  ) {}
+  constructor(private readonly bot: WhatsappBotService) {}
 
   @Post('customers')
   @Public()
   @ApiHeader({
     name: 'x-api-key',
     description: 'API key de la integración (WSP_BOT_API_KEY del servidor).',
-    required: true,
-  })
-  @ApiHeader({
-    name: 'Idempotency-Key',
-    description: 'UUID único de la operación. Debe repetirse sin cambios al reintentar.',
     required: true,
   })
   @ApiOperation({
@@ -44,16 +35,15 @@ export class WhatsappBotController {
       'en el servidor. Los servicios no se eligen: se aplican todos los del catálogo (los 7). ' +
       'La ubicación es automática: la venta se suma a la Cuenta compatible más antigua sin Ventana ' +
       'vigente con 1+1 o 2+2 reservado y la protege 96 h por defecto; si no hay ninguna, crea una ' +
-      'nueva. Devuelve las credenciales y el mensaje de WhatsApp ya renderizado con la plantilla ' +
+      'nueva. Un DNI, teléfono o ID de gestión ya registrado en la misma Empresa Revendedora ' +
+      'rechaza el alta, por lo que reintentar la misma operación no crea una segunda Cuenta. ' +
+      'Devuelve las credenciales y el mensaje de WhatsApp ya renderizado con la plantilla ' +
       'de la empresa.\n\n' +
       'Errores: la respuesta sigue siendo HTTP 200 pero con `success: false`, `whatsapp.mensaje` ' +
       'con un texto entendible para el Cliente Final y `error.code` para diagnóstico. Así el bot ' +
       'siempre puede mostrar el motivo sin depender de la salida "Error".',
   })
-  crear(
-    @Headers('idempotency-key') idempotencyKey: string | undefined,
-    @Body() dto: CrearClienteBotDto,
-  ) {
-    return this.idempotencia.ejecutar(idempotencyKey, dto, () => this.bot.crearCliente(dto));
+  crear(@Body() dto: CrearClienteBotDto) {
+    return this.bot.crearCliente(dto);
   }
 }
