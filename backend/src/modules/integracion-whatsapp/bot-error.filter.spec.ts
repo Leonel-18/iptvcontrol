@@ -40,6 +40,24 @@ describe('BotErrorFilter / mapearErrorBot', () => {
       );
     });
 
+    it('distingue los conflictos de idempotencia', () => {
+      const error = new ConflictException({
+        error: 'IdempotencyConflict',
+        message: 'La clave ya fue utilizada con otros datos.',
+      });
+
+      expect(mapearErrorBot(error).code).toBe('IDEMPOTENCY_CONFLICT');
+    });
+
+    it('distingue el rate limit específico del bot', () => {
+      const error = new ConflictException({
+        error: 'BotRateLimited',
+        message: 'Se alcanzó el límite.',
+      });
+
+      expect(mapearErrorBot(error).code).toBe('RATE_LIMITED');
+    });
+
     it('separa el error de autenticación contra el proveedor', () => {
       expect(mapearErrorBot(new ProveedorAutenticacionError('401')).code).toBe('PROVIDER_AUTH');
     });

@@ -2,6 +2,8 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -11,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
+import { BotRateLimitExcedidoError, BotRateLimitService } from './bot-rate-limit.service';
 
 /**
  * Autenticación del bot de WhatsApp.
@@ -36,6 +39,7 @@ export class BotApiKeyGuard implements CanActivate {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly contexto: RequestContextService,
+    private readonly rateLimit: BotRateLimitService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -54,6 +58,23 @@ export class BotApiKeyGuard implements CanActivate {
     const recibida = request.headers['x-api-key'];
     if (typeof recibida !== 'string' || !this.claveValida(esperada, recibida)) {
       throw new UnauthorizedException('Credencial de integración inválida.');
+    }
+
+    try {
+      await this.rateLimit.consumir(recibida);
+    } catch (error) {
+      if (!(error instanceof BotRateLimitExcedidoError)) throw error;
+      context
+        .switchToHttp()
+        .getResponse()
+        .setHeader('Retry-After', String(error.retryAfterSeconds));
+      throw new HttpException(
+        {
+          error: 'BotRateLimited',
+          message: 'Se alcanzó el límite de solicitudes de la integración.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     // Se fija el tenant ANTES de resolver el operador: la política RLS de

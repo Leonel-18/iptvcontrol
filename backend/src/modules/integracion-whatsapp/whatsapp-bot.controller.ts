@@ -1,10 +1,11 @@
-import { Body, Controller, Post, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Post, UseFilters, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/auth/decorators';
 import { BotApiKeyGuard } from './bot-api-key.guard';
 import { BotErrorFilter } from './bot-error.filter';
 import { CrearClienteBotDto } from './dto/crear-cliente-bot.dto';
 import { WhatsappBotService } from './whatsapp-bot.service';
+import { BotIdempotenciaService } from './bot-idempotencia.service';
 
 /**
  * Integración para el bot de WhatsApp.
@@ -19,13 +20,21 @@ import { WhatsappBotService } from './whatsapp-bot.service';
 @UseGuards(BotApiKeyGuard)
 @UseFilters(BotErrorFilter)
 export class WhatsappBotController {
-  constructor(private readonly bot: WhatsappBotService) {}
+  constructor(
+    private readonly bot: WhatsappBotService,
+    private readonly idempotencia: BotIdempotenciaService,
+  ) {}
 
   @Post('customers')
   @Public()
   @ApiHeader({
     name: 'x-api-key',
     description: 'API key de la integración (WSP_BOT_API_KEY del servidor).',
+    required: true,
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    description: 'UUID único de la operación. Debe repetirse sin cambios al reintentar.',
     required: true,
   })
   @ApiOperation({
@@ -41,7 +50,10 @@ export class WhatsappBotController {
       'con un texto entendible para el Cliente Final y `error.code` para diagnóstico. Así el bot ' +
       'siempre puede mostrar el motivo sin depender de la salida "Error".',
   })
-  crear(@Body() dto: CrearClienteBotDto) {
-    return this.bot.crearCliente(dto);
+  crear(
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Body() dto: CrearClienteBotDto,
+  ) {
+    return this.idempotencia.ejecutar(idempotencyKey, dto, () => this.bot.crearCliente(dto));
   }
 }

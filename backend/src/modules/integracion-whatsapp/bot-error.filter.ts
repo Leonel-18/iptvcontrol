@@ -1,7 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RequestContextService } from '../../common/context/request-context.service';
-import { mapearErrorBot } from './bot-error.mapper';
+import { crearRespuestaErrorBot, mapearErrorBot } from './bot-error.mapper';
 
 /**
  * Filtro de errores exclusivo del endpoint del bot de WhatsApp.
@@ -26,7 +26,7 @@ export class BotErrorFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const requestId = this.contexto.get()?.requestId ?? '-';
 
-    const { code, mensajeUsuario, detalle, nivelLog } = mapearErrorBot(exception);
+    const { code, detalle, nivelLog } = mapearErrorBot(exception);
 
     const traza = `[${requestId}] ${request.method} ${request.url} → ${code}: ${detalle}`;
     if (nivelLog === 'error') {
@@ -35,11 +35,6 @@ export class BotErrorFilter implements ExceptionFilter {
       this.logger.warn(traza);
     }
 
-    response.status(200).json({
-      success: false,
-      whatsapp: { mensaje: mensajeUsuario },
-      cuenta: { usuario: null, password: null, pin: null },
-      error: { code, message: mensajeUsuario },
-    });
+    response.status(200).json(crearRespuestaErrorBot(exception));
   }
 }

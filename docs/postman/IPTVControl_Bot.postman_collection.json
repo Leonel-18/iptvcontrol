@@ -1,0 +1,119 @@
+{
+  "info": {
+    "name": "IPTVControl - API Bot",
+    "description": "Las solicitudes crean Cuentas reales. Configure baseUrl y apiKey como secretos. Conserve la misma Idempotency-Key únicamente para reintentar la misma operación.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://<HOST>" },
+    { "key": "apiKey", "value": "<API_KEY>", "type": "secret" },
+    {
+      "key": "idempotencyExclusive",
+      "value": "871d63e5-a915-4c21-bbe5-ae68b76eb730"
+    },
+    {
+      "key": "idempotencyShared",
+      "value": "81ca2fb4-6d2d-4b01-bdb0-7744b5af6efe"
+    },
+    {
+      "key": "idempotencyIsolated",
+      "value": "ddd9f8c3-20c3-48e8-acf4-bf05352a5981"
+    }
+  ],
+  "item": [
+    {
+      "name": "Crear Cuenta exclusiva",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyExclusive}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"dni\": \"30123456\",\n  \"telefono\": \"2615551234\",\n  \"id_gestion_externo\": \"CRM-1042\",\n  \"tipo_alta\": \"cuenta_exclusiva\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/whatsapp/customers",
+        "description": "Genere una Idempotency-Key nueva antes de una operación nueva. Reutilícela sólo para reintentar este mismo JSON."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Contrato success presente', () => pm.expect(pm.response.json()).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear venta compartida 1+1",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyShared}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"María\",\n  \"dni\": \"30123457\",\n  \"id_gestion_externo\": \"CRM-1043\",\n  \"tipo_alta\": \"dispositivo_compartido\",\n  \"cupos_por_categoria\": 1,\n  \"dispositivo\": {\n    \"nota_descriptiva\": \"TV living\"\n  }\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/whatsapp/customers"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Contrato success presente', () => pm.expect(pm.response.json()).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crear venta compartida aislada",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyIsolated}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Carlos\",\n  \"dni\": \"30123458\",\n  \"tipo_alta\": \"dispositivo_compartido\",\n  \"cupos_por_categoria\": 1,\n  \"aislar_cuenta\": true,\n  \"aislamiento_dias\": 30\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/whatsapp/customers"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Contrato success presente', () => pm.expect(pm.response.json()).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
