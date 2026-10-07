@@ -24,31 +24,29 @@ usarse exclusivamente desde el servidor del sistema integrador.
 POST <BASE_URL>/api/v1/integration/whatsapp/customers
 Content-Type: application/json
 x-api-key: <API_KEY>
-Idempotency-Key: <UUID_UNICO>
 ```
 
 No utiliza Auth0. La Empresa Revendedora se determina mediante la configuración de la API key y no
 puede elegirse desde el request.
 
-## 4. Idempotencia y reintentos
+## 4. Duplicados y reintentos
 
-`Idempotency-Key` es obligatorio y debe ser un UUID. El sistema integrador debe generar uno nuevo al
-iniciar cada alta y conservarlo hasta recibir una respuesta definitiva.
-
-```text
-871d63e5-a915-4c21-bbe5-ae68b76eb730
-```
+El alta es idempotente por datos, sin clave de idempotencia. Dentro de la misma Empresa Revendedora,
+un **DNI**, un **teléfono** o un `id_gestion_externo` ya registrado en un Cliente Final activo o
+suspendido rechaza el alta con `ACCOUNT_ALREADY_EXISTS`.
 
 Reglas:
 
-- Un reintento de la misma alta debe usar la misma clave y exactamente el mismo JSON.
-- La misma clave y el mismo JSON devuelven la respuesta original sin crear otra Cuenta.
-- La misma clave con datos diferentes produce `IDEMPOTENCY_CONFLICT`.
-- Una segunda solicitud concurrente produce `REQUEST_IN_PROGRESS`.
-- Después de un timeout no debe generarse otra clave: hacerlo podría crear una segunda Cuenta.
+- Reintentar exactamente el mismo JSON no crea una segunda Cuenta: responde
+  `ACCOUNT_ALREADY_EXISTS`.
+- Un DNI o teléfono repetido también responde `ACCOUNT_ALREADY_EXISTS`, aunque el resto del request
+  cambie.
+- El único campo con confirmación explícita es `id_gestion_externo`: enviar
+  `confirmar_duplicado: true` permite crear otro cliente con el mismo ID de CRM.
+- Tras un timeout se puede reintentar el mismo JSON con seguridad; no hay UUID que conservar.
 
-IPTVControl conserva el hash del request y la respuesta cifrada. Usuario, contraseña y PIN no se
-almacenan en claro dentro del registro de idempotencia.
+IPTVControl no guarda la respuesta de un alta anterior: un reintento confirmado como duplicado
+devuelve el error, no las credenciales ya generadas.
 
 ## 5. Campos del request
 
@@ -184,14 +182,11 @@ Los errores controlados responden HTTP 200 para que las plataformas de chat pued
 
 | Código | Significado | Acción recomendada |
 |---|---|---|
-| `ACCOUNT_ALREADY_EXISTS` | Cuenta o ID de gestión duplicado | Revisar el cliente; confirmar sólo si el duplicado es intencional |
+| `ACCOUNT_ALREADY_EXISTS` | DNI, teléfono o ID de gestión ya registrado en la Empresa Revendedora | Revisar el cliente; no reintentar |
 | `INVALID_DATA` | Datos faltantes, inválidos o combinación incompatible | Corregir el request |
-| `IDEMPOTENCY_KEY_REQUIRED` | Falta la clave o no es un UUID | Generar una clave válida |
-| `IDEMPOTENCY_CONFLICT` | La clave se reutilizó con otro JSON | No reusar claves entre operaciones |
-| `REQUEST_IN_PROGRESS` | La primera solicitud sigue ejecutándose | Esperar y reintentar con la misma clave y JSON |
 | `RATE_LIMITED` | Se superaron 30 requests en 60 segundos | Esperar los segundos de `Retry-After` |
 | `PROVIDER_AUTH` | Falló la autenticación con el Proveedor | Informar a soporte |
-| `PROVIDER_UNAVAILABLE` | Proveedor o dependencia temporalmente no disponible | No generar otra clave; conservar la operación y consultar a soporte |
+| `PROVIDER_UNAVAILABLE` | Proveedor o dependencia temporalmente no disponible | Reintentar el mismo JSON y consultar a soporte |
 | `INTERNAL_ERROR` | Error no esperado | Informar a soporte con fecha y hora, sin credenciales |
 
 ## 9. Rate limit
@@ -200,14 +195,12 @@ El endpoint admite 30 solicitudes por cada ventana de 60 segundos para la API ke
 es una cuota diaria. Al superar el límite, la operación no llega al Proveedor y la respuesta incluye
 `RATE_LIMITED` y el header `Retry-After`.
 
-El integrador no debe reintentar en bucle. Debe esperar `Retry-After` y conservar la misma
-`Idempotency-Key` y el mismo JSON.
+El integrador no debe reintentar en bucle. Debe esperar `Retry-After` y puede reintentar el mismo
+JSON: los duplicados por DNI, teléfono o ID de gestión están bloqueados.
 
 ## 10. Checklist del integrador
 
 - Guardar `BASE_URL` y `API_KEY` como secretos del servidor.
-- Generar un UUID distinto para cada alta.
-- Reutilizar el UUID original ante timeout o reintento.
 - Enviar `Content-Type: application/json`.
 - Evaluar `success` en todas las respuestas.
 - Respetar `Retry-After`.
@@ -216,6 +209,6 @@ El integrador no debe reintentar en bucle. Debe esperar `Retry-After` y conserva
 
 ## 11. Postman
 
-La colección `docs/postman/IPTVControl_Bot.postman_collection.json` utiliza variables y no contiene
-URL ni API key reales. Antes de cada alta nueva se debe generar un UUID nuevo en la variable de
-idempotencia correspondiente. Para probar un reintento, se conserva esa variable sin cambios.
+La colección `IPTVControl_Bot.postman_collection.json` utiliza variables y no contiene
+URL ni API key reales. Use DNIs y teléfonos no registrados en cada alta: repetir un request
+existente responde `ACCOUNT_ALREADY_EXISTS` y no crea una segunda Cuenta.

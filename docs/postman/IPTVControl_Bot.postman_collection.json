@@ -1,24 +1,12 @@
 {
   "info": {
     "name": "IPTVControl - API Bot",
-    "description": "Las solicitudes crean Cuentas reales. Configure baseUrl y apiKey como secretos. Conserve la misma Idempotency-Key únicamente para reintentar la misma operación.",
+    "description": "Las solicitudes crean Cuentas reales. Configure baseUrl y apiKey como secretos. Un DNI, teléfono o ID de gestión ya registrado en la misma Empresa Revendedora rechaza el alta con ACCOUNT_ALREADY_EXISTS.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "https://<HOST>" },
-    { "key": "apiKey", "value": "<API_KEY>", "type": "secret" },
-    {
-      "key": "idempotencyExclusive",
-      "value": "871d63e5-a915-4c21-bbe5-ae68b76eb730"
-    },
-    {
-      "key": "idempotencyShared",
-      "value": "81ca2fb4-6d2d-4b01-bdb0-7744b5af6efe"
-    },
-    {
-      "key": "idempotencyIsolated",
-      "value": "ddd9f8c3-20c3-48e8-acf4-bf05352a5981"
-    }
+    { "key": "apiKey", "value": "<API_KEY>", "type": "secret" }
   ],
   "item": [
     {
@@ -27,19 +15,14 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" },
-          {
-            "key": "Idempotency-Key",
-            "value": "{{idempotencyExclusive}}",
-            "type": "text"
-          }
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
         ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"dni\": \"30123456\",\n  \"telefono\": \"2615551234\",\n  \"id_gestion_externo\": \"CRM-1042\",\n  \"tipo_alta\": \"cuenta_exclusiva\"\n}"
         },
         "url": "{{baseUrl}}/api/v1/integration/whatsapp/customers",
-        "description": "Genere una Idempotency-Key nueva antes de una operación nueva. Reutilícela sólo para reintentar este mismo JSON."
+        "description": "Use un DNI y teléfono no registrados. Repetir el mismo JSON no crea una segunda Cuenta: responde ACCOUNT_ALREADY_EXISTS."
       },
       "event": [
         {
@@ -59,12 +42,7 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" },
-          {
-            "key": "Idempotency-Key",
-            "value": "{{idempotencyShared}}",
-            "type": "text"
-          }
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
         ],
         "body": {
           "mode": "raw",
@@ -90,12 +68,7 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" },
-          {
-            "key": "Idempotency-Key",
-            "value": "{{idempotencyIsolated}}",
-            "type": "text"
-          }
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
         ],
         "body": {
           "mode": "raw",

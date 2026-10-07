@@ -384,36 +384,9 @@ model EmpresaRevendedora {
   consumosPrueba         ConsumoCuentaPrueba[]
   notificaciones         Notificacion[]
   notificacionesLeidas   NotificacionLectura[]
-  solicitudesIdempotenciaBot SolicitudIdempotenciaBot[]
 
   @@index([operadorPrincipalId])
   @@map("empresa_revendedora")
-}
-
-/// Reserva una operación del bot para que los reintentos no creen dos Cuentas.
-/// La respuesta completa se cifra porque puede contener credenciales del Proveedor.
-model SolicitudIdempotenciaBot {
-  id String @id @default(uuid()) @db.Uuid
-
-  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
-  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
-
-  clave            String                @db.VarChar(128)
-  hashSolicitud    String                @map("hash_solicitud") @db.Char(64)
-  estado           EstadoIdempotenciaBot
-  respuestaCifrada String?               @map("respuesta_cifrada")
-  creadaEn         DateTime              @default(now()) @map("creada_en")
-  finalizadaEn     DateTime?             @map("finalizada_en")
-
-  @@unique([empresaRevendedoraId, clave])
-  @@index([empresaRevendedoraId, creadaEn])
-  @@map("solicitud_idempotencia_bot")
-}
-
-enum EstadoIdempotenciaBot {
-  procesando
-  completada
-  fallida
 }
 
 /// Notificación persistente y empresarial (Épica C, HU-N01).

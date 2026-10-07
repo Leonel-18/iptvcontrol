@@ -262,7 +262,6 @@ Reglas que impone el servidor (el bot no las elige):
 ```http
 POST /api/v1/integration/whatsapp/customers
 x-api-key: <WSP_BOT_API_KEY>
-Idempotency-Key: <UUID único de la operación>
 Content-Type: application/json
 
 {
@@ -274,10 +273,9 @@ Content-Type: application/json
 }
 ```
 
-`Idempotency-Key` es obligatorio. El sistema externo genera un UUID por alta y reutiliza la misma
-clave y el mismo JSON ante un timeout o reintento. Generar otra clave para un reintento puede crear
-una segunda Cuenta. La respuesta se guarda cifrada y una repetición devuelve el resultado original
-sin volver a ejecutar el alta.
+No hay clave de idempotencia. El alta es naturalmente idempotente por datos: un DNI, teléfono o
+`id_gestion_externo` ya registrado en la misma Empresa Revendedora devuelve `ACCOUNT_ALREADY_EXISTS`
+sin crear una segunda Cuenta. Ante un timeout se puede reintentar el mismo JSON con seguridad.
 
 La respuesta exitosa trae `success: true`, el número de cliente, las credenciales (`usuario`,
 `password`, `pin`) y el campo `whatsapp.mensaje` con el texto ya renderizado con la plantilla de la
@@ -295,9 +293,6 @@ respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. C
 | `PROVIDER_AUTH` | Credenciales de SENSA rechazadas | "No pudimos conectarnos con el servicio de IPTV…" |
 | `PROVIDER_UNAVAILABLE` | SENSA caída, timeout o sin conexión | "El servicio de IPTV está demorando más de lo normal…" |
 | `RATE_LIMITED` | Muchas solicitudes | "Estamos recibiendo muchas solicitudes…" |
-| `IDEMPOTENCY_KEY_REQUIRED` | Falta `Idempotency-Key` o no es un UUID | "No se pudo identificar de forma única la solicitud." |
-| `IDEMPOTENCY_CONFLICT` | La clave se reutilizó con otro JSON | "El identificador de la solicitud ya fue utilizado con otros datos." |
-| `REQUEST_IN_PROGRESS` | La primera ejecución todavía no terminó | "La solicitud todavía se está procesando." |
 | `INTERNAL_ERROR` | Error inesperado | "No pudimos procesar la solicitud…" |
 
 El mensaje nunca expone stack traces, credenciales ni respuestas crudas de SENSA; el detalle queda

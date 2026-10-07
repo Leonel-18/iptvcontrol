@@ -285,7 +285,10 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
     const prisma = {
       db: {
         cuenta: { findUnique: jest.fn().mockResolvedValue(cuentaPersistida) },
-        clienteFinal: { delete: jest.fn().mockResolvedValue(undefined) },
+        clienteFinal: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          delete: jest.fn().mockResolvedValue(undefined),
+        },
         incidenciaDispositivoProveedor: {
           count: jest.fn().mockResolvedValue(incidenciasPendientes),
         },
@@ -511,6 +514,68 @@ describe('ClientesService — crear() con carga manual en Cuenta (cuenta_id)', (
   });
 });
 
+describe('ClientesService — validación de DNI y teléfono al crear', () => {
+  const dto = {
+    nombre: 'Ana',
+    dni: '30123456',
+    telefono: '2615550000',
+    tipo_alta: TipoAltaClienteFinal.cuenta_exclusiva,
+    dispositivo: {},
+  };
+
+  const crearServicio = (findFirst: jest.Mock) => {
+    const prisma = {
+      db: { clienteFinal: { findFirst } },
+    } as unknown as PrismaService;
+    const contexto = {
+      empresaRevendedoraId: 'empresa-1',
+    } as unknown as RequestContextService;
+    const dispositivos = {
+      operadorPrincipalId: jest.fn(),
+    } as unknown as DispositivosService;
+
+    const servicio = new ClientesService(
+      prisma,
+      {} as AuditService,
+      {} as CryptoService,
+      contexto,
+      dispositivos,
+      {} as IdentificadoresService,
+      {} as ProveedorService,
+      {} as PruebasService,
+    );
+    return { servicio, dispositivos };
+  };
+
+  it('rechaza crear un Cliente Final con el DNI de otro Cliente activo', async () => {
+    const { servicio, dispositivos } = crearServicio(
+      jest.fn().mockResolvedValue({ id: 'cliente-existente' }),
+    );
+
+    const error = await servicio.crear(dto).catch((e) => e);
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({ error: 'DniDuplicado' });
+    expect(dispositivos.operadorPrincipalId).not.toHaveBeenCalled();
+  });
+
+  it('rechaza crear un Cliente Final con el teléfono de otro Cliente activo', async () => {
+    const findFirst = jest
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'cliente-existente' });
+    const { servicio, dispositivos } = crearServicio(findFirst);
+
+    const error = await servicio.crear(dto).catch((e) => e);
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({
+      error: 'TelefonoDuplicado',
+    });
+    expect(dispositivos.operadorPrincipalId).not.toHaveBeenCalled();
+  });
+});
+
 /**
  * "Aislar Cuenta" (HU-A01): crea una Cuenta compartida nueva y aislada, con el
  * aislamiento expresado en DÍAS. Estas validaciones corren antes de tocar el
@@ -604,7 +669,7 @@ describe('ClientesService — validación de Aislar Cuenta', () => {
     };
     const prisma = {
       transaction: jest.fn().mockImplementation((fn: (t: unknown) => unknown) => fn(tx)),
-      db: {},
+      db: { clienteFinal: { findFirst: jest.fn().mockResolvedValue(null) } },
     } as unknown as PrismaService;
     const dispositivos = {
       operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
