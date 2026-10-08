@@ -539,6 +539,10 @@ model ClienteFinal {
   email     String? @db.VarChar(160)
   direccion String? @db.VarChar(200)
 
+  /// Nota interna de la Empresa Revendedora (ej. "TV del living"). Es un dato
+  /// local de IPTVControl: nunca se envía al Proveedor. Opcional.
+  notaDescriptiva String? @map("nota_descriptiva") @db.VarChar(200)
+
   tipoAlta TipoAltaClienteFinal @map("tipo_alta")
   estado   EstadoClienteFinal   @default(activo)
 

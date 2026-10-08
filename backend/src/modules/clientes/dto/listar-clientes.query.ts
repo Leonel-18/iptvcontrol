@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EstadoClienteFinal, TipoAltaClienteFinal } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 export class ListarClientesQueryDto extends PaginationQueryDto {
@@ -68,6 +68,15 @@ export class ActualizarClienteDto {
   @IsOptional()
   @IsString()
   direccion?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Nota interna de la Empresa Revendedora sobre el Cliente Final. Dato local; no se envía al Proveedor.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  nota_descriptiva?: string;
 
   @ApiPropertyOptional({ description: 'ID del cliente en el CRM de la Empresa Revendedora.' })
   @IsOptional()

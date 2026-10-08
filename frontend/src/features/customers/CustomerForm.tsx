@@ -260,9 +260,8 @@ export const CustomerForm = () => {
                       valores.duracionVentanaCuriosidadMinutos,
                   }
               : {}),
-            dispositivo: {
-              nota_descriptiva: valores.notaDescriptiva.trim() || undefined,
-            },
+            nota_descriptiva: valores.notaDescriptiva.trim() || undefined,
+            dispositivo: {},
             confirmar_duplicado: decisionDuplicado?.tipo === 'crear' ? true : undefined,
             agrupar_en_cliente_id:
               decisionDuplicado?.tipo === 'agrupar' ? decisionDuplicado.clienteId : undefined,
