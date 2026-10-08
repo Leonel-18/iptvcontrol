@@ -21,7 +21,7 @@ el ciclo de vida de **Cuentas / Dispositivos / Clientes Finales** entre un **Ope
 - **Glosario** (nombres obligatorios en base y lógica): `docs/02_Glosario_de_Actores_y_Entidades.md`.
   La unidad oficial es **Dispositivo**; para capacidad libre se usa **cupo**.
 - **Estado actual:** el MVP funciona localmente con Docker Compose (Postgres + Redis + backend +
-  frontend). La suite vigente tiene **119 tests de backend y 23 de frontend**.
+  frontend). La suite vigente tiene **328 tests de backend y 39 de frontend**.
 - **Producción confirmada (26/08/2026):** VPS propia con Ubuntu 24.04 LTS, arquitectura AMD64,
   dominio `iptvcontrol.com.ar` administrado y proxied por Cloudflare, base PostgreSQL nueva y
   HTTPS en origen con el Nginx del host + Let's Encrypt/Certbot.
@@ -187,20 +187,39 @@ Confirmar además desde el panel:
 
 No ejecutar nuevamente `seed:root` durante una actualización normal.
 
-#### Verificación de la versión `feature/device-metadata-source-sans`
+#### Verificación de la versión desplegada
 
-Esta versión incorpora la migración `20261005120000_modelo_ultimo_inicio_dispositivo`, que agrega
-columnas nullable y no elimina ni transforma datos existentes. Después del despliegue:
+Esta versión incluye una migración **aditiva** (`20261008120000_nota_cliente_final`, agrega
+`cliente_final.nota_descriptiva` nullable; no borra ni transforma datos) y tres cambios
+funcionales. Después del despliegue, probar en el panel de una Empresa Revendedora (y comparar
+con el Operador Principal donde corresponda):
 
-1. Abrir **Cuentas → una Cuenta → Dispositivos** como Empresa Revendedora.
-2. Pulsar **Consultar dispositivos en el proveedor** para completar los registros históricos.
-3. Verificar que cada fila muestre **Modelo** y **Último inicio** dentro de **Equipo / nota**.
-4. Recargar la página y confirmar que ambos valores permanezcan visibles.
-5. Comprobar que toda la interfaz utilice **Source Sans 3**.
+**1. Alta de Cliente Final en Cuenta exclusiva sin titular**
+- **Cuentas** → abrir una **Cuenta exclusiva que no tenga Cliente Final** (p. ej. una importada o
+  una que quedó sin titular) → pestaña **Dispositivos**.
+- El botón **Agregar cliente** debe verse y, al pulsarlo, **abrir el diálogo** (antes no abría nada).
+- Confirmar que el diálogo **no** ofrece 1+1/2+2 ni Ventana de Alta (no aplican a exclusivas).
+- Cargar nombre + DNI válidos → **Cargar cliente** → debe quedar asignado como titular.
+- En una exclusiva **con** titular el botón ya **no** aparece; intentar un segundo cliente
+  (por API) devuelve "Esta Cuenta exclusiva ya tiene un Cliente Final asignado".
 
-Los Dispositivos que todavía no hayan sido informados por SENSA muestran `—` hasta su primera
-sincronización. El barrido periódico también completa estos datos, pero la consulta manual permite
-validar el despliegue inmediatamente.
+**2. Bloqueo de Clientes Finales duplicados por DNI o teléfono**
+- **Clientes → Nuevo cliente** con un DNI nuevo → OK.
+- Repetir con el **mismo DNI** → "Ya existe otro Cliente Final con ese DNI".
+- Repetir con el **mismo teléfono** y otro DNI → "Ya existe otro Cliente Final con ese teléfono".
+- **Clientes → detalle → Editar datos**: poner el DNI/teléfono de otro → rechaza; guardar sin
+  cambiar esos campos → permite.
+- Un cliente **dado de baja** no debe bloquear reutilizar su DNI/teléfono.
+
+**3. Nota interna del Cliente Final**
+- En el wizard de alta, cargar **Nota interna** y confirmar el alta → debe guardarse en el cliente.
+- En **Clientes → detalle** (fila "Nota interna") debe verse y poder editarse desde **Editar datos**.
+- Como **Operador Principal**, la nota **no** debe verse (regla de visibilidad 4.2).
+
+**Smoke general**
+- Login, dashboard y apertura de una Cuenta.
+- Alta de una venta compartida 1+1 y 2+2 (ventana de vinculación de 10 min).
+- Sin errores nuevos en los logs del backend.
 
 #### Reversión del código
 
