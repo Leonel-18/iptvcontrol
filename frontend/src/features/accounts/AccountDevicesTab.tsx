@@ -36,7 +36,10 @@ import {
 } from "@/components/ui/overlays";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { AddManualCustomerDialog } from "./AddManualCustomerDialog";
-import { getUnlinkedProviderDevices } from "./account-devices.utils";
+import {
+  getUnlinkedProviderDevices,
+  puedeAgregarCliente,
+} from "./account-devices.utils";
 import { CorrectDeviceBindingDialog } from "./CorrectDeviceBindingDialog";
 
 /** Una sola grilla para los Dispositivos locales y los detectados al consultar al Proveedor. */
@@ -64,6 +67,7 @@ export const AccountDevicesTab = ({
   const [crearClienteAbierto, setCrearClienteAbierto] = useState(false);
   const dispositivosProveedor = getUnlinkedProviderDevices(cuenta, inventario);
   const clienteExclusivo = cuenta.cliente_final_exclusivo;
+  const puedeAgregar = puedeAgregarCliente(cuenta, esOperador);
 
   // Al vincular un equipo detectado en esta Cuenta, el destinatario sólo puede
   // ser un Cliente Final que YA pertenezca a esta Cuenta (no cualquiera de la
@@ -182,9 +186,7 @@ export const AccountDevicesTab = ({
           proveedor detectó para esta Cuenta.
         </p>
         <div className="flex flex-wrap gap-2">
-          {!esOperador &&
-          !cuenta.password_pendiente &&
-          (!cuenta.es_exclusiva || !cuenta.cliente_final_exclusivo) ? (
+          {puedeAgregar ? (
             <Button
               variant="primary"
               size="sm"
@@ -563,7 +565,7 @@ export const AccountDevicesTab = ({
         </DialogContent>
       </Dialog>
 
-      {!cuenta.es_exclusiva ? (
+      {puedeAgregar ? (
         <AddManualCustomerDialog
           cuenta={cuenta}
           abierto={crearClienteAbierto}
