@@ -301,6 +301,9 @@ export const CustomerDetail = () => {
                   <DetailRow etiqueta="Dirección">
                     {data.direccion || "—"}
                   </DetailRow>
+                  <DetailRow etiqueta="Nota interna">
+                    {data.nota_descriptiva || "—"}
+                  </DetailRow>
                   <DetailRow etiqueta="ID en su gestión">
                     {data.id_gestion_externo ? (
                       <CopyableId

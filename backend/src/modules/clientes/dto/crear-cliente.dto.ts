@@ -82,6 +82,16 @@ export class CrearClienteDto {
 
   @ApiPropertyOptional({
     description:
+      'Nota interna de la Empresa Revendedora sobre el Cliente Final (ej. "TV del living"). ' +
+      'Dato local: no se envía al Proveedor.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  nota_descriptiva?: string;
+
+  @ApiPropertyOptional({
+    description:
       'ID del cliente en el sistema de gestión propio de la Empresa Revendedora. Opcional. ' +
       'Si ya existe otro cliente con el mismo valor, el sistema avisa antes de confirmar.',
   })

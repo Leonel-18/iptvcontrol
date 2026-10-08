@@ -215,6 +215,8 @@ export interface Customer {
   telefono: string | null;
   email: string | null;
   direccion: string | null;
+  /** Nota interna de la Empresa Revendedora. Opcional. */
+  nota_descriptiva?: string | null;
   tipo_alta: "cuenta_exclusiva" | "dispositivo_compartido";
   estado: "activo" | "suspendido" | "dado_de_baja";
   empresa_revendedora_id: string;

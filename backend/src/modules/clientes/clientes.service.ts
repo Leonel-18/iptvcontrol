@@ -443,7 +443,9 @@ export class ClientesService {
     if (dto.agrupar_en_cliente_id) {
       const operadorPrincipalId = await this.dispositivos.operadorPrincipalId(empresaRevendedoraId);
       const resultado = await this.dispositivos.altaAdicional(dto.agrupar_en_cliente_id, {
-        notaDescriptiva: dto.dispositivo.nota_descriptiva,
+        // Al agrupar no se crea un Cliente Final nuevo: la nota se aplica al
+        // Dispositivo adicional (la nota del cliente existente no se pisa).
+        notaDescriptiva: dto.dispositivo.nota_descriptiva ?? dto.nota_descriptiva,
         operadorPrincipalId,
         duracionVentanaCuriosidadMinutos: dto.duracion_ventana_curiosidad_minutos,
       });
@@ -635,6 +637,7 @@ export class ClientesService {
           telefono: dto.telefono?.trim() || null,
           email: dto.email?.trim() || null,
           direccion: dto.direccion?.trim() || null,
+          notaDescriptiva: dto.nota_descriptiva?.trim() || null,
           tipoAlta: dto.tipo_alta,
           estado: EstadoClienteFinal.activo,
         },
@@ -836,6 +839,8 @@ export class ClientesService {
         telefono: dto.telefono?.trim(),
         email: dto.email?.trim(),
         direccion: dto.direccion?.trim(),
+        notaDescriptiva:
+          dto.nota_descriptiva === undefined ? undefined : dto.nota_descriptiva.trim() || null,
         idGestionExterno,
       },
     });
@@ -1122,6 +1127,7 @@ export class ClientesService {
       telefono: cliente.telefono,
       email: cliente.email,
       direccion: cliente.direccion,
+      nota_descriptiva: cliente.notaDescriptiva,
       tipo_alta: cliente.tipoAlta,
       cuenta_aislada: cuentaAislada,
       cuenta_es_prueba: cuentaEsPrueba,

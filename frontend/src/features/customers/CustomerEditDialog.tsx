@@ -8,6 +8,7 @@ import {
   Button,
   Field,
   Input,
+  Textarea,
 } from "@/components/ui/primitives";
 import { Dialog, DialogContent } from "@/components/ui/overlays";
 
@@ -34,6 +35,9 @@ export const CustomerEditDialog = ({
   const [telefono, setTelefono] = useState(cliente.telefono ?? "");
   const [email, setEmail] = useState(cliente.email ?? "");
   const [direccion, setDireccion] = useState(cliente.direccion ?? "");
+  const [notaDescriptiva, setNotaDescriptiva] = useState(
+    cliente.nota_descriptiva ?? "",
+  );
   const [idGestionExterno, setIdGestionExterno] = useState(
     cliente.id_gestion_externo ?? "",
   );
@@ -47,6 +51,7 @@ export const CustomerEditDialog = ({
     setTelefono(cliente.telefono ?? "");
     setEmail(cliente.email ?? "");
     setDireccion(cliente.direccion ?? "");
+    setNotaDescriptiva(cliente.nota_descriptiva ?? "");
     setIdGestionExterno(cliente.id_gestion_externo ?? "");
     setError("");
   }, [abierto, cliente]);
@@ -62,6 +67,7 @@ export const CustomerEditDialog = ({
           telefono: telefono.trim() || undefined,
           email: email.trim() || undefined,
           direccion: direccion.trim() || undefined,
+          nota_descriptiva: notaDescriptiva.trim() || undefined,
           id_gestion_externo: idGestionExterno.trim() || undefined,
         },
       }),
@@ -143,6 +149,18 @@ export const CustomerEditDialog = ({
               id="edit-direccion"
               value={direccion}
               onChange={(evento) => setDireccion(evento.target.value)}
+            />
+          </Field>
+          <Field
+            label="Nota interna"
+            htmlFor="edit-nota"
+            help="Opcional. Para identificarlo en su panel, por ejemplo &quot;TV del living&quot;. No se envía al proveedor."
+          >
+            <Textarea
+              id="edit-nota"
+              value={notaDescriptiva}
+              onChange={(evento) => setNotaDescriptiva(evento.target.value)}
+              rows={2}
             />
           </Field>
           <Field
