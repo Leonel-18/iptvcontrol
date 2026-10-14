@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   "backend/src/proveedor/proveedor-adapter.interface.ts": {
-    "mtime": 1787839977.258675,
-    "ast_hash": "4b4fa0915172f23f694bce472134d6fe",
+    "mtime": 1788191733.1688643,
+    "ast_hash": "fee88f50e3f52225b4a3618f2b69621b",
     "semantic_hash": ""
   },
   "backend/src/proveedor/proveedor-telemetry.service.ts": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "backend/src/proveedor/proveedor.service.ts": {
-    "mtime": 1787839977.2626777,
-    "ast_hash": "73cce98d40c99cb941b683d3b02cb316",
+    "mtime": 1788191783.36362,
+    "ast_hash": "7d896d7fe30a20852c38b7d93de97de4",
     "semantic_hash": ""
   },
   "backend/src/proveedor/rate-limiter.service.ts": {
@@ -130,8 +130,8 @@
     "semantic_hash": ""
   },
   "backend/src/proveedor/sensa/sensa.adapter.ts": {
-    "mtime": 1787839977.263676,
-    "ast_hash": "144dceead4e9eb436c752f73a2b3165a",
+    "mtime": 1788191748.3036222,
+    "ast_hash": "2670a4acc279a2f8a96bd73e605bd6ee",
     "semantic_hash": ""
   },
   "backend/src/proveedor/sensa/sensa.constants.ts": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "backend/src/proveedor/sensa/sensa.types.ts": {
-    "mtime": 1787674895.979167,
-    "ast_hash": "cc5d4065d4400364e223bd3697904763",
+    "mtime": 1788191769.6629372,
+    "ast_hash": "53b721b69ba7d402af78e03e189f052b",
     "semantic_hash": ""
   },
   "backend/docker-entrypoint.sh": {
@@ -160,7 +160,7 @@
     "semantic_hash": ""
   },
   "backend/package.json": {
-    "mtime": 1787861203.3606205,
+    "mtime": 1788191447.8810506,
     "ast_hash": "803ce277ee106adb05d6732cdb87404c",
     "semantic_hash": ""
   },
@@ -175,7 +175,7 @@
     "semantic_hash": ""
   },
   "backend/tsconfig.build.json": {
-    "mtime": 1787861203.0148902,
+    "mtime": 1788191447.9130533,
     "ast_hash": "8120e040c249837e94c8cc59d4ed4d9c",
     "semantic_hash": ""
   },
@@ -195,8 +195,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1787674895.9461677,
-    "ast_hash": "0e0ae89d32528387867acb91499e0a69",
+    "mtime": 1788190746.0554185,
+    "ast_hash": "5b628e73c589d8ffd7fcbc272deb2865",
     "semantic_hash": ""
   },
   "INSTRUCTIVO.md": {
@@ -210,27 +210,27 @@
     "semantic_hash": ""
   },
   "docs/01_Instrucciones_del_Proyecto.md": {
-    "mtime": 1788187365.506007,
-    "ast_hash": "e0dcef6f0c179d0ba716605ff1677940",
+    "mtime": 1788191447.9150546,
+    "ast_hash": "eb40669474e82b2ad951a227d07fc5dc",
     "semantic_hash": ""
   },
   "docs/02_Glosario_de_Actores_y_Entidades.md": {
-    "mtime": 1788187334.3958056,
-    "ast_hash": "a099b30c7fcd824edcb31ef18347bf59",
+    "mtime": 1788191447.916052,
+    "ast_hash": "666ee1ac9d0d320e48daf43fb734ae39",
     "semantic_hash": ""
   },
   "docs/03_Reglas_de_Negocio.md": {
-    "mtime": 1788187125.38419,
-    "ast_hash": "13f5bfa6aedd5cccfb04d052a489a123",
+    "mtime": 1788192519.795545,
+    "ast_hash": "67aca9d832545881b8dad784e270592a",
     "semantic_hash": ""
   },
   "docs/04_Esqueleto_Tecnico_Inicial.md": {
-    "mtime": 1788187307.1672523,
-    "ast_hash": "f94193542ce26480181149b01ff2fd2b",
+    "mtime": 1788192557.1303551,
+    "ast_hash": "9111653c0977244ce378d7674b453a30",
     "semantic_hash": ""
   },
   "docs/05_Decisiones_Pendientes.md": {
-    "mtime": 1788186898.7966955,
+    "mtime": 1788191447.920052,
     "ast_hash": "99c1688e4f395fa72eeef51a309bb4e8",
     "semantic_hash": ""
   },
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/auditoria/auditoria.service.ts": {
-    "mtime": 1788187516.5934155,
-    "ast_hash": "e7e640188365d1f82c93feef735de77d",
+    "mtime": 1788191861.493008,
+    "ast_hash": "d879161abd8825a43e55c4ae7b9f0752",
     "semantic_hash": ""
   },
   "backend/src/modules/auditoria/dto/listar-auditoria.query.ts": {
@@ -300,7 +300,7 @@
     "semantic_hash": ""
   },
   "backend/src/modules/clientes/clientes.controller.ts": {
-    "mtime": 1787934249.6137617,
+    "mtime": 1788191447.8870506,
     "ast_hash": "6bc87feeb20a49d3d32d042198d513ec",
     "semantic_hash": ""
   },
@@ -310,12 +310,12 @@
     "semantic_hash": ""
   },
   "backend/src/modules/clientes/clientes.service.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.8880498,
     "ast_hash": "48a9dcee1fbab2c410d4524453ce491c",
     "semantic_hash": ""
   },
   "backend/src/modules/clientes/dto/crear-cliente.dto.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.8890517,
     "ast_hash": "a208b2c2154311f59b521502b35ba62e",
     "semantic_hash": ""
   },
@@ -330,18 +330,18 @@
     "semantic_hash": ""
   },
   "backend/src/modules/configuracion/configuracion.module.ts": {
-    "mtime": 1788181772.7034743,
-    "ast_hash": "4fbf1b9a7ace921c54c05cc88f2a0f77",
+    "mtime": 1788191447.8900502,
+    "ast_hash": "329f4622a35d40316c168a402f8f6ebd",
     "semantic_hash": ""
   },
   "backend/src/modules/configuracion/configuracion.service.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.89105,
     "ast_hash": "e27299c4f3142a34a55e34b8180653e3",
     "semantic_hash": ""
   },
   "backend/src/modules/configuracion/dto/configuracion.dto.ts": {
-    "mtime": 1788181772.6884758,
-    "ast_hash": "8d962fb044a1f9b6a614fdeda1ddbb1d",
+    "mtime": 1788191447.8920517,
+    "ast_hash": "4451e2d1985d29c34ed1b78a32790ee8",
     "semantic_hash": ""
   },
   "backend/src/modules/configuracion/proveedores.controller.ts": {
@@ -355,23 +355,23 @@
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/capacidad.util.spec.ts": {
-    "mtime": 1787934249.7782733,
+    "mtime": 1788191447.8930519,
     "ast_hash": "2776d7ebcfd91b7b4e388e233b5191cf",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/capacidad.util.ts": {
-    "mtime": 1787934249.8022752,
+    "mtime": 1788191447.8930519,
     "ast_hash": "399ad322ed5e1ff4eeb036e83bca9a8c",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas-provisioning.service.ts": {
-    "mtime": 1788187516.5934155,
-    "ast_hash": "4a4fa3c3b9b0924bb8030dce49f3f03d",
+    "mtime": 1788191820.8769937,
+    "ast_hash": "6cab12d7bd6e52883cc0a9e47706bc2a",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.controller.ts": {
-    "mtime": 1788187516.5934155,
-    "ast_hash": "d9eef14ac380a825f85a8be88c40eef1",
+    "mtime": 1788192017.0530956,
+    "ast_hash": "2aa1f4dae9ed1f6eb4836b07b5d1d62a",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.mapper.spec.ts": {
@@ -380,18 +380,18 @@
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.mapper.ts": {
-    "mtime": 1787934249.9208064,
+    "mtime": 1788191447.8960502,
     "ast_hash": "bd65f728ec78ae58252f2635984ba77e",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.module.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.8970506,
     "ast_hash": "7df73c5fec5f6a3d45f2a3e8a21c9892",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.service.ts": {
-    "mtime": 1788187516.5934155,
-    "ast_hash": "6b871b02527a7c5ef5c512b0682b8824",
+    "mtime": 1788192001.0723677,
+    "ast_hash": "cc13906d49574df5d362852e4c8782c0",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/dto/listar-cuentas.query.ts": {
@@ -420,7 +420,7 @@
     "semantic_hash": ""
   },
   "backend/src/modules/dashboard/dashboard.service.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.9000497,
     "ast_hash": "c50f040ba3fc9bf0b37e729878e615b7",
     "semantic_hash": ""
   },
@@ -430,7 +430,7 @@
     "semantic_hash": ""
   },
   "backend/src/modules/dispositivos/dispositivos.controller.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.9010503,
     "ast_hash": "8c5ac568cb94c89f68e44ff6161771c3",
     "semantic_hash": ""
   },
@@ -440,12 +440,12 @@
     "semantic_hash": ""
   },
   "backend/src/modules/dispositivos/dispositivos.service.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.9020503,
     "ast_hash": "b5ec75e1aa59573cc196e76bd66ccd91",
     "semantic_hash": ""
   },
   "backend/src/modules/dispositivos/dto/listar-dispositivos.query.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.9040523,
     "ast_hash": "58cded1394e0c22f6aebb3a9f8ca8999",
     "semantic_hash": ""
   },
@@ -545,12 +545,12 @@
     "semantic_hash": ""
   },
   "backend/src/queues/cola-proveedor.processor.ts": {
-    "mtime": 1788187516.5944169,
+    "mtime": 1788191447.908052,
     "ast_hash": "2e45dac29b13ce08aea941aa84ef6b5f",
     "semantic_hash": ""
   },
   "backend/src/queues/cola-proveedor.service.ts": {
-    "mtime": 1788178684.7022746,
+    "mtime": 1788191447.9110565,
     "ast_hash": "196cba9d3bad48c850d33da6c5420644",
     "semantic_hash": ""
   },
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/layout/AppLayout.tsx": {
-    "mtime": 1788180911.0842545,
-    "ast_hash": "dae6c1bc43f4bf23ad9b69ba4b9c03e9",
+    "mtime": 1788191447.9230537,
+    "ast_hash": "8e93d73ec267c2ea0ce9fc362acddf82",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/Gates.tsx": {
@@ -615,8 +615,8 @@
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/AccountDetail.tsx": {
-    "mtime": 1788181355.9330952,
-    "ast_hash": "ff5a0d77d883af669ca0a8ea7ae66948",
+    "mtime": 1788192458.5308113,
+    "ast_hash": "81a4e5026fea596a0128e750fc72e9d0",
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/AccountDevicesTab.tsx": {
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "frontend/src/features/customers/CustomerForm.tsx": {
-    "mtime": 1788181225.264043,
-    "ast_hash": "d71c5d0dba52c74e5b3c5580a485c786",
+    "mtime": 1788191447.9260502,
+    "ast_hash": "bc93eceff0a698b6ddad84d874cf7f3c",
     "semantic_hash": ""
   },
   "frontend/src/features/customers/CustomerList.tsx": {
@@ -670,8 +670,8 @@
     "semantic_hash": ""
   },
   "frontend/src/features/devices/AddDeviceDialog.tsx": {
-    "mtime": 1788181225.2660408,
-    "ast_hash": "e37b1ebb375ecd7e9ac3399e7929b72c",
+    "mtime": 1788191447.9270513,
+    "ast_hash": "e48c87171c5aa16b2e3ff0301afa08e8",
     "semantic_hash": ""
   },
   "frontend/src/features/devices/DeviceDetail.tsx": {
@@ -730,13 +730,13 @@
     "semantic_hash": ""
   },
   "frontend/src/i18n/entityLabels.spec.ts": {
-    "mtime": 1787933897.703277,
-    "ast_hash": "089ea8d610331527340f76dc031b4e36",
+    "mtime": 1788191447.9280517,
+    "ast_hash": "6d172440869db5351e3dfd81b163feba",
     "semantic_hash": ""
   },
   "frontend/src/i18n/entityLabels.ts": {
-    "mtime": 1787933334.5589821,
-    "ast_hash": "a40ba42334f35f545d29f3c21e9309f1",
+    "mtime": 1788191447.9290507,
+    "ast_hash": "aee315de064ead4924cc4a39bd8eae4e",
     "semantic_hash": ""
   },
   "frontend/src/lib/api.ts": {
@@ -755,8 +755,8 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/types.ts": {
-    "mtime": 1788180718.5445664,
-    "ast_hash": "418f57677c20e6da6bd7c7df89dc308e",
+    "mtime": 1788191447.9300525,
+    "ast_hash": "5557edc66faaa1988fcf5fa42959e7a8",
     "semantic_hash": ""
   },
   "frontend/src/lib/utils.spec.ts": {
@@ -775,8 +775,8 @@
     "semantic_hash": ""
   },
   "frontend/src/routes.tsx": {
-    "mtime": 1788180911.0842545,
-    "ast_hash": "e2ef50d3b64447dbcda09701609dfeb8",
+    "mtime": 1788191447.931051,
+    "ast_hash": "fc20b85da251422e58ea8ce09e24b52a",
     "semantic_hash": ""
   },
   "frontend/src/test/setup.ts": {
@@ -830,8 +830,8 @@
     "semantic_hash": ""
   },
   "vault/10 - Negocio/Capacidad de una Cuenta.md": {
-    "mtime": 1788187396.0204775,
-    "ast_hash": "efbd344ad16851133383f01e50443a92",
+    "mtime": 1788191447.959689,
+    "ast_hash": "4c4e4e1347156b1cfc11ed6ed971deb9",
     "semantic_hash": ""
   },
   "vault/10 - Negocio/Ciclo de vida del Cliente Final.md": {
@@ -885,13 +885,13 @@
     "semantic_hash": ""
   },
   "vault/30 - Flujos/Flujo - Alta de Cliente Final.md": {
-    "mtime": 1788187421.8723836,
-    "ast_hash": "27d02d7ddcbd6f53ae2219ca67537558",
+    "mtime": 1788191447.9616888,
+    "ast_hash": "21b791dbe25482635486e00654e766aa",
     "semantic_hash": ""
   },
   "vault/30 - Flujos/Flujo - Migraci\u00f3n de Cuenta.md": {
-    "mtime": 1787933993.9464843,
-    "ast_hash": "a50a52e5424880d43f116de309683ae1",
+    "mtime": 1788191447.9626896,
+    "ast_hash": "c045c5ecd5fbb1099e1d9e29f1102c09",
     "semantic_hash": ""
   },
   "vault/40 - Operaci\u00f3n/Arranque en fr\u00edo y seed.md": {
@@ -920,7 +920,7 @@
     "semantic_hash": ""
   },
   "vault/90 - Decisiones/Riesgo aceptado - contrase\u00f1a compartida.md": {
-    "mtime": 1788187479.5847564,
+    "mtime": 1788191447.96369,
     "ast_hash": "4477b8bf2e3384099073e274a63d9899",
     "semantic_hash": ""
   },
@@ -950,7 +950,7 @@
     "semantic_hash": ""
   },
   "backend/src/modules/clientes/clientes.service.spec.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.8870506,
     "ast_hash": "21d68db90db7b989cb7b29e9ec33055b",
     "semantic_hash": ""
   },
@@ -980,7 +980,7 @@
     "semantic_hash": ""
   },
   "backend/src/modules/dispositivos/incidencias-dispositivos.service.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.9060526,
     "ast_hash": "ea46c35b51cca423c6ad72784eb41b08",
     "semantic_hash": ""
   },
@@ -1025,7 +1025,7 @@
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas-provisioning.service.spec.ts": {
-    "mtime": 1788187516.5934155,
+    "mtime": 1788191447.8940506,
     "ast_hash": "c00b05dbde9913957fd249259ace7aab",
     "semantic_hash": ""
   },
@@ -1040,7 +1040,7 @@
     "semantic_hash": ""
   },
   "backend/src/modules/dispositivos/dispositivos.service.spec.ts": {
-    "mtime": 1788186853.5100737,
+    "mtime": 1788191447.9010503,
     "ast_hash": "6f151e2e5edfb3c649a81ce34a7d90af",
     "semantic_hash": ""
   },
@@ -1060,17 +1060,17 @@
     "semantic_hash": ""
   },
   "backend/src/modules/dispositivos/incidencias-dispositivos.service.spec.ts": {
-    "mtime": 1788178684.7022746,
+    "mtime": 1788191447.905053,
     "ast_hash": "b530d173f6e34c45e9e10cf194218db0",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/cuentas.service.spec.ts": {
-    "mtime": 1788187516.5934155,
-    "ast_hash": "d9c473426de85157532376d2c746e662",
+    "mtime": 1788192296.5281675,
+    "ast_hash": "ac5b3ef7cccd4f82dc19c0bd659b5ca5",
     "semantic_hash": ""
   },
   "backend/src/queues/cola-proveedor.processor.spec.ts": {
-    "mtime": 1788187516.5944169,
+    "mtime": 1788191447.907052,
     "ast_hash": "a31c5e596c0073d0a475200033d47499",
     "semantic_hash": ""
   },
@@ -1080,7 +1080,7 @@
     "semantic_hash": ""
   },
   "backend/prisma/migrations/20260826140000_agregar_dni_cliente_final/migration.sql": {
-    "mtime": 1787861203.36262,
+    "mtime": 1788191447.8830504,
     "ast_hash": "cb264cf578ad9023ea669d7bbe1a939e",
     "semantic_hash": ""
   },
@@ -1095,68 +1095,83 @@
     "semantic_hash": ""
   },
   "backend/prisma/importar-micom.ts": {
-    "mtime": 1787861203.3616178,
+    "mtime": 1788191447.8820531,
     "ast_hash": "f3be4c961b587d99dddf015620bf41d2",
     "semantic_hash": ""
   },
   "backend/prisma/migrations/20260828120000_capacidad_compartida_flexible/migration.sql": {
-    "mtime": 1787935583.6193738,
-    "ast_hash": "308aa069d16cea333dec2d6f0df14ab1",
+    "mtime": 1788191447.8840494,
+    "ast_hash": "1e6efa3c2c82801e93a797c6af9075cf",
     "semantic_hash": ""
   },
   "backend/prisma/migrations/20260831100000_ventana_curiosidad/migration.sql": {
-    "mtime": 1788181590.0290976,
-    "ast_hash": "6f69a03f3c3bd5fe03316f63be023da9",
+    "mtime": 1788191447.8840494,
+    "ast_hash": "e6c2935db1dfcb4385b278ce6924757a",
     "semantic_hash": ""
   },
   "backend/src/modules/configuracion/configuracion-revendedor.controller.ts": {
-    "mtime": 1788181772.6924782,
-    "ast_hash": "17ac02c4a9ced1b0e8ecee5f425bda2c",
+    "mtime": 1788191447.8900502,
+    "ast_hash": "4e44ee512265340100dfe27742e7a030",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/ventanas-curiosidad.service.spec.ts": {
-    "mtime": 1788187516.5934155,
-    "ast_hash": "5bfeb5ef0615e10461b162506952570a",
+    "mtime": 1788191447.8980513,
+    "ast_hash": "8de3f2cee0a8ef724a33b269fb086cd6",
     "semantic_hash": ""
   },
   "backend/src/modules/cuentas/ventanas-curiosidad.service.ts": {
-    "mtime": 1788187516.5934155,
-    "ast_hash": "fde7ea8425c3db908bdb70a79f7bd536",
+    "mtime": 1788191447.8990521,
+    "ast_hash": "f9a3be120032ebd29f5cc10d5e0afa3b",
     "semantic_hash": ""
   },
   "frontend/src/components/CuriosityDurationInput.spec.tsx": {
-    "mtime": 1788182559.8758528,
-    "ast_hash": "3988d9515b92c72189b934a4300800b6",
+    "mtime": 1788191447.9210525,
+    "ast_hash": "593ff11c3b192a66e7f2263a80b3bd13",
     "semantic_hash": ""
   },
   "frontend/src/components/CuriosityDurationInput.tsx": {
-    "mtime": 1788182559.8748527,
-    "ast_hash": "6ba175a54bc137e6f694bb490f991337",
+    "mtime": 1788191447.9220529,
+    "ast_hash": "739a5299305547e03ab2a56cbdfe9033",
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/CuriosityWindowPanel.spec.ts": {
-    "mtime": 1788181225.2505972,
-    "ast_hash": "21e41ba455aac167a990433b5ee74b96",
+    "mtime": 1788191447.9240508,
+    "ast_hash": "1c8567a34af1a23a3eb728394eefa827",
     "semantic_hash": ""
   },
   "frontend/src/features/accounts/CuriosityWindowPanel.tsx": {
-    "mtime": 1788182559.873854,
-    "ast_hash": "ad278f0b2b23231e546761cb6e789821",
+    "mtime": 1788191447.9250515,
+    "ast_hash": "e85cc5f9c2632d1e7f5524b60eda1fca",
     "semantic_hash": ""
   },
   "frontend/src/features/settings/CuriosityWindowSettings.tsx": {
-    "mtime": 1788180718.536554,
-    "ast_hash": "0b19497aa7d82e313b7b232c83f8a87b",
+    "mtime": 1788191447.9280517,
+    "ast_hash": "7fc0dfccb6eb3f9825f1c48df7519387",
     "semantic_hash": ""
   },
   "frontend/src/lib/curiosity-window.ts": {
-    "mtime": 1788181225.2445967,
-    "ast_hash": "0197b79e4df81e3c5db7ee6445740531",
+    "mtime": 1788191447.9300525,
+    "ast_hash": "244af42bbaf491da19a2b6c318b1c685",
     "semantic_hash": ""
   },
   "vault/10 - Negocio/Ventana de curiosidad.md": {
-    "mtime": 1788187445.761647,
-    "ast_hash": "ae2d21dbc035baa4640757fe60d9e071",
+    "mtime": 1788191447.960689,
+    "ast_hash": "236f444eeb421a88c0c5e7753914965a",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260901090000_editar_propiedades_cuenta/migration.sql": {
+    "mtime": 1788191854.854872,
+    "ast_hash": "78be6c06bbece44aa6604218c39ac359",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/actualizar-cuenta.dto.ts": {
+    "mtime": 1788191830.0793948,
+    "ast_hash": "0e0a4584c05e4859a57fc4a3817a5d19",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/EditAccountDialog.tsx": {
+    "mtime": 1788192413.4937696,
+    "ast_hash": "64e0804276e2ade2a3c4ca6b50216970",
     "semantic_hash": ""
   }
 }

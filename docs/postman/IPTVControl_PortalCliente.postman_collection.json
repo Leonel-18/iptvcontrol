@@ -1,0 +1,214 @@
+{
+  "info": {
+    "name": "IPTVControl - Portal de Cliente",
+    "description": "Integración hacia un portal externo: el Cliente Final (identificado por DNI) consulta sus credenciales, servicios y dispositivos, y en cuentas EXCLUSIVAS puede editarlos. Autenticación server-to-server con x-api-key y Empresa Revendedora fija (PORTAL_CLIENTE_API_KEY / PORTAL_CLIENTE_EMPRESA_REVENDEDORA_ID en el servidor).\n\nAntes de usar: configure baseUrl y apiKey (secret) y el dni. Corra primero 'Sesión del cliente': guarda automáticamente cuentaId y dispositivoId en las variables de la colección.\n\nReglas: las cuentas COMPARTIDAS son de solo lectura; las EXCLUSIVAS permiten editar contraseña, PIN, servicios y administrar dispositivos. La baja de un dispositivo es irreversible.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "apiKey", "value": "<API_KEY>", "type": "secret" },
+    { "key": "dni", "value": "30111222" },
+    { "key": "cuentaId", "value": "" },
+    { "key": "dispositivoId", "value": "" },
+    { "key": "proveedorDeviceId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Sesión del cliente",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/portal-cliente/session",
+        "description": "Devuelve el cliente y TODAS sus cuentas con usuario, contraseña, PIN, servicios y dispositivos. En cuentas compartidas solo los dispositivos asignados al cliente. Guarda cuentaId y dispositivoId para las demás requests."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test('Devuelve cuentas', () => pm.expect(data).to.have.property('cuentas'));",
+              "if (data.cuentas && data.cuentas.length) {",
+              "  const cuenta = data.cuentas[0];",
+              "  pm.collectionVariables.set('cuentaId', cuenta.id);",
+              "  pm.test('La cuenta trae credenciales', () => pm.expect(cuenta).to.have.property('usuario'));",
+              "  if (cuenta.dispositivos && cuenta.dispositivos.length) {",
+              "    pm.collectionVariables.set('dispositivoId', cuenta.dispositivos[0].id);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cambiar contraseña (exclusiva)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni}}\",\n  \"password\": \"87654321\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/portal-cliente/accounts/{{cuentaId}}/password",
+        "description": "Solo cuentas exclusivas del titular. Contraseña numérica de 8 a 20 dígitos. Se cambia en SENSA y en IPTVControl. En una cuenta compartida responde 403."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200 o 403 (compartida)', () => pm.expect([200, 403]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cambiar PIN (exclusiva)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni}}\",\n  \"pin\": \"123456\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/portal-cliente/accounts/{{cuentaId}}/pin",
+        "description": "Solo cuentas exclusivas. PIN numérico de 6 dígitos. Se cambia en SENSA y en IPTVControl."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200 o 403 (compartida)', () => pm.expect([200, 403]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cambiar servicios (exclusiva)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni}}\",\n  \"servicios\": [\"1\", \"3\", \"5\"]\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/portal-cliente/accounts/{{cuentaId}}/services",
+        "description": "Solo cuentas exclusivas. Códigos de servicio (el básico 1 se agrega siempre). Se validan contra lo contratado por el Operador Principal."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200 o 403 (compartida)', () => pm.expect([200, 403]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar dispositivos del proveedor (exclusiva)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/portal-cliente/accounts/{{cuentaId}}/devices/sync",
+        "description": "Inventario completo del proveedor para la cuenta (como 'Consultar dispositivos en el proveedor' del panel). Los equipos sin dueño quedan como incidencia pendiente, listos para reclamar."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "if (data.dispositivos) {",
+              "  const pendiente = data.dispositivos.find((d) => d.clasificacion === 'desconocido');",
+              "  if (pendiente) pm.collectionVariables.set('proveedorDeviceId', pendiente.proveedor_device_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reclamar dispositivo detectado (exclusiva)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni}}\",\n  \"proveedor_device_id\": \"{{proveedorDeviceId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/portal-cliente/accounts/{{cuentaId}}/devices/claim",
+        "description": "Asigna al titular un Dispositivo detectado en el proveedor pero todavía sin dueño (incidencia pendiente). Corra antes 'Consultar dispositivos del proveedor' para completar proveedorDeviceId."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200/201 o error de negocio', () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 403, 404]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dar de baja un dispositivo propio (exclusiva)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-api-key", "value": "{{apiKey}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dni\": \"{{dni}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/integration/portal-cliente/accounts/{{cuentaId}}/devices/{{dispositivoId}}/remove",
+        "description": "IRREVERSIBLE: elimina el Dispositivo en el proveedor y borra la fila local. Queda auditado como 'Cliente desde el portal'. Usa dispositivoId de la Sesión; confirmá antes de dispararlo."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('HTTP 200/201 o error de negocio', () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 400, 403, 404]));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

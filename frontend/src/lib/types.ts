@@ -395,6 +395,37 @@ export interface ResellerDetail {
   creado_en: string;
 }
 
+export type AgrupacionMetricas = 'dia' | 'semana' | 'mes';
+
+/** Un punto de la serie histórica de Cuentas de una Empresa Revendedora. */
+export interface ResellerMetricsPoint {
+  fecha: string;
+  altas: number;
+  altas_importadas: number;
+  cierres: number;
+  total: number;
+  activas: number;
+}
+
+/** Serie histórica de Cuentas reconstruida desde fechas de Cuenta y auditoría. */
+export interface ResellerMetrics {
+  empresa_id: string;
+  desde: string;
+  hasta: string;
+  agrupacion: AgrupacionMetricas;
+  puntos: ResellerMetricsPoint[];
+  referencias: {
+    total_cuentas: number;
+    cuentas_activas: number;
+    cuentas_maximas: number;
+    cuentas_a_cobrar: number;
+    cuentas_max_crear_mensual: number;
+    tope_cuentas_activas: number | null;
+    tipo_modalidad: string | null;
+    ritmo_incremento: number | null;
+  };
+}
+
 /** Estado del módulo de cuentas de prueba y consumo del período (HU-P02). */
 export interface TestAccountsStatus {
   /** Mes AR "YYYY-MM" del consumo informado. */

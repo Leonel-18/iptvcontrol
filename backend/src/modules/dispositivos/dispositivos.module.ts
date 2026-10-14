@@ -11,6 +11,7 @@ import { IncidenciasDispositivosService } from './incidencias-dispositivos.servi
   imports: [CuentasModule, ProveedorModule],
   controllers: [DispositivosController, IncidenciasDispositivosController],
   providers: [DispositivosService, DispositivosQueryService, IncidenciasDispositivosService],
-  exports: [DispositivosService, DispositivosQueryService],
+  // IncidenciasDispositivosService lo consume la integración del Portal de Cliente.
+  exports: [DispositivosService, DispositivosQueryService, IncidenciasDispositivosService],
 })
 export class DispositivosModule {}

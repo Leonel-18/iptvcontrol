@@ -115,6 +115,67 @@ export const ConfirmDialog = ({
 );
 
 // -----------------------------------------------------------------------------
+// Drawer (panel lateral)
+// -----------------------------------------------------------------------------
+
+/**
+ * Panel lateral que entra desde la derecha. Se usa para información secundaria
+ * que conviene consultar sin recargar el cuerpo de la página (ej. la actividad de
+ * una Cuenta). Sobre Radix Dialog, así hereda foco, teclado y Escape.
+ */
+export const Drawer = ({
+  abierto,
+  onCambio,
+  titulo,
+  descripcion,
+  children,
+  ancho = 'max-w-xl',
+  sinPadding = false,
+}: {
+  abierto: boolean;
+  onCambio: (abierto: boolean) => void;
+  titulo: string;
+  descripcion?: string;
+  children: ReactNode;
+  /** Ancho máximo del panel (clase Tailwind, ej. `max-w-2xl`). */
+  ancho?: string;
+  /** Sin padding interno: para contenido que ocupa todo el ancho (tablas). */
+  sinPadding?: boolean;
+}) => (
+  <DialogPrimitive.Root open={abierto} onOpenChange={onCambio}>
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-[2px]" />
+      <DialogPrimitive.Content
+        className={cn(
+          'superficie fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l shadow-pop',
+          'animate-drawer-in',
+          ancho,
+        )}
+      >
+        <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
+          <div className="space-y-1">
+            <DialogPrimitive.Title className="font-display text-base font-semibold">
+              {titulo}
+            </DialogPrimitive.Title>
+            {descripcion ? (
+              <DialogPrimitive.Description className="text-sm texto-suave">
+                {descripcion}
+              </DialogPrimitive.Description>
+            ) : null}
+          </div>
+          <DialogPrimitive.Close asChild>
+            <Button variant="ghost" size="icon" aria-label="Cerrar">
+              <X />
+            </Button>
+          </DialogPrimitive.Close>
+        </div>
+        <div className={cn('flex-1 overflow-y-auto', !sinPadding && 'px-5 py-4')}>{children}</div>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  </DialogPrimitive.Root>
+);
+
+// -----------------------------------------------------------------------------
 // Menú desplegable
 // -----------------------------------------------------------------------------
 

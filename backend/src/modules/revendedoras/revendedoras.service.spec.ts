@@ -1,4 +1,5 @@
 import { RevendedorasService } from './revendedoras.service';
+import { AgrupacionMetricas } from './dto/revendedora.dto';
 import { periodoMesArgentina } from '../../common/time/calendario-comercial';
 
 describe('RevendedorasService', () => {
@@ -364,5 +365,88 @@ describe('RevendedorasService', () => {
     await expect(service.actualizar('empresa-1', { pruebas_habilitadas: true })).rejects.toThrow(
       'Solo el Operador Principal',
     );
+  });
+
+  it('reconstruye altas, cierres y activas de la serie de Cuentas', async () => {
+    const prisma = {
+      db: {
+        empresaRevendedora: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'empresa-1',
+            creadoEn: new Date('2026-01-10T12:00:00Z'),
+            cuentasMaxCrearMensual: 10,
+            modalidadAsignadaEn: new Date('2026-01-10T12:00:00Z'),
+            modalidadComercial: { tipo: 'menudeo', ritmoIncremento: null, topeCuentasActivas: 50 },
+          }),
+        },
+        cuenta: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              id: 'c1',
+              creadoEn: new Date('2026-02-05T12:00:00Z'),
+              estado: 'activa',
+              procedencia: 'creada_en_sistema',
+            },
+            {
+              id: 'c2',
+              creadoEn: new Date('2026-02-20T12:00:00Z'),
+              estado: 'activa',
+              procedencia: 'importada_proveedor',
+            },
+            {
+              id: 'c3',
+              creadoEn: new Date('2026-03-02T12:00:00Z'),
+              estado: 'cerrada',
+              procedencia: 'creada_en_sistema',
+            },
+          ]),
+        },
+        auditLog: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ entidadId: 'c3', creadoEn: new Date('2026-03-15T12:00:00Z') }]),
+        },
+      },
+    };
+    const service = new RevendedorasService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    const resultado = await service.metricas('empresa-1', {
+      desde: '2026-02-01',
+      hasta: '2026-03-31',
+      agrupacion: AgrupacionMetricas.mes,
+    });
+
+    expect(resultado.agrupacion).toBe('mes');
+    expect(resultado.puntos).toHaveLength(2);
+    expect(resultado.puntos[0]).toMatchObject({
+      altas: 2,
+      altas_importadas: 1,
+      cierres: 0,
+      total: 2,
+      activas: 2,
+    });
+    // En marzo se da de alta c3 y se cierra el mismo mes: no queda activa.
+    expect(resultado.puntos[1]).toMatchObject({
+      altas: 1,
+      cierres: 1,
+      total: 3,
+      activas: 2,
+    });
+    expect(resultado.referencias).toMatchObject({
+      total_cuentas: 3,
+      cuentas_activas: 2,
+      cuentas_maximas: 13,
+      cuentas_a_cobrar: 2,
+      tope_cuentas_activas: 50,
+      tipo_modalidad: 'menudeo',
+    });
   });
 });

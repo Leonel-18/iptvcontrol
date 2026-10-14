@@ -19,13 +19,17 @@ export const AuditLogEntry = ({
   esOperador,
   expandido,
   onAlternar,
+  mostrarEntidad = true,
 }: {
   registro: AuditEntry;
   esOperador: boolean;
   expandido: boolean;
   onAlternar: () => void;
+  /** La columna "Entidad" se oculta cuando el listado ya está acotado a una. */
+  mostrarEntidad?: boolean;
 }) => {
   const tieneDetalle = registro.detalle && Object.keys(registro.detalle).length > 0;
+  const columnas = 4 + (mostrarEntidad ? 1 : 0) + (esOperador ? 1 : 0);
 
   return (
     <>
@@ -36,14 +40,16 @@ export const AuditLogEntry = ({
         <TD>
           <span className="text-sm font-medium">{registro.accion_etiqueta}</span>
         </TD>
-        <TD>
-          <div className="flex items-center gap-2">
-            <Badge tone="neutral">{traducir(auditEntityLabels, registro.entidad)}</Badge>
-            {registro.entidad_id ? (
-              <CopyableId valor={registro.entidad_id.slice(0, 8)} etiqueta="ID de entidad" />
-            ) : null}
-          </div>
-        </TD>
+        {mostrarEntidad ? (
+          <TD>
+            <div className="flex items-center gap-2">
+              <Badge tone="neutral">{traducir(auditEntityLabels, registro.entidad)}</Badge>
+              {registro.entidad_id ? (
+                <CopyableId valor={registro.entidad_id.slice(0, 8)} etiqueta="ID de entidad" />
+              ) : null}
+            </div>
+          </TD>
+        ) : null}
         <TD>
           {registro.ejecutado_por ? (
             <div className="flex flex-col gap-0.5">
@@ -75,7 +81,7 @@ export const AuditLogEntry = ({
 
       {expandido && tieneDetalle ? (
         <TR className="superficie-2">
-          <TD colSpan={esOperador ? 6 : 5}>
+          <TD colSpan={columnas}>
             <dl className="grid gap-1.5 py-1 sm:grid-cols-2">
               {Object.entries(registro.detalle ?? {}).map(([clave, valor]) => (
                 <DetalleItem key={clave} clave={clave} valor={valor} />

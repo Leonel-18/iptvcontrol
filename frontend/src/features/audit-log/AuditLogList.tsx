@@ -8,7 +8,7 @@ import type { AuditEntry } from '@/lib/types';
 import { auditEntityLabels, roleLabels, traducir } from '@/i18n/entityLabels';
 import { ExportCsvButton, PageHeader } from '@/components/common';
 import { AuditLogEntry } from './AuditLogEntry';
-import { Card, EmptyState, Input } from '@/components/ui/primitives';
+import { Button, Card, EmptyState, Input } from '@/components/ui/primitives';
 import { Select } from '@/components/ui/overlays';
 import { Paginacion, Table, TableSkeleton, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
@@ -28,6 +28,7 @@ export const AuditLogList = () => {
   const pagina = Number(params.get('page') ?? 1);
   const accion = params.get('action') ?? '';
   const entidad = params.get('entity') ?? '';
+  const cuenta = params.get('account_id') ?? '';
   const desde = params.get('from') ?? '';
   const hasta = params.get('to') ?? '';
 
@@ -36,6 +37,7 @@ export const AuditLogList = () => {
     per_page: 50,
     action: accion || undefined,
     entity: entidad || undefined,
+    account_id: cuenta || undefined,
     from: desde || undefined,
     to: hasta || undefined,
   };
@@ -109,6 +111,15 @@ export const AuditLogList = () => {
             aria-label="Hasta"
           />
         </div>
+
+        {cuenta ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-azure-50 px-3 py-2 text-sm dark:bg-azure-900/30">
+            <span>Mostrando la actividad de una Cuenta.</span>
+            <Button variant="ghost" size="sm" onClick={() => actualizar('account_id', '')}>
+              Quitar filtro
+            </Button>
+          </div>
+        ) : null}
 
         <Table>
           <THead>

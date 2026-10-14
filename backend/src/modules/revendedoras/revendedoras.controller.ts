@@ -18,6 +18,7 @@ import {
   CambiarModalidadDto,
   CrearRevendedoraDto,
   ListarRevendedorasQueryDto,
+  MetricasRevendedoraQueryDto,
 } from './dto/revendedora.dto';
 import { Roles, SoloOperador } from '../../common/auth/decorators';
 import { generarCsv, responderCsv } from '../../common/csv/csv.util';
@@ -104,6 +105,21 @@ export class RevendedorasController {
   })
   async obtener(@Param('id', ParseUUIDPipe) id: string) {
     return this.revendedoras.obtener(id);
+  }
+
+  @Get(':id/metrics')
+  @SoloOperador()
+  @ApiOperation({
+    summary: 'Serie histórica de Cuentas de una Empresa Revendedora.',
+    description:
+      'Altas, cierres, total acumulado y activas reconstruidos desde las fechas de Cuenta y el ' +
+      'Audit Log. Devuelve además los límites comerciales vigentes como referencia.',
+  })
+  async metricas(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: MetricasRevendedoraQueryDto,
+  ) {
+    return this.revendedoras.metricas(id, query);
   }
 
   @Post()

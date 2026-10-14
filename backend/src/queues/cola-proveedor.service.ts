@@ -1,5 +1,6 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import {
   COLA_PROVEEDOR,
@@ -23,9 +24,22 @@ import {
 export class ColaProveedorService implements OnModuleInit {
   private readonly logger = new Logger(ColaProveedorService.name);
 
-  constructor(@InjectQueue(COLA_PROVEEDOR) private readonly cola: Queue) {}
+  constructor(
+    @InjectQueue(COLA_PROVEEDOR) private readonly cola: Queue,
+    private readonly config: ConfigService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
+    // Entornos locales con copia de datos reales: se apagan los barridos
+    // recurrentes para no operar sobre el Proveedor de producción. Los encolados
+    // manuales (crear/cerrar Cuenta, reconciliar) siguen funcionando.
+    if (!this.config.get<boolean>('colaProveedor.programarJobsAutomaticos')) {
+      this.logger.warn(
+        'Jobs automáticos contra el Proveedor desactivados (PROVEEDOR_JOBS_AUTOMATICOS=false).',
+      );
+      return;
+    }
+
     try {
       await this.cola.add(
         TRABAJOS_PROVEEDOR.BARRER_VINCULACIONES,

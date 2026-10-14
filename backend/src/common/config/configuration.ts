@@ -36,6 +36,15 @@ export interface AppConfig {
     requestTimeoutMs: number;
     dniMaxRetries: number;
   };
+  /**
+   * Jobs automáticos contra el Proveedor (barridos recurrentes de BullMQ).
+   * Se pueden desactivar en entornos locales que usan una copia de datos reales
+   * para que los barridos no operen sobre el Proveedor de producción. Los
+   * encolados manuales disparados por una acción del usuario siguen funcionando.
+   */
+  colaProveedor: {
+    programarJobsAutomaticos: boolean;
+  };
   /** Credenciales de la documentación de la API (Swagger sólo con login). */
   swagger: {
     usuario?: string;
@@ -59,12 +68,27 @@ export interface AppConfig {
     rateLimit: number;
     rateWindowSeconds: number;
   };
+  /**
+   * Portal de Cliente externo: el Cliente Final consulta sus credenciales,
+   * servicios y dispositivos, y en cuentas exclusivas puede administrarlos.
+   * Se autentica con API key y opera sobre una Empresa Revendedora fija.
+   */
+  portalCliente: {
+    apiKey?: string;
+    empresaRevendedoraId?: string;
+    /** Team Member de sistema para atribuir las acciones en el Audit Log. */
+    teamMemberId?: string;
+  };
 }
 
 const toInt = (value: string | undefined, fallback: number): number => {
   const parsed = Number.parseInt(value ?? '', 10);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+/** Sólo el valor "false" (sin importar mayúsculas) desactiva; el resto usa el default. */
+const toBool = (value: string | undefined, fallback: boolean): boolean =>
+  value === undefined || value.trim() === '' ? fallback : value.trim().toLowerCase() !== 'false';
 
 export const configuration = (): AppConfig => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -100,6 +124,9 @@ export const configuration = (): AppConfig => ({
     requestTimeoutMs: toInt(process.env.SENSA_REQUEST_TIMEOUT_MS, 15000),
     dniMaxRetries: toInt(process.env.SENSA_DNI_MAX_RETRIES, 25),
   },
+  colaProveedor: {
+    programarJobsAutomaticos: toBool(process.env.PROVEEDOR_JOBS_AUTOMATICOS, true),
+  },
   swagger: {
     usuario: process.env.SWAGGER_USER || undefined,
     password: process.env.SWAGGER_PASSWORD || undefined,
@@ -120,6 +147,11 @@ export const configuration = (): AppConfig => ({
     ventanaMinutos: toInt(process.env.WSP_BOT_VENTANA_MINUTOS, 5760),
     rateLimit: toInt(process.env.WSP_BOT_RATE_LIMIT, 30),
     rateWindowSeconds: toInt(process.env.WSP_BOT_RATE_WINDOW_SECONDS, 60),
+  },
+  portalCliente: {
+    apiKey: process.env.PORTAL_CLIENTE_API_KEY || undefined,
+    empresaRevendedoraId: process.env.PORTAL_CLIENTE_EMPRESA_REVENDEDORA_ID || undefined,
+    teamMemberId: process.env.PORTAL_CLIENTE_TEAM_MEMBER_ID || undefined,
   },
 });
 

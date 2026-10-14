@@ -24,6 +24,14 @@ export class ListarAuditoriaQueryDto extends PaginationQueryDto {
   @IsString()
   entity_id?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Cuenta: devuelve sus eventos propios y los de sus Dispositivos y Clientes Finales.',
+  })
+  @IsOptional()
+  @IsUUID()
+  account_id?: string;
+
   @ApiPropertyOptional({ description: 'Empresa Revendedora (uso del Operador Principal).' })
   @IsOptional()
   @IsUUID()

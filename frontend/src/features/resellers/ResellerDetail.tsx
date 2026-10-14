@@ -1,10 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Mail, PauseCircle, PlayCircle, Pencil } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Mail,
+  PauseCircle,
+  PlayCircle,
+  Pencil,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError, type Paginado } from '@/lib/api';
-import { formatearFecha, formatearFechaHora, formatearImporte } from '@/lib/utils';
+import {
+  formatearFecha,
+  formatearFechaHora,
+  formatearImporte,
+  formatearNumero,
+} from '@/lib/utils';
 import type { CommercialPlan, ResellerDetail as ResellerDetailData } from '@/lib/types';
 import {
   commercialPlanTypeLabels,
@@ -33,6 +46,7 @@ import {
 } from '@/components/ui/primitives';
 import { ConfirmDialog, Dialog, DialogContent, Select } from '@/components/ui/overlays';
 import { ResellerAccountsCard } from './ResellerAccountsCard';
+import { ResellerAccountsChart } from './ResellerAccountsChart';
 import { ResellerEditDialog } from './ResellerEditDialog';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
@@ -50,6 +64,7 @@ export const ResellerDetail = () => {
   const [cambiarPlan, setCambiarPlan] = useState(false);
   const [confirmarEstado, setConfirmarEstado] = useState(false);
   const [editarDatos, setEditarDatos] = useState(false);
+  const [verCuentasProveedor, setVerCuentasProveedor] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['reseller', id],
@@ -129,43 +144,19 @@ export const ResellerDetail = () => {
         </Alert>
       ) : null}
 
-      <section className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric etiqueta="Cuentas activas" valor={data.resumen.cuentas_activas} tono="azure" />
-        <Metric etiqueta="Clientes activos" valor={data.resumen.clientes_activos} />
-        <Metric
-          etiqueta="Dispositivos activos"
-          valor={data.resumen.dispositivos_activos}
-          detalle={`${data.resumen.dispositivos_bloqueados} bloqueados`}
-        />
-        <Metric
-          etiqueta="Dispositivos liberados"
-          valor={data.resumen.dispositivos_disponibles}
-          detalle={`${data.resumen.cuentas_cerradas} cuentas cerradas`}
-        />
-      </section>
-
-      {/* Cuentas de esta Empresa Revendedora, por ID (regla de negocio 4.2) */}
-      <ResellerAccountsCard empresaId={data.id} className="mb-4" />
-
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Administrativo y comercial, lo primero que se consulta. */}
+      <div className="mb-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Datos administrativos</CardTitle>
+            <CardTitle>Información administrativa</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="divide-y divide-[rgb(var(--borde))]">
               <DetailRow etiqueta="ID de la empresa">
                 <CopyableId valor={data.id} etiqueta="ID de empresa" />
               </DetailRow>
-              <DetailRow etiqueta="CUIT">
-                <CopyableId valor={data.cuit} etiqueta="CUIT" />
-              </DetailRow>
               <DetailRow etiqueta="Dirección">{data.direccion}</DetailRow>
-              <DetailRow etiqueta="Contacto">
-                {data.nombre_contacto} {data.apellido_contacto}
-              </DetailRow>
               <DetailRow etiqueta="Teléfono">{data.telefono_contacto}</DetailRow>
-              <DetailRow etiqueta="Correo">{data.email_contacto}</DetailRow>
               <DetailRow etiqueta="Sitio web">
                 {data.sitio_web ? (
                   <a
@@ -185,13 +176,13 @@ export const ResellerDetail = () => {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Modalidad comercial</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.modalidad_comercial ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Modalidad y límites</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.modalidad_comercial ? (
+              <>
                 <dl className="divide-y divide-[rgb(var(--borde))]">
                   <DetailRow etiqueta="Modalidad">
                     {traducir(commercialPlanTypeLabels, data.modalidad_comercial.tipo)}
@@ -213,76 +204,139 @@ export const ResellerDetail = () => {
                     </DetailRow>
                   ) : null}
                 </dl>
-              ) : (
-                <Alert tone="warning">
-                  Esta empresa todavía no tiene modalidad asignada, así que no ve precios en su
-                  panel. Asígnele una para completar el alta.
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Acceso al panel</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.team_members.length === 0 ? (
-                <p className="text-sm texto-suave">
-                  No hay accesos creados para esta empresa. Genere uno desde la sección Equipo.
-                </p>
-              ) : (
-                <Table>
-                  <THead>
-                    <TR>
-                      <TH>Correo</TH>
-                      <TH>Rol</TH>
-                      <TH>Estado</TH>
-                      <TH align="right">Último acceso</TH>
-                    </TR>
-                  </THead>
-                  <TBody>
-                    {data.team_members.map((miembro) => (
-                      <TR key={miembro.id}>
-                        <TD>
-                          <span className="text-sm">{miembro.email}</span>
-                        </TD>
-                        <TD>
-                          <span className="text-sm texto-suave">
-                            {traducir(roleLabels, miembro.rol)}
-                          </span>
-                        </TD>
-                        <TD>
-                          <TeamMemberStatusBadge estado={miembro.estado} />
-                        </TD>
-                        <TD align="right">
-                          {miembro.estado === 'invitado' ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => reenviar.mutate(miembro.id)}
-                              disabled={reenviar.isPending}
-                            >
-                              <Mail />
-                              Reenviar
-                            </Button>
-                          ) : (
-                            <span className="text-xs texto-suave">
-                              {miembro.ultimo_acceso_en
-                                ? formatearFechaHora(miembro.ultimo_acceso_en)
-                                : traducir(teamMemberStatusLabels, miembro.estado)}
-                            </span>
-                          )}
-                        </TD>
-                      </TR>
-                    ))}
-                  </TBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-4">
+                  <MiniStat etiqueta="Creadas este mes" valor={data.comerciales.creadas_mes} />
+                  <MiniStat etiqueta="Máx. a crear por mes" valor={data.cuentas_max_crear_mensual} />
+                  <MiniStat
+                    etiqueta="Capacidad total del mes"
+                    valor={data.comerciales.cuentas_maximas}
+                  />
+                  <MiniStat etiqueta="A cobrar del mes" valor={data.comerciales.cuentas_a_cobrar} />
+                </div>
+              </>
+            ) : (
+              <Alert tone="warning">
+                Esta empresa todavía no tiene modalidad asignada, así que no ve precios en su panel.
+                Asígnele una para completar el alta.
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <section className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric
+          etiqueta="Cuentas activas"
+          valor={data.resumen.cuentas_activas}
+          tono="azure"
+          detalle={`${formatearNumero(data.resumen.cuentas_cerradas)} cerradas`}
+        />
+        <Metric etiqueta="Clientes activos" valor={data.resumen.clientes_activos} />
+        <Metric
+          etiqueta="Dispositivos activos"
+          valor={data.resumen.dispositivos_activos}
+          detalle={`${data.resumen.dispositivos_bloqueados} bloqueados`}
+        />
+        <Metric
+          etiqueta="Dispositivos liberados"
+          valor={data.resumen.dispositivos_disponibles}
+          detalle="Disponibles para un alta"
+        />
+      </section>
+
+      <ResellerAccountsChart empresaId={data.id} />
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Acceso al panel</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.team_members.length === 0 ? (
+            <p className="text-sm texto-suave">
+              No hay accesos creados para esta empresa. Genere uno desde la sección Equipo.
+            </p>
+          ) : (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Correo</TH>
+                  <TH>Rol</TH>
+                  <TH>Estado</TH>
+                  <TH align="right">Último acceso</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {data.team_members.map((miembro) => (
+                  <TR key={miembro.id}>
+                    <TD>
+                      <span className="text-sm">{miembro.email}</span>
+                    </TD>
+                    <TD>
+                      <span className="text-sm texto-suave">
+                        {traducir(roleLabels, miembro.rol)}
+                      </span>
+                    </TD>
+                    <TD>
+                      <TeamMemberStatusBadge estado={miembro.estado} />
+                    </TD>
+                    <TD align="right">
+                      {miembro.estado === 'invitado' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => reenviar.mutate(miembro.id)}
+                          disabled={reenviar.isPending}
+                        >
+                          <Mail />
+                          Reenviar
+                        </Button>
+                      ) : (
+                        <span className="text-xs texto-suave">
+                          {miembro.ultimo_acceso_en
+                            ? formatearFechaHora(miembro.ultimo_acceso_en)
+                            : traducir(teamMemberStatusLabels, miembro.estado)}
+                        </span>
+                      )}
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cuentas de esta Empresa Revendedora, por ID (regla de negocio 4.2).
+          Sección secundaria: nace contraída al final de la página. */}
+      <section className="mt-4">
+        {verCuentasProveedor ? (
+          <>
+            <div className="mb-2 flex justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setVerCuentasProveedor(false)}>
+                <ChevronUp />
+                Ocultar cuentas del proveedor
+              </Button>
+            </div>
+            <ResellerAccountsCard empresaId={data.id} />
+          </>
+        ) : (
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-3">
+              <div>
+                <CardTitle>Cuentas en el proveedor</CardTitle>
+                <p className="mt-0.5 text-xs texto-suave">
+                  Detalle técnico por ID de las cuentas de esta empresa.
+                </p>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => setVerCuentasProveedor(true)}>
+                <ChevronDown />
+                Ver cuentas del proveedor
+              </Button>
+            </CardHeader>
+          </Card>
+        )}
+      </section>
 
       <ConfirmDialog
         abierto={confirmarEstado}
@@ -337,6 +391,14 @@ export const ResellerDetail = () => {
     </>
   );
 };
+
+/** Dato comercial compacto del bloque de modalidad y límites. */
+const MiniStat = ({ etiqueta, valor }: { etiqueta: string; valor: number }) => (
+  <div className="superficie-2 rounded-lg border px-3 py-2">
+    <p className="text-2xs texto-suave">{etiqueta}</p>
+    <p className="mt-0.5 font-display text-lg font-bold tabular-nums">{formatearNumero(valor)}</p>
+  </div>
+);
 
 /**
  * Cambio de modalidad comercial o escala (flujo 4.5).

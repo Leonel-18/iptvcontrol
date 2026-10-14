@@ -105,6 +105,15 @@ export class AuditoriaService {
               lte: query.to ? new Date(`${query.to.slice(0, 10)}T23:59:59.999Z`) : undefined,
             }
           : undefined,
+      // Actividad de una Cuenta: sus eventos propios (entidad Cuenta + id) y los
+      // de sus Dispositivos y Clientes Finales, que referencian la Cuenta dentro
+      // del `detalle` (cuenta_id).
+      OR: query.account_id
+        ? [
+            { entidadAfectada: EntidadAuditada.Cuenta, entidadId: query.account_id },
+            { detalle: { path: ['cuenta_id'], equals: query.account_id } },
+          ]
+        : undefined,
     };
 
     const esCsv = query.esCsv;

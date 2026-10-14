@@ -63,3 +63,9 @@ INSTRUCTIVO.md
 # (nombre, email, teléfono, dirección de terceros) — nunca al repo, se copian
 # a mano a la VPS. El script en sí (backend/prisma/importar-*.ts) sí se versiona.
 backend/prisma/data/
+
+# Volcados de base de datos (backups/dumps de producción) — datos de terceros,
+# nunca al repo.
+*.dump
+*.sql.gz
+*.dump.gz

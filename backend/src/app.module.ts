@@ -31,6 +31,7 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { IntegracionWhatsappModule } from './modules/integracion-whatsapp/integracion-whatsapp.module';
+import { IntegracionPortalClienteModule } from './modules/integracion-portal-cliente/integracion-portal-cliente.module';
 
 /**
  * Módulo raíz de IPTVControl.
@@ -89,6 +90,7 @@ import { IntegracionWhatsappModule } from './modules/integracion-whatsapp/integr
     AuditoriaModule,
     ReportesModule,
     IntegracionWhatsappModule,
+    IntegracionPortalClienteModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -1,0 +1,1712 @@
+{
+  "backend/src/common/audit/audit.module.ts": {
+    "mtime": 1786732002.082734,
+    "ast_hash": "f59168d6d027cbc98e4231fc2ebf55fa",
+    "semantic_hash": ""
+  },
+  "backend/src/common/audit/audit.service.ts": {
+    "mtime": 1786732001.0341966,
+    "ast_hash": "ad69efdf4a74a5250b0c3c4d2741792b",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/auth.module.ts": {
+    "mtime": 1786731959.792143,
+    "ast_hash": "5af0dd7aa7f93c26d7e87c18a5e0ecea",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/auth0-management.service.ts": {
+    "mtime": 1790707531.2805276,
+    "ast_hash": "07b44428cb1791ef44c2dc337e64f3f1",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/decorators.ts": {
+    "mtime": 1786731929.118536,
+    "ast_hash": "cb237f68ee426195d3f153d8087ccf07",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/jwt-auth.guard.ts": {
+    "mtime": 1786731936.4853806,
+    "ast_hash": "f6e61f985686a92d0256687e537e0df5",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/jwt.strategy.ts": {
+    "mtime": 1786731922.0076916,
+    "ast_hash": "982f035591a880708ea1f21e818f5fcf",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/team-member.guard.ts": {
+    "mtime": 1787674895.951167,
+    "ast_hash": "8c06d9bedda579b1c767b7634fe95627",
+    "semantic_hash": ""
+  },
+  "backend/src/common/config/configuration.ts": {
+    "mtime": 1791382231.8741064,
+    "ast_hash": "84e5e085aa97551881d5eba19b37fc39",
+    "semantic_hash": ""
+  },
+  "backend/src/common/context/context.module.ts": {
+    "mtime": 1786731857.9404807,
+    "ast_hash": "0c06ed690b8bf6cdc6d230426774cca1",
+    "semantic_hash": ""
+  },
+  "backend/src/common/context/request-context.middleware.ts": {
+    "mtime": 1786731856.5258238,
+    "ast_hash": "a231ba925cb2609531c95da69357f5cd",
+    "semantic_hash": ""
+  },
+  "backend/src/common/context/request-context.service.ts": {
+    "mtime": 1786731848.637435,
+    "ast_hash": "51b4d7470ad4f79bce089d1cae7d4870",
+    "semantic_hash": ""
+  },
+  "backend/src/common/crypto/crypto.module.ts": {
+    "mtime": 1786731836.0114613,
+    "ast_hash": "1648262f3fc45a61893876d21ab65857",
+    "semantic_hash": ""
+  },
+  "backend/src/common/crypto/crypto.service.ts": {
+    "mtime": 1787674895.952167,
+    "ast_hash": "38ac3f5ea0a919412be554e9412053d7",
+    "semantic_hash": ""
+  },
+  "backend/src/common/csv/csv.util.ts": {
+    "mtime": 1786732057.618592,
+    "ast_hash": "6b0bcdb9ecc0d1e2c840f5a0b50642da",
+    "semantic_hash": ""
+  },
+  "backend/src/common/dto/pagination.dto.ts": {
+    "mtime": 1786732047.7750132,
+    "ast_hash": "becba5bab4f6cb89e6b5fb826cf94dc6",
+    "semantic_hash": ""
+  },
+  "backend/src/common/errors/http-exception.filter.ts": {
+    "mtime": 1786732033.746476,
+    "ast_hash": "a56636de4cd998634f208d293896d698",
+    "semantic_hash": ""
+  },
+  "backend/src/common/errors/proveedor.errors.ts": {
+    "mtime": 1790707531.2825274,
+    "ast_hash": "9671acbc6dd7175d17483431ad686f53",
+    "semantic_hash": ""
+  },
+  "backend/src/common/prisma/prisma.module.ts": {
+    "mtime": 1786731906.7951012,
+    "ast_hash": "3505a1831c78f0a9475e4ce0f0092410",
+    "semantic_hash": ""
+  },
+  "backend/src/common/prisma/prisma.service.ts": {
+    "mtime": 1787674895.953168,
+    "ast_hash": "0b0f0e2fb100d395fdfd6932bb19c746",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/configuracion-proveedor.service.ts": {
+    "mtime": 1787674895.9761674,
+    "ast_hash": "9b0340378adcbc84f663495aba73bb8b",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/proveedor-adapter.interface.ts": {
+    "mtime": 1790707531.4156933,
+    "ast_hash": "c0f85542c729ad90aa7c5f79a43b0d38",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/proveedor-telemetry.service.ts": {
+    "mtime": 1787674895.9771667,
+    "ast_hash": "2dabe40c24daf5b6782d78a6c4e30836",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/proveedor.module.ts": {
+    "mtime": 1786732358.9758363,
+    "ast_hash": "903a8aee969b437e345d7825a6d40abd",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/proveedor.service.ts": {
+    "mtime": 1790707531.4156933,
+    "ast_hash": "4a5264c6936f09a0a965660410c06640",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/rate-limiter.service.ts": {
+    "mtime": 1786732120.130891,
+    "ast_hash": "e853b721c6d685c5b6902b2d4b1a6af9",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/sensa/sensa.adapter.ts": {
+    "mtime": 1791312408.1173623,
+    "ast_hash": "9d8d51b62606f838b1639e92b78cfda2",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/sensa/sensa.constants.ts": {
+    "mtime": 1786732162.0092404,
+    "ast_hash": "77fd1442329d1f6ecb3b46e72baef8b4",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/sensa/sensa.types.ts": {
+    "mtime": 1788458922.6995475,
+    "ast_hash": "6b05b3f3ff110c7687edd6291bf14aa7",
+    "semantic_hash": ""
+  },
+  "backend/docker-entrypoint.sh": {
+    "mtime": 1786731425.5790558,
+    "ast_hash": "d64f3e4bcfdb3194394e09a25f932b19",
+    "semantic_hash": ""
+  },
+  "backend/eslint.config.mjs": {
+    "mtime": 1786731416.770742,
+    "ast_hash": "2935527c9422f292aeed1c2ee2cbfdd8",
+    "semantic_hash": ""
+  },
+  "backend/nest-cli.json": {
+    "mtime": 1786731407.988052,
+    "ast_hash": "24c13f284b64c93d8267705fa05b1c28",
+    "semantic_hash": ""
+  },
+  "backend/package.json": {
+    "mtime": 1788191447.8810506,
+    "ast_hash": "803ce277ee106adb05d6732cdb87404c",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260814120000_init/migration.sql": {
+    "mtime": 1786731718.1193025,
+    "ast_hash": "f9123fda38c4d73d5c8a459a8dbe4f67",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260814120100_rls_multitenant/migration.sql": {
+    "mtime": 1786731759.2619085,
+    "ast_hash": "ac172ef0624cbe02fc6e082986280c96",
+    "semantic_hash": ""
+  },
+  "backend/tsconfig.build.json": {
+    "mtime": 1788191447.9130533,
+    "ast_hash": "8120e040c249837e94c8cc59d4ed4d9c",
+    "semantic_hash": ""
+  },
+  "backend/tsconfig.json": {
+    "mtime": 1786731404.9221737,
+    "ast_hash": "ccba1e780d91e6051a310ce12b083848",
+    "semantic_hash": ""
+  },
+  "docker/postgres/init/01-app-user.sh": {
+    "mtime": 1786731355.329371,
+    "ast_hash": "786aad45978881f767c62d24e7738983",
+    "semantic_hash": ""
+  },
+  "opencode.json": {
+    "mtime": 1787061206.8428228,
+    "ast_hash": "e3200bd284a856c5887c63410b0a666c",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1788190746.0554185,
+    "ast_hash": "5b628e73c589d8ffd7fcbc272deb2865",
+    "semantic_hash": ""
+  },
+  "INSTRUCTIVO.md": {
+    "mtime": 1786729728.0,
+    "ast_hash": "8d207e827317c4bd8ce9029cd6aebfec",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1790707531.4356933,
+    "ast_hash": "bfdbe478a531c6adfe4164d714a50028",
+    "semantic_hash": ""
+  },
+  "docs/01_Instrucciones_del_Proyecto.md": {
+    "mtime": 1788458922.7050693,
+    "ast_hash": "882c4f2ed5a04c8c0d303a7842464636",
+    "semantic_hash": ""
+  },
+  "docs/02_Glosario_de_Actores_y_Entidades.md": {
+    "mtime": 1788458922.706069,
+    "ast_hash": "54f3d8f320963a72d45550890fc1da30",
+    "semantic_hash": ""
+  },
+  "docs/03_Reglas_de_Negocio.md": {
+    "mtime": 1790862235.3236864,
+    "ast_hash": "1cd9afc5f2014e59c2def68f0d362c88",
+    "semantic_hash": ""
+  },
+  "docs/04_Esqueleto_Tecnico_Inicial.md": {
+    "mtime": 1790862269.6322882,
+    "ast_hash": "2a996707791020952f4abb1960281502",
+    "semantic_hash": ""
+  },
+  "docs/05_Decisiones_Pendientes.md": {
+    "mtime": 1788191447.920052,
+    "ast_hash": "99c1688e4f395fa72eeef51a309bb4e8",
+    "semantic_hash": ""
+  },
+  "docs/IPTVControl_URL_Routing_Convention.md": {
+    "mtime": 1787674895.9931684,
+    "ast_hash": "acc8731036ad42bd37b1937bf60d4ede",
+    "semantic_hash": ""
+  },
+  "branding/logo_iptvcontrol.png": {
+    "mtime": 1786729708.0,
+    "ast_hash": "b29ecae81824a91d4dcf378ea6f7ae1d",
+    "semantic_hash": ""
+  },
+  "backend/prisma/seed-root.ts": {
+    "mtime": 1787750986.415028,
+    "ast_hash": "3aaf43904fbf92cc6249a4254dc6535c",
+    "semantic_hash": ""
+  },
+  "backend/prisma/verificar-rls.sql": {
+    "mtime": 1786738994.6597266,
+    "ast_hash": "3145da96a0c27afb5e0a3e0f8473f1a8",
+    "semantic_hash": ""
+  },
+  "backend/src/app.module.ts": {
+    "mtime": 1790773759.7674267,
+    "ast_hash": "5cd17517af619140fe8cc7daf9043b3f",
+    "semantic_hash": ""
+  },
+  "backend/src/common/crypto/crypto.service.spec.ts": {
+    "mtime": 1787674895.952167,
+    "ast_hash": "4ce39748e7afcf692399a406b7d73277",
+    "semantic_hash": ""
+  },
+  "backend/src/common/csv/csv.util.spec.ts": {
+    "mtime": 1786733965.109598,
+    "ast_hash": "e6999f9c330be04ee1368fee2ed6791b",
+    "semantic_hash": ""
+  },
+  "backend/src/main.ts": {
+    "mtime": 1786738272.671238,
+    "ast_hash": "b961ca846112fed0e7e0a197e157a836",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auditoria/auditoria.controller.ts": {
+    "mtime": 1786733505.1527407,
+    "ast_hash": "ea8f7128c53e7d020ccb6d900daa6720",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auditoria/auditoria.module.ts": {
+    "mtime": 1786733510.7611868,
+    "ast_hash": "750b1479b0f96cd4e755c89cd3983532",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auditoria/auditoria.service.ts": {
+    "mtime": 1790775700.3861542,
+    "ast_hash": "5ceb3e44569cfa4afcac828a6b6fc091",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auditoria/dto/listar-auditoria.query.ts": {
+    "mtime": 1786733496.974987,
+    "ast_hash": "61f3a95abd6a2d6f8bd9c8a1c0985eb4",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/clientes/clientes.controller.ts": {
+    "mtime": 1790707531.2835286,
+    "ast_hash": "bbc6f8b529885bd08c1aa6f32748098f",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/clientes/clientes.module.ts": {
+    "mtime": 1790769936.5690057,
+    "ast_hash": "3d4d82ce0b8e31615f9ce04bbf8c0298",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/clientes/clientes.service.ts": {
+    "mtime": 1791387427.4804003,
+    "ast_hash": "57161d70ce450eaa3054d0649843e84f",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/clientes/dto/crear-cliente.dto.ts": {
+    "mtime": 1790769936.571099,
+    "ast_hash": "6f46edc44327c98725aabb27c9a5a585",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/clientes/dto/listar-clientes.query.ts": {
+    "mtime": 1790707531.2855287,
+    "ast_hash": "27c0c164e2d1d5a334c96953d5d9bfcd",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/configuracion.controller.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "9a4bc3260fb0fa5f723addbafd0297fa",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/configuracion.module.ts": {
+    "mtime": 1790775700.387154,
+    "ast_hash": "1e395300d638fa638a6e68513edadc19",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/configuracion.service.ts": {
+    "mtime": 1790775700.3881564,
+    "ast_hash": "0f4271f610a55699dabd547f486527e6",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/dto/configuracion.dto.ts": {
+    "mtime": 1790775700.389159,
+    "ast_hash": "5ba001f7036e9e2feeeed69095a59e41",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/proveedores.controller.ts": {
+    "mtime": 1787674895.959167,
+    "ast_hash": "88c33847fb466af126d2be2b29ac8ef0",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/proveedores.service.ts": {
+    "mtime": 1787674895.960168,
+    "ast_hash": "9f891e15bb8be8fe0398d436226f7b28",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/capacidad.util.spec.ts": {
+    "mtime": 1788458922.6345458,
+    "ast_hash": "f83d2de44963efdf329f985331f502d2",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/capacidad.util.ts": {
+    "mtime": 1788458922.635546,
+    "ast_hash": "63833505f1cb257c3f69f2c9e218ae27",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas-provisioning.service.ts": {
+    "mtime": 1791288779.910145,
+    "ast_hash": "0a74966406692368e84c4ec9d7ac0fd0",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas.controller.ts": {
+    "mtime": 1790771745.68096,
+    "ast_hash": "c662eb9e9972b1511a26509bb9eaf20c",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas.mapper.spec.ts": {
+    "mtime": 1791203429.2899451,
+    "ast_hash": "ee14d0bc6bfef8e0165ab0af0693dbe9",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas.mapper.ts": {
+    "mtime": 1791203429.2348864,
+    "ast_hash": "2eee5360df0e6a8e0b394c61bb5d26d4",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas.module.ts": {
+    "mtime": 1790769936.5720987,
+    "ast_hash": "0c80c220f231306fedfa79a2100c6e29",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas.service.ts": {
+    "mtime": 1790861936.0561068,
+    "ast_hash": "06a47bb7ede08921cde82111988a90fb",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/listar-cuentas.query.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "ad4e6c67467c78760df52640d8ae3d2b",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/identificadores.service.spec.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "00b8643bb862265b778524fbd6271357",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/identificadores.service.ts": {
+    "mtime": 1786732467.2815921,
+    "ast_hash": "4487aa4c7da6bd159b7317107070e958",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dashboard/dashboard.controller.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "ed3e1e779023750e8764d9430868a72a",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dashboard/dashboard.module.ts": {
+    "mtime": 1786733558.9682686,
+    "ast_hash": "de8c7d59178f50c958fa4f6028ecf606",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dashboard/dashboard.service.ts": {
+    "mtime": 1790707531.3035274,
+    "ast_hash": "a10045fec6e3326afc9654d22764f7a3",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dispositivos-query.service.ts": {
+    "mtime": 1786738952.9888968,
+    "ast_hash": "f72c799109c0c014e484f8b1496a4e1c",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dispositivos.controller.ts": {
+    "mtime": 1790707531.3115263,
+    "ast_hash": "b1d14674287f2802fe619ec367e3119c",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dispositivos.module.ts": {
+    "mtime": 1787674895.9691677,
+    "ast_hash": "3b7456e3654117214754e3af226939b1",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dispositivos.service.ts": {
+    "mtime": 1791288621.1197176,
+    "ast_hash": "80c89e039fbb31f54b22bcc197eedabd",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dto/listar-dispositivos.query.ts": {
+    "mtime": 1788191447.9040523,
+    "ast_hash": "58cded1394e0c22f6aebb3a9f8ca8999",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/health/health.controller.ts": {
+    "mtime": 1786733615.5810726,
+    "ast_hash": "ee6ca34d55b1bb5f5cfcbc612e455e49",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/health/health.module.ts": {
+    "mtime": 1786733616.7343888,
+    "ast_hash": "dffb59943888959a8db5eedf6afacba6",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/modalidades/dto/modalidad.dto.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "d93f83cfe960de1e1ab5f56f92de3316",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/modalidades/modalidades.controller.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "58a778cab0700caf241292985d65bf8f",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/modalidades/modalidades.module.ts": {
+    "mtime": 1786733352.906919,
+    "ast_hash": "18ed1e2ba9a5a7ef268dbc4b50aac8d6",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/modalidades/modalidades.service.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "e6927ab5c091ee7f3e2c2782a541f756",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/reportes/reportes.controller.ts": {
+    "mtime": 1786733604.4693465,
+    "ast_hash": "db2457ccdf914e795fbb92b55359a2bf",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/reportes/reportes.module.ts": {
+    "mtime": 1786733606.1374097,
+    "ast_hash": "d35afcd5afa2121f246e28ef496b1c97",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/reportes/reportes.service.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "2bcba4b39dd5713deaff3231967161af",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/revendedoras/dto/revendedora.dto.ts": {
+    "mtime": 1790707531.3826952,
+    "ast_hash": "30da8dad171c817a966aadb9b5a10079",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/revendedoras/revendedoras.controller.ts": {
+    "mtime": 1788458922.6815498,
+    "ast_hash": "28e2ad21ca92d8240fc8e4d5313b048c",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/revendedoras/revendedoras.module.ts": {
+    "mtime": 1788458922.6885488,
+    "ast_hash": "81d739f556de8f2adb13aa0af27ac982",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/revendedoras/revendedoras.service.ts": {
+    "mtime": 1791296111.628418,
+    "ast_hash": "3a60f8dd55160f56e7787d9089fd367a",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/team-members/dto/team-member.dto.ts": {
+    "mtime": 1786734052.6532023,
+    "ast_hash": "e223d2a5554c30284f6287f4f43a1587",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/team-members/team-members.controller.ts": {
+    "mtime": 1790707531.3906932,
+    "ast_hash": "7f8255dbb74c3ed28d8737200b8e42c1",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/team-members/team-members.module.ts": {
+    "mtime": 1786733285.4728918,
+    "ast_hash": "72a52d40ae9532ebccb111d75efc7aeb",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/team-members/team-members.service.ts": {
+    "mtime": 1790707531.408695,
+    "ast_hash": "4bc69220c69460eb1600e38d786b343c",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/sensa/sensa.adapter.spec.ts": {
+    "mtime": 1791312408.2258403,
+    "ast_hash": "2acab1aea130216dcbba3cabcdf8fd2b",
+    "semantic_hash": ""
+  },
+  "backend/src/queues/cola-proveedor.constants.ts": {
+    "mtime": 1790861738.9254417,
+    "ast_hash": "a7ebe901d432a98437326cbcda571eca",
+    "semantic_hash": ""
+  },
+  "backend/src/queues/cola-proveedor.processor.ts": {
+    "mtime": 1791203429.6001823,
+    "ast_hash": "b8d1c7bff019185509c903ee7b33427c",
+    "semantic_hash": ""
+  },
+  "backend/src/queues/cola-proveedor.service.ts": {
+    "mtime": 1790861738.926441,
+    "ast_hash": "74322f0339344951fcde9277f86969ba",
+    "semantic_hash": ""
+  },
+  "backend/src/queues/queues.module.ts": {
+    "mtime": 1790776150.9187796,
+    "ast_hash": "4f2bb3f7138097a16e0cf225ba6c0520",
+    "semantic_hash": ""
+  },
+  "frontend/eslint.config.js": {
+    "mtime": 1786736015.814056,
+    "ast_hash": "7b5efd3430f9f4ea00a89bb1c8630d33",
+    "semantic_hash": ""
+  },
+  "frontend/package.json": {
+    "mtime": 1786734154.8008907,
+    "ast_hash": "a6d0afd72db908af6921f5954ab6bce2",
+    "semantic_hash": ""
+  },
+  "frontend/postcss.config.js": {
+    "mtime": 1786734253.9428792,
+    "ast_hash": "c735540bb63936a123bc867d950c9f69",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/CapacityMeter.spec.tsx": {
+    "mtime": 1790707531.437694,
+    "ast_hash": "dc076749ac60969f6fff812877a36ffd",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/CapacityMeter.tsx": {
+    "mtime": 1790707531.445697,
+    "ast_hash": "6b8ce6390bd565883870ed21ae368d4e",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/common.tsx": {
+    "mtime": 1788523030.1164665,
+    "ast_hash": "a014b714e501536f46ccc20d3373e870",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/layout/AppLayout.tsx": {
+    "mtime": 1790773759.769427,
+    "ast_hash": "0ed4a5ba1c7c021e798b72c9e468041a",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/layout/Gates.tsx": {
+    "mtime": 1787674895.9971676,
+    "ast_hash": "c8f3588777d4845f127bd4598ba73459",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ui/overlays.tsx": {
+    "mtime": 1790773759.7704268,
+    "ast_hash": "9ba74b65e32eff24db6a6e97e74402ed",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ui/primitives.tsx": {
+    "mtime": 1786734454.2977002,
+    "ast_hash": "32ed3152f1675270e4c36509b4506782",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ui/table.tsx": {
+    "mtime": 1786734476.0487788,
+    "ast_hash": "a178d1726ae717748cee1a7362c106fe",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/AccountDetail.tsx": {
+    "mtime": 1791288686.5698774,
+    "ast_hash": "91ebda778bb795456c1deb7e4e675510",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/AccountDevicesTab.tsx": {
+    "mtime": 1791203223.739789,
+    "ast_hash": "03e2e3ac904e7732f87fbe0dc6813d60",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/AccountList.tsx": {
+    "mtime": 1790771162.188628,
+    "ast_hash": "3245efd09e4de13c4ae9ef4c043b75e3",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/audit-log/AuditLogEntry.tsx": {
+    "mtime": 1786735784.0391724,
+    "ast_hash": "d530a98131d98744633595f291c5b7dc",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/audit-log/AuditLogList.tsx": {
+    "mtime": 1786735962.5937529,
+    "ast_hash": "140cf0a7d0d0cf7ed1e742d114fc04a4",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/commercial-plans/CommercialPlanForm.tsx": {
+    "mtime": 1790707531.4626937,
+    "ast_hash": "78dd875cff5c6ffbe53d1a1c0ffe15dc",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/commercial-plans/CommercialPlanList.tsx": {
+    "mtime": 1786739133.7708743,
+    "ast_hash": "1ff8168f76d568ad295d551d91f833bd",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/customers/CustomerDetail.tsx": {
+    "mtime": 1790771162.188628,
+    "ast_hash": "11279a2f1888f1dd4fc930d1a953e43f",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/customers/CustomerForm.tsx": {
+    "mtime": 1790769936.5750966,
+    "ast_hash": "5c3bb329f122c2b25d1a6d5a890305d0",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/customers/CustomerList.tsx": {
+    "mtime": 1790771162.1896272,
+    "ast_hash": "8416f9766feaed6816f0fe6e65256fda",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/dashboard/Dashboard.tsx": {
+    "mtime": 1790707531.4857018,
+    "ast_hash": "f0ca831b42e741b616c3e09f5c27ec59",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/devices/DeviceDetail.tsx": {
+    "mtime": 1787674896.0056863,
+    "ast_hash": "d7dfe399ce6342febcea48843f1f5b4b",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/devices/DeviceList.tsx": {
+    "mtime": 1787674896.006687,
+    "ast_hash": "d88449b4cb00ead11e1e494a5dd09177",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/landing/LandingPage.tsx": {
+    "mtime": 1787674896.006687,
+    "ast_hash": "5df730166cfae91edd2726d165cd7cf8",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/reports/ReportsView.tsx": {
+    "mtime": 1786735812.4347298,
+    "ast_hash": "0f935a51fe5fd5c68fcb7285471dacbc",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/ResellerDetail.tsx": {
+    "mtime": 1790707531.486703,
+    "ast_hash": "3e195aaaceafb06e4f8edd6194d0b04b",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/ResellerForm.tsx": {
+    "mtime": 1786735558.27711,
+    "ast_hash": "6e4ab625d1a37691f424aafdf28bfb7f",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/ResellerList.tsx": {
+    "mtime": 1790707531.4917028,
+    "ast_hash": "0e20eb20e26bb5f4fcb83aef588b0f1c",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/SettingsView.tsx": {
+    "mtime": 1790707531.5088375,
+    "ast_hash": "b89807d32166837fde29ebbd719bd1cd",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/team-members/TeamMemberForm.tsx": {
+    "mtime": 1786735735.2662108,
+    "ast_hash": "e11b30eb09a09a17a04553d9806387dc",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/team-members/TeamMemberList.tsx": {
+    "mtime": 1790707531.5188375,
+    "ast_hash": "d002962ac5e72b212697efbe29f4c42e",
+    "semantic_hash": ""
+  },
+  "frontend/src/i18n/entityLabels.spec.ts": {
+    "mtime": 1788191447.9280517,
+    "ast_hash": "6d172440869db5351e3dfd81b163feba",
+    "semantic_hash": ""
+  },
+  "frontend/src/i18n/entityLabels.ts": {
+    "mtime": 1788458922.7330675,
+    "ast_hash": "864b61c9fcb2e5876e7c8fa6eedc7186",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/api.ts": {
+    "mtime": 1786734377.3050082,
+    "ast_hash": "ee68586ad2b5bfa5ad5e5cdd614cceb5",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/session.tsx": {
+    "mtime": 1790707531.519843,
+    "ast_hash": "aaea743f3f9d5c28be6bd97e08a6149b",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/theme.tsx": {
+    "mtime": 1786736569.6636658,
+    "ast_hash": "b87f2bf620127c588d73af2de56036df",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/types.ts": {
+    "mtime": 1791202731.4524279,
+    "ast_hash": "43e424020bb02126d8986c6c8bbabd71",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/utils.spec.ts": {
+    "mtime": 1788458922.7360697,
+    "ast_hash": "8a72ddbc5e5d341424cf20612d674694",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/utils.ts": {
+    "mtime": 1788523030.1254706,
+    "ast_hash": "46c4c32d7034aa2804cd9e765a32339e",
+    "semantic_hash": ""
+  },
+  "frontend/src/main.tsx": {
+    "mtime": 1786735922.4590254,
+    "ast_hash": "1a68c0e9142fc6aae18a61c3a35c1e56",
+    "semantic_hash": ""
+  },
+  "frontend/src/routes.tsx": {
+    "mtime": 1788523030.127466,
+    "ast_hash": "9845d8353572903dc7dc91d55d694104",
+    "semantic_hash": ""
+  },
+  "frontend/src/test/setup.ts": {
+    "mtime": 1786735932.0730925,
+    "ast_hash": "4f4b91395c9980c3ebabddb524b0093d",
+    "semantic_hash": ""
+  },
+  "frontend/src/vite-env.d.ts": {
+    "mtime": 1786735928.9195766,
+    "ast_hash": "5530bb155dde17a1e6388992d8e1ae5b",
+    "semantic_hash": ""
+  },
+  "frontend/tailwind.config.js": {
+    "mtime": 1791202731.4634268,
+    "ast_hash": "51b5c744fd47c7f705bfb5da92e71620",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.json": {
+    "mtime": 1786734253.4249887,
+    "ast_hash": "6cbfefd7d472158ecd9b129f02e31553",
+    "semantic_hash": ""
+  },
+  "frontend/vite.config.ts": {
+    "mtime": 1786736012.6398964,
+    "ast_hash": "2d1c4a8e70a0a0b05ca2bfc0e2d381f8",
+    "semantic_hash": ""
+  },
+  "vault/.obsidian/app.json": {
+    "mtime": 1786738090.9667985,
+    "ast_hash": "be9101df4586d134b7bc68ee3939e2f8",
+    "semantic_hash": ""
+  },
+  "vault/.obsidian/appearance.json": {
+    "mtime": 1786738096.7146358,
+    "ast_hash": "0a88cf107236a249e98be257b0fd526a",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1788458922.6245475,
+    "ast_hash": "82664ad6d0203b704a47caf2fb0abcc0",
+    "semantic_hash": ""
+  },
+  "frontend/index.html": {
+    "mtime": 1791202731.461425,
+    "ast_hash": "cbb0be93625e320c3a518d33664553cc",
+    "semantic_hash": ""
+  },
+  "vault/00 - \u00cdndice.md": {
+    "mtime": 1787674896.052297,
+    "ast_hash": "d84b419586c41619495214e16739c4e7",
+    "semantic_hash": ""
+  },
+  "vault/10 - Negocio/Capacidad de una Cuenta.md": {
+    "mtime": 1788191447.959689,
+    "ast_hash": "4c4e4e1347156b1cfc11ed6ed971deb9",
+    "semantic_hash": ""
+  },
+  "vault/10 - Negocio/Ciclo de vida del Cliente Final.md": {
+    "mtime": 1787674896.0532966,
+    "ast_hash": "359903e87ef4d6a1d1d696a2f5f09313",
+    "semantic_hash": ""
+  },
+  "vault/10 - Negocio/Glosario de actores y entidades.md": {
+    "mtime": 1788458922.7420719,
+    "ast_hash": "6321d5983d15c3f3f7a7c78bd89091f4",
+    "semantic_hash": ""
+  },
+  "vault/10 - Negocio/Modalidades comerciales.md": {
+    "mtime": 1786737814.7443013,
+    "ast_hash": "64618574a10a394de359e7ba25959010",
+    "semantic_hash": ""
+  },
+  "vault/10 - Negocio/Team Members.md": {
+    "mtime": 1786738005.3278337,
+    "ast_hash": "6d45c18c0a36b007c6486f52e07bf86f",
+    "semantic_hash": ""
+  },
+  "vault/10 - Negocio/Validaci\u00f3n de ID de gesti\u00f3n externa.md": {
+    "mtime": 1786738063.9636612,
+    "ast_hash": "b87e83ec7f77c7359423a1b3b704a283",
+    "semantic_hash": ""
+  },
+  "vault/20 - Arquitectura/Aislamiento multi-tenant.md": {
+    "mtime": 1786737854.5048144,
+    "ast_hash": "5c07b270045b37e0323ecd41d1c62cea",
+    "semantic_hash": ""
+  },
+  "vault/20 - Arquitectura/Consistencia con el Proveedor.md": {
+    "mtime": 1786737933.1780226,
+    "ast_hash": "7e2506ce4f8e8f1a4337478f4a019453",
+    "semantic_hash": ""
+  },
+  "vault/20 - Arquitectura/Integraci\u00f3n con SENSA.md": {
+    "mtime": 1787674896.0552964,
+    "ast_hash": "b2274eb69de480d23260d7879a5b0de7",
+    "semantic_hash": ""
+  },
+  "vault/20 - Arquitectura/Patr\u00f3n ProveedorAdapter.md": {
+    "mtime": 1787674896.056296,
+    "ast_hash": "7f05292fdf4937e6fd7b00ba1d993a35",
+    "semantic_hash": ""
+  },
+  "vault/20 - Arquitectura/Stack t\u00e9cnico.md": {
+    "mtime": 1787674896.0572996,
+    "ast_hash": "6d15e83c9f1e44171044b61b77aed828",
+    "semantic_hash": ""
+  },
+  "vault/30 - Flujos/Flujo - Alta de Cliente Final.md": {
+    "mtime": 1788458922.7460685,
+    "ast_hash": "bcc0d09eb561a6f8f43c3ede1aa6f5d2",
+    "semantic_hash": ""
+  },
+  "vault/30 - Flujos/Flujo - Migraci\u00f3n de Cuenta.md": {
+    "mtime": 1788191447.9626896,
+    "ast_hash": "c045c5ecd5fbb1099e1d9e29f1102c09",
+    "semantic_hash": ""
+  },
+  "vault/40 - Operaci\u00f3n/Arranque en fr\u00edo y seed.md": {
+    "mtime": 1786737996.08733,
+    "ast_hash": "1c0f5339e7a4418295955d62d8f6d385",
+    "semantic_hash": ""
+  },
+  "vault/40 - Operaci\u00f3n/Despliegue y operaci\u00f3n.md": {
+    "mtime": 1787771987.3076224,
+    "ast_hash": "d1d1ab10e36e4468caa73e623698e831",
+    "semantic_hash": ""
+  },
+  "vault/40 - Operaci\u00f3n/Registro de auditor\u00eda.md": {
+    "mtime": 1787674896.0592947,
+    "ast_hash": "67ea9c04370983c3661cc4909f6cb0b0",
+    "semantic_hash": ""
+  },
+  "vault/40 - Operaci\u00f3n/Reporte de consumo.md": {
+    "mtime": 1786738088.3747964,
+    "ast_hash": "e33673182d01924e050b6c593f3b5bdb",
+    "semantic_hash": ""
+  },
+  "vault/90 - Decisiones/Decisiones pendientes.md": {
+    "mtime": 1787674896.0602949,
+    "ast_hash": "375957e9c9cc578fab1a2a940a43240b",
+    "semantic_hash": ""
+  },
+  "vault/90 - Decisiones/Riesgo aceptado - contrase\u00f1a compartida.md": {
+    "mtime": 1788191447.96369,
+    "ast_hash": "4477b8bf2e3384099073e274a63d9899",
+    "semantic_hash": ""
+  },
+  "vault/README.md": {
+    "mtime": 1786738116.114807,
+    "ast_hash": "d1f4a140e9b919b24d0a71f325f70123",
+    "semantic_hash": ""
+  },
+  "frontend/public/logo_iptvcontrol.png": {
+    "mtime": 1786734239.5049124,
+    "ast_hash": "b29ecae81824a91d4dcf378ea6f7ae1d",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260814120200_rls_team_member_operador/migration.sql": {
+    "mtime": 1786738977.704121,
+    "ast_hash": "e62b7f7b6d52254e5e0c9d6613aab5fd",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/swagger.guard.spec.ts": {
+    "mtime": 1786738304.3594558,
+    "ast_hash": "536b8bf83c7177e88b1d43c14066254b",
+    "semantic_hash": ""
+  },
+  "backend/src/common/auth/swagger.guard.ts": {
+    "mtime": 1786738243.8413248,
+    "ast_hash": "cf6871515a6a7150df07f43aca7406d5",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/clientes/clientes.service.spec.ts": {
+    "mtime": 1791387427.596128,
+    "ast_hash": "f4d19509131660a64b72036dcbb6d537",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/commercial-plans/CommercialPlanDetail.tsx": {
+    "mtime": 1790707531.4626937,
+    "ast_hash": "9e32d3bc6d9564ee37100f07ef243803",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/ResellerAccountsCard.tsx": {
+    "mtime": 1787674896.0086877,
+    "ast_hash": "8325e491f8cfee53f170d626969c460c",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260821120000_device_enrollment_reservations/migration.sql": {
+    "mtime": 1787674895.9481678,
+    "ast_hash": "6cb3020db315d0a295d345b543c3c23e",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dto/resolver-incidencia.dto.ts": {
+    "mtime": 1787674895.9731674,
+    "ast_hash": "b5bc66da20430e430bdf4a9345e68a25",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/incidencias-dispositivos.controller.ts": {
+    "mtime": 1787674895.9731674,
+    "ast_hash": "2d94a2fb6aec603bfedc13c9ff27e972",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/incidencias-dispositivos.service.ts": {
+    "mtime": 1791203429.4571218,
+    "ast_hash": "b754d5392a7f22f61091472165835a11",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/servicios.util.spec.ts": {
+    "mtime": 1787674895.9801686,
+    "ast_hash": "e5aa3fa5f12f7feca06a514e8ae068f3",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/servicios.util.ts": {
+    "mtime": 1787674895.9801686,
+    "ast_hash": "5d217fef7133a322fe3904f3998d6f46",
+    "semantic_hash": ""
+  },
+  "chrome-net-export-log-SENSAV2.json": {
+    "mtime": 1787245538.6067164,
+    "ast_hash": "16d6c1b5dbbff9e319a841d8f890b3a5",
+    "semantic_hash": ""
+  },
+  "docs/auth0-actions/post-login-tenant-claims.js": {
+    "mtime": 1787674895.9931684,
+    "ast_hash": "b39bf2a694994b6ed3cbf9413b267c0c",
+    "semantic_hash": ""
+  },
+  "docs/06_Despliegue_en_Produccion.md": {
+    "mtime": 1791387341.659413,
+    "ast_hash": "df7aa9942cc9bf1f8a1fe5ce726bb776",
+    "semantic_hash": ""
+  },
+  "docs/API Sensa V4.1.4.pdf": {
+    "mtime": 1787674895.992167,
+    "ast_hash": "74431d4940f2e6f45240e2944453ea18",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260821180000_correccion_vinculacion_action/migration.sql": {
+    "mtime": 1787674895.9491668,
+    "ast_hash": "0e4d9d669df815773b87c7fef145352f",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260824120000_modelo_capacidad_por_categoria/migration.sql": {
+    "mtime": 1787674895.9491668,
+    "ast_hash": "c95754b340d1ad2112c30e835411c9a9",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas-provisioning.service.spec.ts": {
+    "mtime": 1791222725.7647228,
+    "ast_hash": "6b3df9fe4c6b9ff40144c981468655d1",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/inventario-proveedor.service.spec.ts": {
+    "mtime": 1791296111.51193,
+    "ast_hash": "9369ef655bb63933dbcddc92755a1a0d",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/inventario-proveedor.service.ts": {
+    "mtime": 1791296111.4715304,
+    "ast_hash": "b3b1eb15b1192abbcaaec362dee206ad",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dispositivos.service.spec.ts": {
+    "mtime": 1791288621.2621188,
+    "ast_hash": "79e6369057aa3a5d0a0b7cfe65085814",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/dto/corregir-vinculacion.dto.ts": {
+    "mtime": 1787674895.971169,
+    "ast_hash": "347ca51f9fb02b883c572cba5b9e48df",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/CorrectDeviceBindingDialog.tsx": {
+    "mtime": 1787674896.0006902,
+    "ast_hash": "cbebbbe3d8b8217af3e4c5d24f3a7611",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/dispositivos/incidencias-dispositivos.service.spec.ts": {
+    "mtime": 1788458922.6725461,
+    "ast_hash": "b2e8ce900b6e7ad3dfc4256fd0cc24bb",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/cuentas.service.spec.ts": {
+    "mtime": 1790772234.3964612,
+    "ast_hash": "b7f09f72ae9b87e128596251c975a91e",
+    "semantic_hash": ""
+  },
+  "backend/src/queues/cola-proveedor.processor.spec.ts": {
+    "mtime": 1790861738.9254417,
+    "ast_hash": "d43b9124478d21c1572d183f64348abc",
+    "semantic_hash": ""
+  },
+  "docker-compose.prod.yml": {
+    "mtime": 1790707531.4246933,
+    "ast_hash": "a56ef88ecfeed4960c08cdce49a950e0",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260826140000_agregar_dni_cliente_final/migration.sql": {
+    "mtime": 1788191447.8830504,
+    "ast_hash": "cb264cf578ad9023ea669d7bbe1a939e",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260826150000_agregar_cambio_password_cuenta/migration.sql": {
+    "mtime": 1787839977.2396421,
+    "ast_hash": "9860de03e7a92468114a88fca7990197",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/cambiar-password-cuenta.dto.ts": {
+    "mtime": 1787839977.2576783,
+    "ast_hash": "3b1eea738d3ce06ac842d3145e335e97",
+    "semantic_hash": ""
+  },
+  "backend/prisma/importar-micom.ts": {
+    "mtime": 1788458922.6255467,
+    "ast_hash": "46c7b2bac9de41a1066b81140f9ea2e6",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260828120000_capacidad_compartida_flexible/migration.sql": {
+    "mtime": 1788191447.8840494,
+    "ast_hash": "1e6efa3c2c82801e93a797c6af9075cf",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260831100000_ventana_curiosidad/migration.sql": {
+    "mtime": 1788191447.8840494,
+    "ast_hash": "e6c2935db1dfcb4385b278ce6924757a",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/configuracion-revendedor.controller.ts": {
+    "mtime": 1790707531.2855287,
+    "ast_hash": "5b2d7fae83b28f671bb0db89d054104a",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/ventanas-curiosidad.service.spec.ts": {
+    "mtime": 1791288621.391346,
+    "ast_hash": "e89e6af64e5dd79bc2ba461280c4bbdf",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/ventanas-curiosidad.service.ts": {
+    "mtime": 1791288621.3284812,
+    "ast_hash": "933dea2552bcd8133fa74d1f623e2b64",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/CuriosityDurationInput.spec.tsx": {
+    "mtime": 1788191447.9210525,
+    "ast_hash": "593ff11c3b192a66e7f2263a80b3bd13",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/CuriosityDurationInput.tsx": {
+    "mtime": 1788540945.7310138,
+    "ast_hash": "4dda3f5843539f6256cef8b5d20e9990",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/CuriosityWindowPanel.spec.ts": {
+    "mtime": 1788191447.9240508,
+    "ast_hash": "1c8567a34af1a23a3eb728394eefa827",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/CuriosityWindowPanel.tsx": {
+    "mtime": 1790707531.461693,
+    "ast_hash": "7a87c222b0a2561c85f239b93c93d3bd",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/CuriosityWindowSettings.tsx": {
+    "mtime": 1790707531.5017214,
+    "ast_hash": "c476f52300b1a36db2bf92be8331dac1",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/curiosity-window.ts": {
+    "mtime": 1788191447.9300525,
+    "ast_hash": "244af42bbaf491da19a2b6c318b1c685",
+    "semantic_hash": ""
+  },
+  "vault/10 - Negocio/Ventana de curiosidad.md": {
+    "mtime": 1790707531.5318372,
+    "ast_hash": "f8e515ae6d1d558e41e59c968afbd4e0",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260901090000_editar_propiedades_cuenta/migration.sql": {
+    "mtime": 1788193614.678075,
+    "ast_hash": "a73ae505a336b05b58f9bbe02cd40484",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/actualizar-cuenta.dto.ts": {
+    "mtime": 1788458922.6565468,
+    "ast_hash": "506c516a5340fde82e3fac4740b91e6a",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/EditAccountDialog.tsx": {
+    "mtime": 1788458937.2900453,
+    "ast_hash": "d581c4442bbd0e0f7ea43f23af1ed725",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/AddManualCustomerDialog.tsx": {
+    "mtime": 1790707531.4486957,
+    "ast_hash": "a9fd394994c244ee7c325f788d9d474e",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260901150000_cuenta_cliente_exclusivo_mac_40/migration.sql": {
+    "mtime": 1788458922.6275465,
+    "ast_hash": "838c7d487371098db4ad6bb46510a657",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/AccountDevicesTab.spec.ts": {
+    "mtime": 1788458922.7200701,
+    "ast_hash": "bff67b18ed238aa5d24e9557fa3fbfc1",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/accounts/account-devices.utils.ts": {
+    "mtime": 1788458922.7240684,
+    "ast_hash": "a069428e720468bb889d19364bc4dec2",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/revendedoras/revendedoras.service.spec.ts": {
+    "mtime": 1790708191.543573,
+    "ast_hash": "442b7cb0ff4ae57009fe0dc060a5c332",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/ExternalProviderAccountsCard.tsx": {
+    "mtime": 1788458922.7280676,
+    "ast_hash": "938b9b0a07b005385befa8aa4c8601ee",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260902120000_password_cuenta_importada_opcional/migration.sql": {
+    "mtime": 1788458922.6285467,
+    "ast_hash": "72c36a3d8a76f553386f697a45f6636f",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/revendedoras/dto/cuenta-externa.dto.ts": {
+    "mtime": 1788458937.283162,
+    "ast_hash": "1f911969c11d8e7df16cf216c3d9fe64",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/ImportExternalAccountsDialog.tsx": {
+    "mtime": 1788458922.7290685,
+    "ast_hash": "ad814168a919fd95568f2795d7aed083",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260903120000_comercial_empresas_auditoria/migration.sql": {
+    "mtime": 1788458937.271633,
+    "ast_hash": "53f3b7c8e16aea2ea5d83b55008bd373",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260903150000_plantilla_whatsapp/migration.sql": {
+    "mtime": 1788523030.0909016,
+    "ast_hash": "5e5487ec9955cd0a422b373eff0c902f",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260904120000_ventana_vinculacion_sin_dispositivo/migration.sql": {
+    "mtime": 1788534989.4110677,
+    "ast_hash": "6d754dffe18c9545d775cd945be7ad54",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260905120000_crear_tipo_enum_procedencia/migration.sql": {
+    "mtime": 1788540945.7069726,
+    "ast_hash": "8a09dc0512a738e8ccb733e71cfec38e",
+    "semantic_hash": ""
+  },
+  "backend/src/common/time/calendario-comercial.ts": {
+    "mtime": 1790708191.5415213,
+    "ast_hash": "a48e67480276184f609cd853792564fb",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/configuracion-plantilla.controller.ts": {
+    "mtime": 1788523030.1099024,
+    "ast_hash": "85921c2db2b5cedaafb1e130575f9385",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/plantilla-whatsapp.util.spec.ts": {
+    "mtime": 1788523030.113904,
+    "ast_hash": "0556224b62351a6cf6c8e12d30ceebb9",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/plantilla-whatsapp.util.ts": {
+    "mtime": 1788523030.1149497,
+    "ast_hash": "024734d73fbde123343cff1ebbba2322",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/ajustar-slot.dto.ts": {
+    "mtime": 1788525669.1560624,
+    "ast_hash": "ef1814922262a52fbdd9339a15d5c3dc",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/identidad-cuentas.service.spec.ts": {
+    "mtime": 1788540945.7260928,
+    "ast_hash": "f1b29d07d358047af03110e4b4c6ef44",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/identidad-cuentas.service.ts": {
+    "mtime": 1788540945.7266154,
+    "ast_hash": "4e248db309882504150974afe23602eb",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/ResellerEditDialog.tsx": {
+    "mtime": 1790707531.4877026,
+    "ast_hash": "968e1fa9e4edb8649fef19abaaccba58",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/ProviderSection.tsx": {
+    "mtime": 1788458937.29705,
+    "ast_hash": "55171da176aea15dc59a9c2531b7c5f9",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/ResellerSettingsView.tsx": {
+    "mtime": 1790778845.9999514,
+    "ast_hash": "725f044e8c459bc8e31b77d7aa2230d2",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/WhatsappTemplateSettings.tsx": {
+    "mtime": 1788523030.121467,
+    "ast_hash": "4547b354b85cbd319a1614b4186cefb5",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260907120000_cambio_pin_auditoria/migration.sql": {
+    "mtime": 1790707531.2605264,
+    "ast_hash": "abaead7ea45a1701182c96e26b3a0e53",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260924120000_team_member_reactivacion/migration.sql": {
+    "mtime": 1790707531.2615283,
+    "ast_hash": "10135a2d978a411890b29beb414754ef",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260924130000_ventana_curiosidad_sin_tope/migration.sql": {
+    "mtime": 1790707531.2615283,
+    "ast_hash": "53c1cdb64bff9a4535d2b7d81569fbf3",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260928120000_venta_compartida_aislada/migration.sql": {
+    "mtime": 1790707531.2615283,
+    "ast_hash": "6af12b01125090d812e3a72d9f0c59fa",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929120000_aislamiento_cuenta/migration.sql": {
+    "mtime": 1790707531.262528,
+    "ast_hash": "807f4b802d896724132a79b2fae9e268",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929130000_fin_aislamiento_cuenta/migration.sql": {
+    "mtime": 1790707531.262528,
+    "ast_hash": "ad155ecbcb19f9162d5ef9f8350ea463",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929140000_cuentas_prueba_config/migration.sql": {
+    "mtime": 1790707531.262528,
+    "ast_hash": "f678d873ec59ae1d58769bceead06bbc",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929150000_consumo_cuenta_prueba/migration.sql": {
+    "mtime": 1790708191.5393486,
+    "ast_hash": "e8da8236e5f6c50048ad59491ac323ef",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929160000_cuenta_prueba/migration.sql": {
+    "mtime": 1790769936.5669065,
+    "ast_hash": "7dbf8b64b5c0f7f716e9ab9b7367955a",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929170000_conversion_cuenta_prueba/migration.sql": {
+    "mtime": 1790771745.6789577,
+    "ast_hash": "c057c724dedd1d013aa036c6ee0ce4e6",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929180000_cierre_cuenta_prueba/migration.sql": {
+    "mtime": 1790772234.3944612,
+    "ast_hash": "7c37e8f52c61d6f1f713d7b5ee16e850",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929190000_cierre_automatico_cuenta_prueba/migration.sql": {
+    "mtime": 1790773082.8407168,
+    "ast_hash": "b256cc4a71a08c4e562fc0dfb7190e3d",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929200000_notificaciones/migration.sql": {
+    "mtime": 1790773759.766426,
+    "ast_hash": "2a0861a6d11477b1be1d8d2d99d8f978",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929210000_configuracion_notificaciones/migration.sql": {
+    "mtime": 1790775700.3851542,
+    "ast_hash": "04c5ae8009b2dc0947ce3f132dd140e7",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929220000_preferencia_sonido_notificaciones/migration.sql": {
+    "mtime": 1790778845.9953156,
+    "ast_hash": "dc91d5b0102c2ec94b84bca8d3adc181",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929230000_incidencia_clientes_activos/migration.sql": {
+    "mtime": 1790779305.517892,
+    "ast_hash": "3567f06b2823d09904a11414c5157431",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929240000_recordatorio_dispositivos/migration.sql": {
+    "mtime": 1790861738.9234421,
+    "ast_hash": "c9109a29ce976391bc5cd3ea2695a6ac",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20260929250000_aislamiento_nivel_cuenta/migration.sql": {
+    "mtime": 1790861784.7601516,
+    "ast_hash": "28808ddc23d3a34271134d8227bea912",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20261005120000_modelo_ultimo_inicio_dispositivo/migration.sql": {
+    "mtime": 1791202731.4494264,
+    "ast_hash": "ff18e5581102b33412c5a16728de3614",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/configuracion-notificaciones.controller.ts": {
+    "mtime": 1790775700.387154,
+    "ast_hash": "465566dea8489af254db73dcc037e5fa",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/configuracion/configuracion.service.spec.ts": {
+    "mtime": 1790775700.3881564,
+    "ast_hash": "5e826929b819ae3909cec79c7ff8e643",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/abrir-ventana.dto.ts": {
+    "mtime": 1790707531.301527,
+    "ast_hash": "6eb12b41d83947309b2bcef9f05137f0",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/aislar-cuenta.dto.ts": {
+    "mtime": 1790707531.301527,
+    "ast_hash": "130bf2a0a23d9bdbe6b0682838f36e74",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/cambiar-pin-cuenta.dto.ts": {
+    "mtime": 1790707531.301527,
+    "ast_hash": "204cedd205e872141b70b7ad84deb9e3",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/cuentas/dto/convertir-prueba.dto.ts": {
+    "mtime": 1790771745.6829586,
+    "ast_hash": "41772bd80699ef4064aac7dd0d957860",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-api-key.guard.ts": {
+    "mtime": 1791382231.9121046,
+    "ast_hash": "0e921eacda18cbcb85f688292ceb4abb",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-error.filter.spec.ts": {
+    "mtime": 1791387285.9843087,
+    "ast_hash": "493cf06b12643cc9a1f5ef572a7cc3cf",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-error.filter.ts": {
+    "mtime": 1791382231.954166,
+    "ast_hash": "dd094f7b6a4aa7a52fb8f4134f708296",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-error.mapper.ts": {
+    "mtime": 1791387281.5156436,
+    "ast_hash": "cb8e97e0523a3d767bcfa5709189d60e",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/dto/crear-cliente-bot.dto.spec.ts": {
+    "mtime": 1790707531.3706942,
+    "ast_hash": "97ac3761a04fb3ede12e758ece102f40",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/dto/crear-cliente-bot.dto.ts": {
+    "mtime": 1790707531.3706942,
+    "ast_hash": "f05de74ec19467c34ca9dc578871dfc5",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/integracion-whatsapp.module.ts": {
+    "mtime": 1791387275.2752087,
+    "ast_hash": "0e89d8c0c1e8f8e23c5ebf7598d01474",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/whatsapp-bot.controller.ts": {
+    "mtime": 1791387271.2180378,
+    "ast_hash": "75ccb16d59c7b5a23eb84058831fb11d",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/whatsapp-bot.service.ts": {
+    "mtime": 1790707531.3816934,
+    "ast_hash": "ca6bd309d51e205e363b61b838c54c18",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/notificaciones/dto/preferencias.dto.ts": {
+    "mtime": 1790778845.9969163,
+    "ast_hash": "34a58bf287e3bbbd528145df55c4170a",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/notificaciones/notificaciones.controller.ts": {
+    "mtime": 1790773759.7684264,
+    "ast_hash": "5ffb6753dd11c983935f595c8166691b",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/notificaciones/notificaciones.module.ts": {
+    "mtime": 1790778845.9969163,
+    "ast_hash": "36e3e703c6bc1aedf511844245a9e696",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/notificaciones/notificaciones.service.spec.ts": {
+    "mtime": 1790778845.9974327,
+    "ast_hash": "b003a87a77f521b91568acfeea00bbab",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/notificaciones/notificaciones.service.ts": {
+    "mtime": 1790778845.9979515,
+    "ast_hash": "99c113d48a8ddb888b6363cf83e295ac",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/notificaciones/preferencias.controller.ts": {
+    "mtime": 1790778845.9979515,
+    "ast_hash": "870bf125491ed42738b942df64669cf7",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/pruebas/pruebas.controller.ts": {
+    "mtime": 1790708191.5420554,
+    "ast_hash": "9d6b4e2aac0468548fd5b44220795714",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/pruebas/pruebas.module.ts": {
+    "mtime": 1790708191.5420554,
+    "ast_hash": "f1cba5837356545fcfc207df7597fc1c",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/pruebas/pruebas.service.spec.ts": {
+    "mtime": 1790769936.5730965,
+    "ast_hash": "827f7bc2a23f252ca483abfe6277761c",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/pruebas/pruebas.service.ts": {
+    "mtime": 1790769936.574096,
+    "ast_hash": "3b991bdc269c7afd3b3f67ccec03aec4",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/team-members/team-members.service.spec.ts": {
+    "mtime": 1790707531.3956935,
+    "ast_hash": "4d41eb3b67aba12dddaaef3c9ed02b5b",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/metadatos-dispositivo.util.spec.ts": {
+    "mtime": 1791203429.6181834,
+    "ast_hash": "3a74482fc16835aa5a63494923f25453",
+    "semantic_hash": ""
+  },
+  "backend/src/proveedor/metadatos-dispositivo.util.ts": {
+    "mtime": 1791202731.4504254,
+    "ast_hash": "df5b84313c9ee3d29a8338c7918a40cb",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/customers/CustomerEditDialog.tsx": {
+    "mtime": 1790707531.4777026,
+    "ast_hash": "ad82ac9166ce918c2a75b737d53f9e8a",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/notifications/NotificationBell.tsx": {
+    "mtime": 1790778845.9989486,
+    "ast_hash": "b0716d922066996b51778715ea89018d",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/resellers/AccountLimitsPanel.tsx": {
+    "mtime": 1790707531.486703,
+    "ast_hash": "9835145cfd1d2af0e422598facdc9fe4",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/NotificationSettings.tsx": {
+    "mtime": 1790775700.389159,
+    "ast_hash": "70b66ca6ffbfd0d3ddd627e1ed3b1948",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/TestAccountsSettings.tsx": {
+    "mtime": 1790769936.5750966,
+    "ast_hash": "bbde80bc7bb508a1cd5129687da415f1",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/settings/UserPreferences.tsx": {
+    "mtime": 1790778845.9999514,
+    "ast_hash": "77b09c48d723e38dba361dd7f87747f6",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/account-modality.ts": {
+    "mtime": 1790771162.1896272,
+    "ast_hash": "7405c62a991c916f44eb1be011057841",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/notification-sound.ts": {
+    "mtime": 1790778845.9999514,
+    "ast_hash": "84512fba0bf74ea34dcee76b2ea662ed",
+    "semantic_hash": ""
+  },
+  "FAQ_OPERADOR_CLIENTE.md": {
+    "mtime": 1788789821.993776,
+    "ast_hash": "ecae17be49a96719fd8dfcba77cc9c8a",
+    "semantic_hash": ""
+  },
+  "GUIA_DEMO_Y_ONBOARDING_CLIENTE.md": {
+    "mtime": 1788789781.6149447,
+    "ast_hash": "d41cc516f0914e7fa29bb305cf8451f9",
+    "semantic_hash": ""
+  },
+  "MACHETE_DEMO_CLIENTE.md": {
+    "mtime": 1788789798.1662621,
+    "ast_hash": "911a1c2c53b7973661fc0bbf0e0973b7",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/02-INDICE-FUNCIONES-NUEVAS.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "f5752263486f8dbf64ed3687ed2930e0",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-A-Aislamiento/HU-A01-Crear-cuenta-compartida-aislada.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "0738cc7224f15ab47efa3a7bd14b7369",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-A-Aislamiento/HU-A02-Aislar-cuenta-compartida-existente.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "8e368c2ed2d8b745bf0f1eb8489c6bfb",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-A-Aislamiento/HU-A03-Vencimiento-y-revocacion-de-aislamiento.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "6bbdd00b98e1fb80ad02f7bfa7435d9b",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-A-Aislamiento/HU-A04-Tags-y-visualizacion-de-aislamiento.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "49f648e15438337fc8c5e578008b7270",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-B-Cuentas-Prueba/HU-P01-Habilitacion-y-parametrizacion-por-revendedor.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "da56edbe8c85273b4ff487d419295104",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-B-Cuentas-Prueba/HU-P02-Cupo-mensual-y-cuentas-extra.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "ec6a31f9512e12ccad182624c9074ecc",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-B-Cuentas-Prueba/HU-P03-Crear-cuenta-de-prueba.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "3578a1509464a12e75cca72ba33efd8a",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-B-Cuentas-Prueba/HU-P04-Tags-de-cuenta-de-prueba.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "746b70ed56fbaf6db37b91f31dca4bf4",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-B-Cuentas-Prueba/HU-P05-Convertir-prueba-a-permanente.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "ef60ec120fb0cd82b23f0d05f9448658",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-B-Cuentas-Prueba/HU-P06-Vencimiento-automatico-de-prueba.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "4e4d76349335d63d53c2e1cb1fcf6e55",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-B-Cuentas-Prueba/HU-P07-Auditoria-de-cuentas-de-prueba.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "94b250abb62f8d7d6f2568188c3ab2c4",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-C-Notificaciones/HU-N01-Centro-de-notificaciones.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "e30fc0988b0d544e8ff769b377dd34b3",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-C-Notificaciones/HU-N02-Configuracion-de-notificaciones.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "e48e305c9d30d40fa68d24287cc59f4a",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-C-Notificaciones/HU-N03-Avisos-de-cuentas-de-prueba.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "2735dea2274ea8d911ba7a683d9454bf",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-C-Notificaciones/HU-N04-Avisos-de-ventana-de-alta.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "76b15726f64039208985fe515ae804df",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-C-Notificaciones/HU-N05-Preferencias-de-usuario-y-sonido.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "5754203125e7621a635f8b394a1145d9",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-D-Dispositivos/HU-D01-Deteccion-de-dispositivos-no-asignados.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "1efd98b29b24942f231e2416ab874b78",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-D-Dispositivos/HU-D02-Autoasignacion-con-un-unico-cliente-activo.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "03b5c19256caabc77d1ae04a65bd680f",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-D-Dispositivos/HU-D03-Notificacion-con-cero-o-varios-clientes.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "72a603d1802f8953f30fdca14398f381",
+    "semantic_hash": ""
+  },
+  "vault/funcionalidades-28/EPIC-D-Dispositivos/HU-D04-Recordatorios-de-dispositivos-pendientes.md": {
+    "mtime": 1790704228.0,
+    "ast_hash": "d4613e82b960395c8a6f226f585e1a6b",
+    "semantic_hash": ""
+  },
+  "docs/API_REST_Cotelhub_v1 (1).pdf": {
+    "mtime": 1790863382.1137247,
+    "ast_hash": "06aa28ced07feb123045ae542775dbcc",
+    "semantic_hash": ""
+  },
+  "backend/prisma/migrations/20261005130000_validar_licencias_disponibles_empresa/migration.sql": {
+    "mtime": 1791222571.0306613,
+    "ast_hash": "09d5229c7f03f3de2c25612b09639a6e",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-api-key.guard.spec.ts": {
+    "mtime": 1791381934.3282695,
+    "ast_hash": "f94bbedce83037d439cdc062f4fcdb21",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-rate-limit.service.spec.ts": {
+    "mtime": 1791381966.4973836,
+    "ast_hash": "8007521251ff06ed49c120bf22dd6585",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-rate-limit.service.ts": {
+    "mtime": 1791382232.084029,
+    "ast_hash": "5960ceef28e4c1bcdae6c3cb2375d308",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/integracion-whatsapp/bot-redis.service.ts": {
+    "mtime": 1791381873.3421743,
+    "ast_hash": "d5725b4136c73da02fb0e6391c566fcf",
+    "semantic_hash": ""
+  },
+  "docs/postman/IPTVControl_Bot.postman_collection.json": {
+    "mtime": 1791387334.7955549,
+    "ast_hash": "78fb6c998e21e1543ba6ea088315975b",
+    "semantic_hash": ""
+  },
+  "docs/07_Guia_Integracion_API_Bot.md": {
+    "mtime": 1791387359.5079298,
+    "ast_hash": "e4acba0b3f48da7d9e5ef918dcb4f315",
+    "semantic_hash": ""
+  }
+}

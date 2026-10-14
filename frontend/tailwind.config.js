@@ -78,10 +78,15 @@ export default {
           from: { opacity: '0', transform: 'translateX(-8px)' },
           to: { opacity: '1', transform: 'translateX(0)' },
         },
+        'drawer-in': {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 160ms ease-out',
         'slide-in': 'slide-in 160ms ease-out',
+        'drawer-in': 'drawer-in 200ms ease-out',
       },
     },
   },

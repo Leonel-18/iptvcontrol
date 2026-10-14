@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   BadgeCheck,
+  History,
   KeyRound,
   Lock,
   Pencil,
@@ -27,6 +28,7 @@ import {
   SecretValue,
   WhatsappTemplateButton,
 } from "@/components/common";
+import { AccountActivityPanel } from "./AccountActivityPanel";
 import { AccountDevicesTab } from "./AccountDevicesTab";
 import { CuriosityDurationInput } from "@/components/CuriosityDurationInput";
 import { CuriosityWindowPanel } from "./CuriosityWindowPanel";
@@ -48,6 +50,7 @@ import {
   ConfirmDialog,
   Dialog,
   DialogContent,
+  Drawer,
   Select,
   Tabs,
   TabsContent,
@@ -89,6 +92,7 @@ export const AccountDetail = () => {
   const [duracionConversion, setDuracionConversion] = useState(0);
   const [confirmarRevocarAislamiento, setConfirmarRevocarAislamiento] =
     useState(false);
+  const [actividadAbierta, setActividadAbierta] = useState(false);
   const navegar = useNavigate();
 
   const { data, isLoading, error } = useQuery({
@@ -304,6 +308,16 @@ export const AccountDetail = () => {
         acciones={
           <>
             <AccountStatusBadge estado={data.estado} />
+            {!esOperador ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setActividadAbierta(true)}
+              >
+                <History />
+                Actividad
+              </Button>
+            ) : null}
             {!esOperador ? (
               <Button
                 variant="secondary"
@@ -1057,6 +1071,19 @@ export const AccountDetail = () => {
           ) : null}
         </div>
       </div>
+
+      {/* Actividad de la Cuenta en un panel lateral, sólo para la Empresa Revendedora. */}
+      {!esOperador ? (
+        <Drawer
+          abierto={actividadAbierta}
+          onCambio={setActividadAbierta}
+          titulo="Actividad de la cuenta"
+          descripcion="Altas, cambios de credenciales, aislamientos, dispositivos y clientes de esta cuenta."
+          sinPadding
+        >
+          <AccountActivityPanel key={data.id} cuentaId={data.id} />
+        </Drawer>
+      ) : null}
     </>
   );
 };

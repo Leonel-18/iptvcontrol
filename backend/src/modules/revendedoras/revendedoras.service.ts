@@ -32,10 +32,88 @@ import {
 } from '../../common/time/calendario-comercial';
 import {
   ActualizarRevendedoraDto,
+  AgrupacionMetricas,
   CambiarModalidadDto,
   CrearRevendedoraDto,
   ListarRevendedorasQueryDto,
+  MetricasRevendedoraQueryDto,
 } from './dto/revendedora.dto';
+
+/** Un punto de la serie histórica de Cuentas. */
+interface PuntoMetricas {
+  fecha: string;
+  altas: number;
+  altas_importadas: number;
+  cierres: number;
+  total: number;
+  activas: number;
+}
+
+/**
+ * Bordes de día en calendario argentino (UTC-3 todo el año, sin horario de
+ * verano desde 2009). `inicioDiaArgentina` devuelve el instante UTC de las
+ * 00:00 AR; `finDiaArgentina`, el de las 00:00 AR del día siguiente, para
+ * filtrar con `[inicio, fin)`.
+ */
+function partesFechaArgentina(referencia: Date): { anio: number; mes: number; dia: number } {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(referencia);
+  return {
+    anio: Number(partes.find((parte) => parte.type === 'year')?.value),
+    mes: Number(partes.find((parte) => parte.type === 'month')?.value),
+    dia: Number(partes.find((parte) => parte.type === 'day')?.value),
+  };
+}
+
+/** Instante UTC de una fecha argentina: 00:00 AR = 03:00 UTC. */
+function instanteArgentina(anio: number, mes: number, dia: number): Date {
+  return new Date(Date.UTC(anio, mes - 1, dia, 3, 0, 0, 0));
+}
+
+function inicioDiaArgentina(referencia: Date): Date {
+  const { anio, mes, dia } = partesFechaArgentina(referencia);
+  return instanteArgentina(anio, mes, dia);
+}
+
+/** Interpreta `YYYY-MM-DD` como fecha argentina (no como medianoche UTC). */
+function inicioDiaDesdeTexto(texto: string): Date {
+  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto);
+  if (coincidencia) {
+    return instanteArgentina(
+      Number(coincidencia[1]),
+      Number(coincidencia[2]),
+      Number(coincidencia[3]),
+    );
+  }
+  return inicioDiaArgentina(new Date(texto));
+}
+
+function finDiaDesdeTexto(texto: string): Date {
+  return new Date(inicioDiaDesdeTexto(texto).getTime() + 86_400_000);
+}
+
+/** Lunes 00:00 AR de la semana que contiene a `referencia` (semana ISO). */
+function inicioSemanaArgentina(referencia: Date): Date {
+  const dia = inicioDiaArgentina(referencia);
+  const diaSemana = (dia.getUTCDay() + 6) % 7; // 0 = lunes … 6 = domingo
+  return new Date(dia.getTime() - diaSemana * 86_400_000);
+}
+
+/** Primer día a las 00:00 AR del mes que contiene a `referencia`. */
+function inicioMesDesdeInstante(referencia: Date): Date {
+  const { anio, mes } = partesFechaArgentina(referencia);
+  return instanteArgentina(anio, mes, 1);
+}
+
+/** Primer día a las 00:00 AR del mes siguiente (normaliza el cambio de año). */
+function mesSiguiente(fecha: Date): Date {
+  const { anio, mes } = partesFechaArgentina(fecha);
+  return instanteArgentina(anio, mes + 1, 1);
+}
 
 /**
  * Administración de Empresas Revendedoras.
@@ -331,6 +409,170 @@ export class RevendedorasService {
       comerciales,
       creado_en: empresa.creadoEn,
     };
+  }
+
+  /**
+   * Serie histórica de Cuentas de una Empresa Revendedora.
+   *
+   * Reconstruye la evolución con datos que ya existen (no inventa snapshots):
+   *  - altas por período: fecha de registro de cada Cuenta en IPTVControl
+   *    (`Cuenta.creadoEn`). Las importadas se informan aparte: su `creadoEn` es
+   *    la fecha de importación, no su alta real en el Proveedor.
+   *  - cierres por período y cuentas activas: única fuente de bajas es el
+   *    `AuditLog` (`cierre_cuenta` / `cierre_cuenta_prueba`). Una Cuenta cerrada
+   *    sin evento de cierre (p. ej. importada ya inactiva) se considera no activa
+   *    desde su alta para no inflar la serie (coincide con el estado actual).
+   *  - total acumulado: todas las Cuentas registradas, activas o cerradas.
+   *
+   * Los límites comerciales (cuentas máximas, tope de activas, máximo crear/mes)
+   * son valores vigentes, no históricos: se devuelven como referencia.
+   */
+  async metricas(id: string, query: MetricasRevendedoraQueryDto) {
+    const empresa = await this.prisma.db.empresaRevendedora.findUnique({
+      where: { id },
+      include: { modalidadComercial: true },
+    });
+    if (!empresa) {
+      throw new NotFoundException('La Empresa Revendedora no existe o no está disponible.');
+    }
+
+    const hasta = query.hasta ? finDiaDesdeTexto(query.hasta) : new Date();
+    const desde = query.desde
+      ? inicioDiaDesdeTexto(query.desde)
+      : inicioDiaArgentina(empresa.creadoEn);
+    const agrupacion = query.agrupacion ?? this.deducirAgrupacion(desde, hasta);
+
+    const [cuentas, cierres] = await Promise.all([
+      this.prisma.db.cuenta.findMany({
+        where: { empresaRevendedoraId: id },
+        select: { id: true, creadoEn: true, estado: true, procedencia: true },
+      }),
+      this.prisma.db.auditLog.findMany({
+        where: {
+          empresaRevendedoraId: id,
+          accion: {
+            in: [AccionAuditoria.cierre_cuenta, AccionAuditoria.cierre_cuenta_prueba],
+          },
+        },
+        select: { entidadId: true, creadoEn: true },
+      }),
+    ]);
+
+    const buckets = this.generarBuckets(desde, hasta, agrupacion);
+    const cierrePorCuenta = new Map<string, Date>();
+    for (const cierre of cierres) {
+      if (!cierre.entidadId) continue;
+      const previo = cierrePorCuenta.get(cierre.entidadId);
+      if (!previo || cierre.creadoEn < previo)
+        cierrePorCuenta.set(cierre.entidadId, cierre.creadoEn);
+    }
+
+    const puntos: PuntoMetricas[] = buckets.map((bucket) => {
+      let altas = 0;
+      let altasImportadas = 0;
+      for (const cuenta of cuentas) {
+        if (cuenta.creadoEn >= bucket.inicio && cuenta.creadoEn < bucket.fin) {
+          altas += 1;
+          if (cuenta.procedencia === 'importada_proveedor') altasImportadas += 1;
+        }
+      }
+      const cierresBucket = cierres.filter(
+        (cierre) => cierre.creadoEn >= bucket.inicio && cierre.creadoEn < bucket.fin,
+      ).length;
+
+      const total = cuentas.filter((cuenta) => cuenta.creadoEn < bucket.fin).length;
+      const activas = cuentas.filter((cuenta) => {
+        if (cuenta.creadoEn >= bucket.fin) return false;
+        if (cuenta.estado === EstadoCuenta.activa) return true;
+        const cierre = cierrePorCuenta.get(cuenta.id);
+        return cierre !== undefined && cierre >= bucket.fin;
+      }).length;
+
+      return {
+        fecha: bucket.inicio.toISOString(),
+        altas,
+        altas_importadas: altasImportadas,
+        cierres: cierresBucket,
+        total,
+        activas,
+      };
+    });
+
+    const totalCuentas = cuentas.length;
+    const cuentasActivas = cuentas.filter((cuenta) => cuenta.estado === EstadoCuenta.activa).length;
+    const creadasMesSistema = cuentas.filter(
+      (cuenta) =>
+        cuenta.procedencia === 'creada_en_sistema' &&
+        cuenta.estado === EstadoCuenta.activa &&
+        cuenta.creadoEn >= inicioMesArgentina(new Date()) &&
+        cuenta.creadoEn < finMesArgentina(new Date()),
+    ).length;
+
+    return {
+      empresa_id: empresa.id,
+      desde: desde.toISOString(),
+      hasta: hasta.toISOString(),
+      agrupacion,
+      puntos,
+      referencias: {
+        total_cuentas: totalCuentas,
+        cuentas_activas: cuentasActivas,
+        cuentas_maximas: this.calcularMaximoComercial({
+          totalCuentas,
+          creadasEnMes: creadasMesSistema,
+          cuentasMaxCrearMensual: empresa.cuentasMaxCrearMensual,
+        }),
+        cuentas_a_cobrar: this.calcularCuentasACobrar({
+          modalidad: empresa.modalidadComercial,
+          asignadaEn: empresa.modalidadAsignadaEn ?? empresa.creadoEn,
+          creadasEnMes: creadasMesSistema,
+          cuentasActivas,
+        }),
+        cuentas_max_crear_mensual: empresa.cuentasMaxCrearMensual,
+        tope_cuentas_activas: empresa.modalidadComercial?.topeCuentasActivas ?? null,
+        tipo_modalidad: empresa.modalidadComercial?.tipo ?? null,
+        ritmo_incremento: empresa.modalidadComercial?.ritmoIncremento ?? null,
+      },
+    };
+  }
+
+  /** Agrupación por defecto según la amplitud de la ventana pedida. */
+  private deducirAgrupacion(desde: Date, hasta: Date): AgrupacionMetricas {
+    const dias = Math.max(1, Math.round((hasta.getTime() - desde.getTime()) / 86_400_000));
+    if (dias <= 31) return AgrupacionMetricas.dia;
+    if (dias <= 120) return AgrupacionMetricas.semana;
+    return AgrupacionMetricas.mes;
+  }
+
+  /**
+   * Genera los intervalos consecutivos [inicio, fin) del rango, alineados al
+   * calendario argentino (día, semana que arranca el lunes, mes).
+   */
+  private generarBuckets(
+    desde: Date,
+    hasta: Date,
+    agrupacion: AgrupacionMetricas,
+  ): Array<{ inicio: Date; fin: Date }> {
+    const buckets: Array<{ inicio: Date; fin: Date }> = [];
+    let cursor =
+      agrupacion === AgrupacionMetricas.mes
+        ? inicioMesDesdeInstante(desde)
+        : agrupacion === AgrupacionMetricas.semana
+          ? inicioSemanaArgentina(desde)
+          : desde;
+    let guardia = 0;
+    while (cursor < hasta && guardia < 5000) {
+      guardia += 1;
+      const fin =
+        agrupacion === AgrupacionMetricas.mes
+          ? mesSiguiente(cursor)
+          : agrupacion === AgrupacionMetricas.semana
+            ? new Date(cursor.getTime() + 7 * 86_400_000)
+            : new Date(cursor.getTime() + 86_400_000);
+      buckets.push({ inicio: cursor, fin });
+      cursor = fin;
+    }
+    return buckets;
   }
 
   /** Perfil de la propia Empresa Revendedora, con sus precios vigentes. */

@@ -5,6 +5,7 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEmail,
   IsEnum,
   IsInt,
@@ -19,6 +20,13 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
+
+/** Nivel de agrupación temporal de la serie de métricas de una empresa. */
+export enum AgrupacionMetricas {
+  dia = 'dia',
+  semana = 'semana',
+  mes = 'mes',
+}
 
 /**
  * Alta de Empresa Revendedora (docs/03_Reglas_de_Negocio.md, sección 14).
@@ -180,4 +188,36 @@ export class ListarRevendedorasQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(EstadoEmpresaRevendedora)
   status?: EstadoEmpresaRevendedora;
+}
+
+/**
+ * Parámetros de la serie histórica de Cuentas de una Empresa Revendedora.
+ *
+ * La ventana es opcional: si no se informa `desde`, la serie arranca en el alta
+ * de la empresa (histórico). La agrupación por defecto se deduce del rango en el
+ * servicio (día/semana/mes).
+ */
+export class MetricasRevendedoraQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'Inicio de la ventana en formato ISO (YYYY-MM-DD). Por defecto, alta de la empresa.',
+  })
+  @IsOptional()
+  @IsDateString()
+  desde?: string;
+
+  @ApiPropertyOptional({
+    description: 'Fin de la ventana en formato ISO (YYYY-MM-DD). Por defecto, hoy.',
+  })
+  @IsOptional()
+  @IsDateString()
+  hasta?: string;
+
+  @ApiPropertyOptional({
+    enum: AgrupacionMetricas,
+    description: 'Agrupación temporal de la serie.',
+  })
+  @IsOptional()
+  @IsEnum(AgrupacionMetricas)
+  agrupacion?: AgrupacionMetricas;
 }
