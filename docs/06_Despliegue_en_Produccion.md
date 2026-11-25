@@ -101,12 +101,11 @@ necesitan **sí o sí** definirse en producción:
 | `AUTH0_DB_CONNECTION`, `AUTH0_INVITATION_TTL_SEC` | Con su valor por defecto |
 | `SWAGGER_USER` / `SWAGGER_PASSWORD` | Definir para que `/api/docs` esté disponible |
 | `SENSA_*` | Rate limit/timeout/`SENSA_DNI_MAX_RETRIES` ya parametrizados |
-| `WSP_BOT_API_KEY` | API key del bot de WhatsApp (`openssl rand -hex 32`). **Si queda vacía, el endpoint `/api/v1/integration/whatsapp/customers` no se habilita** (responde 503) |
-| `WSP_BOT_EMPRESA_REVENDEDORA_ID` | UUID de la Empresa Revendedora para la que opera el bot (ej. MDZINTERNET). Se saca del panel, de `/resellers` (ver §4.4) |
-| `WSP_BOT_TEAM_MEMBER_ID` | **Opcional.** Team Member que figura como autor en el Audit Log. Sin él, las altas del bot quedan sin autor |
+| `INTEGRACIONES_FALLBACK_ENV` | `true` durante la migración: permite que una key que no está en la base se valide contra `WSP_BOT_API_KEY` / `PORTAL_CLIENTE_API_KEY`. Después de crear las credenciales en el panel, poner `false` |
+| `INTEGRACIONES_RATE_LIMIT` | Máximo de solicitudes por credencial en la ventana. Default `30` |
+| `INTEGRACIONES_RATE_WINDOW_SECONDS` | Duración de la ventana del rate limit de integraciones. Default `60` segundos |
+| `WSP_BOT_API_KEY`, `WSP_BOT_EMPRESA_REVENDEDORA_ID`, `WSP_BOT_TEAM_MEMBER_ID`, `PORTAL_CLIENTE_*` | **Fallback de transición.** La autenticación normal usa las credenciales de **Configuración → Integraciones** (una key por Empresa Revendedora). Estas variables solo se usan mientras `INTEGRACIONES_FALLBACK_ENV=true` |
 | `WSP_BOT_VENTANA_MINUTOS` | Duración de la Ventana de Alta que aplica el bot en cada venta compartida. Default `5760` (96 h) |
-| `WSP_BOT_RATE_LIMIT` | Máximo de solicitudes del bot por ventana. Default `30` |
-| `WSP_BOT_RATE_WINDOW_SECONDS` | Duración de la ventana del rate limit. Default `60` segundos |
 | `SEED_ROOT_EMAIL`, `SEED_ROOT_AUTH0_USER_ID` | Ya usados; en prod el seed se corre UNA vez (ver §4.1) |
 | `VITE_API_BASE_URL`, `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE` | Build args del frontend (tiempo de build) |
 | `PGADMIN_*` | **Solo dev**; no habilitar en producción |
@@ -248,9 +247,10 @@ forma temprana la "API pública" que `docs/04_Esqueleto_Tecnico_Inicial.md` (sec
 para una fase posterior; no reemplaza al panel, reutiliza su misma lógica de negocio.
 
 **Endpoint:** `POST /api/v1/integration/whatsapp/customers`
-**Autenticación:** header `x-api-key: <WSP_BOT_API_KEY>`. No usa Auth0.
-**Alcance:** siempre crea los Clientes Finales de **una sola Empresa Revendedora**, la definida en
-`WSP_BOT_EMPRESA_REVENDEDORA_ID`. El bot no puede elegir a quién le crea Cuentas.
+**Autenticación:** header `x-api-key: <credencial de la Empresa>`. No usa Auth0.
+**Alcance:** la credencial identifica a la Empresa Revendedora. Cada empresa tiene su propia key,
+creada por el Operador Principal en **Configuración → Integraciones**. La misma key puede habilitar
+el bot y el Portal de Cliente según sus `scopes`.
 
 Reglas que impone el servidor (el bot no las elige):
 - **Servicios:** se aplican los 7 del catálogo para ambos tipos de Cuenta. Requiere que el Operador
@@ -262,25 +262,23 @@ Reglas que impone el servidor (el bot no las elige):
   una nueva.
 - **Cuenta exclusiva:** nace 3+3, sin `cupos_por_categoria`.
 
-**Configuración (una sola vez):**
+**Configuración:**
 
-1. Generar la API key: `openssl rand -hex 32` → cargarla en `WSP_BOT_API_KEY` del `.env.production`.
-2. Obtener el UUID de la Empresa Revendedora:
-   - del panel del Operador Principal, en `/resellers` (el detalle tiene la URL `/resellers/<uuid>`), o
-   - del endpoint `GET /api/v1/resellers` → `data[].id`.
-   Cargarlo en `WSP_BOT_EMPRESA_REVENDEDORA_ID`.
-3. (Opcional) Autor en el Audit Log: crear/ubicar un Team Member de esa empresa y cargar su `id` en
-   `WSP_BOT_TEAM_MEMBER_ID`. Se obtiene de `/team-members` en el panel o de
-   `GET /api/v1/team-members?reseller_id=<uuid>` → `data[].id`.
-4. Reiniciar el backend para tomar las variables:
-   `docker compose --env-file .env.production -f docker-compose.prod.yml up -d backend`.
-   No hace falta reconstruir el frontend (son variables de runtime del backend).
+1. Entrar al panel como Operador Principal → **Configuración → Integraciones**.
+2. Crear una credencial para la Empresa Revendedora, con un nombre identificable y las APIs que
+   correspondan (por defecto, todas).
+3. Copiar la key en el momento: **no se vuelve a mostrar**. Entregarla por un canal seguro.
+4. (Opcional) Asignar un Team Member como autor en el Audit Log.
+5. Para una segunda empresa, repetir con otra credencial. No hace falta reiniciar el backend.
+
+Durante la transición se mantiene el fallback a `WSP_BOT_API_KEY` / `WSP_BOT_EMPRESA_REVENDEDORA_ID`.
+Cuando todas las integraciones usen credenciales de la base, poner `INTEGRACIONES_FALLBACK_ENV=false`.
 
 **Ejemplo de request:**
 
 ```http
 POST /api/v1/integration/whatsapp/customers
-x-api-key: <WSP_BOT_API_KEY>
+x-api-key: <credencial de la Empresa>
 Content-Type: application/json
 
 {
@@ -300,6 +298,9 @@ La respuesta exitosa trae `success: true`, el número de cliente, las credencial
 `password`, `pin`) y el campo `whatsapp.mensaje` con el texto ya renderizado con la plantilla de la
 empresa, listo para enviar.
 
+**Pendiente resuelto:** el Team Member configurado en la credencial se valida contra la Empresa
+Revendedora; si no pertenece, la integración responde 403.
+
 **Errores (respuesta consistente para ManyChat):** ante un error de negocio/controlado el endpoint
 responde **HTTP 200** con `success: false`, `whatsapp.mensaje` (texto entendible para el Cliente
 Final), las credenciales de `cuenta` en null y `error.code`. Se hace así porque ManyChat sólo mapea los "Campos de
@@ -316,9 +317,6 @@ respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. C
 
 El mensaje nunca expone stack traces, credenciales ni respuestas crudas de SENSA; el detalle queda
 en los logs del backend (con `requestId` y código interno).
-
-**Pendiente:** definir si conviene validar en el guard que el `WSP_BOT_TEAM_MEMBER_ID` pertenezca a
-la Empresa Revendedora configurada (hoy sólo se usa para firmar el Audit Log).
 
 ---
 

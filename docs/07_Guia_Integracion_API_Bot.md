@@ -13,10 +13,12 @@ Las solicitudes crean datos y Cuentas reales. No existe un modo de prueba o `dry
 IPTVControl entrega por un canal seguro:
 
 - `BASE_URL`: URL pública de IPTVControl.
-- `API_KEY`: credencial privada asociada a una única Empresa Revendedora.
+- `API_KEY`: credencial privada de **una Empresa Revendedora**. Cada empresa tiene su propia key,
+  creada por el Operador Principal en **Configuración → Integraciones**.
 
 La API key no debe incluirse en aplicaciones web, mensajes, repositorios, capturas ni logs. Debe
-usarse exclusivamente desde el servidor del sistema integrador.
+usarse exclusivamente desde el servidor del sistema integrador. La misma key puede habilitar el bot
+de WhatsApp, el Portal de Cliente o ambas APIs, según sus `scopes`.
 
 ## 3. Endpoint
 
@@ -26,8 +28,18 @@ Content-Type: application/json
 x-api-key: <API_KEY>
 ```
 
-No utiliza Auth0. La Empresa Revendedora se determina mediante la configuración de la API key y no
-puede elegirse desde el request.
+No utiliza Auth0. La Empresa Revendedora se determina por la credencial; no se elige desde el
+request. Una key revocada deja de funcionar de inmediato.
+
+### 3.1. Alta y rotación de la credencial
+
+1. El Operador Principal entra a **Configuración → Integraciones**.
+2. Crea una credencial para la Empresa Revendedora, con un nombre identificable y las APIs
+   habilitadas (por defecto, todas).
+3. Copia la key en ese momento: el sistema no la vuelve a mostrar.
+4. Para rotarla, usa **Rotar**: genera una key nueva y revoca la anterior. Actualizar el integrador
+   antes de descartar la vieja.
+5. Para cortar el acceso, usa **Revocar**. No hace falta reiniciar el backend.
 
 ## 4. Duplicados y reintentos
 
@@ -191,8 +203,8 @@ Los errores controlados responden HTTP 200 para que las plataformas de chat pued
 
 ## 9. Rate limit
 
-El endpoint admite 30 solicitudes por cada ventana de 60 segundos para la API key configurada. No
-es una cuota diaria. Al superar el límite, la operación no llega al Proveedor y la respuesta incluye
+El endpoint admite 30 solicitudes por cada ventana de 60 segundos **por credencial**. No es una
+cuota diaria. Al superar el límite, la operación no llega al Proveedor y la respuesta incluye
 `RATE_LIMITED` y el header `Retry-After`.
 
 El integrador no debe reintentar en bucle. Debe esperar `Retry-After` y puede reintentar el mismo
@@ -201,6 +213,7 @@ JSON: los duplicados por DNI, teléfono o ID de gestión están bloqueados.
 ## 10. Checklist del integrador
 
 - Guardar `BASE_URL` y `API_KEY` como secretos del servidor.
+- Usar la key de **su** Empresa Revendedora; no compartirla entre empresas.
 - Enviar `Content-Type: application/json`.
 - Evaluar `success` en todas las respuestas.
 - Respetar `Retry-After`.
@@ -209,6 +222,7 @@ JSON: los duplicados por DNI, teléfono o ID de gestión están bloqueados.
 
 ## 11. Postman
 
-La colección `IPTVControl_Bot.postman_collection.json` utiliza variables y no contiene
-URL ni API key reales. Use DNIs y teléfonos no registrados en cada alta: repetir un request
-existente responde `ACCOUNT_ALREADY_EXISTS` y no crea una segunda Cuenta.
+La colección `IPTVControl_Bot.postman_collection.json` utiliza variables y no contiene URL ni API
+key reales. Cargar `base_url` y `api_key` con los datos de la Empresa correspondiente. Use DNIs y
+teléfonos no registrados en cada alta: repetir un request existente responde
+`ACCOUNT_ALREADY_EXISTS` y no crea una segunda Cuenta.
