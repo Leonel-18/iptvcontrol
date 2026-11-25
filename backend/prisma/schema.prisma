@@ -175,6 +175,8 @@ enum AccionAuditoria {
   cierre_automatico_cuenta_prueba
   fallo_cierre_cuenta_prueba
   cambio_configuracion_notificaciones
+  alta_integracion_credencial
+  revocacion_integracion_credencial
 }
 
 enum EntidadAuditada {
@@ -189,6 +191,7 @@ enum EntidadAuditada {
   ReservaTecnicaDispositivo
   IncidenciaDispositivoProveedor
   VentanaCuriosidad
+  IntegracionCredencial
 }
 
 enum EstadoLlamadaProveedor {
@@ -231,12 +234,13 @@ model OperadorPrincipal {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  empresasRevendedoras   EmpresaRevendedora[]
-  modalidadesComerciales ModalidadComercial[]
-  teamMembers            TeamMember[]
-  configuraciones        ConfiguracionProveedor[]
-  auditLogs              AuditLog[]
-  llamadasProveedor      LlamadaProveedor[]
+  empresasRevendedoras    EmpresaRevendedora[]
+  modalidadesComerciales  ModalidadComercial[]
+  teamMembers             TeamMember[]
+  configuraciones         ConfiguracionProveedor[]
+  auditLogs               AuditLog[]
+  llamadasProveedor       LlamadaProveedor[]
+  credencialesIntegracion IntegracionCredencial[]
 
   @@map("operador_principal")
 }
@@ -348,42 +352,43 @@ model EmpresaRevendedora {
 
   /// Cuentas de prueba (Épica B). El Operador Principal habilita y parametriza el
   /// módulo por Empresa Revendedora. La duración aplica sólo a pruebas nuevas.
-  pruebasHabilitadas   Boolean @default(false) @map("pruebas_habilitadas")
-  pruebasCupoMensual   Int     @default(0) @map("pruebas_cupo_mensual")
-  pruebasDuracionDias  Int     @default(0) @map("pruebas_duracion_dias")
-  pruebasExtrasPeriodo Int     @default(0) @map("pruebas_extras_periodo")
+  pruebasHabilitadas      Boolean @default(false) @map("pruebas_habilitadas")
+  pruebasCupoMensual      Int     @default(0) @map("pruebas_cupo_mensual")
+  pruebasDuracionDias     Int     @default(0) @map("pruebas_duracion_dias")
+  pruebasExtrasPeriodo    Int     @default(0) @map("pruebas_extras_periodo")
   /// Período (mes AR "YYYY-MM") al que pertenecen los extras actuales. Los extras
   /// sólo aplican al período vigente: al cambiar de mes dejan de contar solos,
   /// sin necesidad de un job (regla HU-P02).
   pruebasExtrasPeriodoRef String? @map("pruebas_extras_periodo_ref")
   /// Múltiples días de aviso previo al vencimiento (ej. [7, 3, 1]).
-  pruebasAvisosDias    Int[]   @default([]) @map("pruebas_avisos_dias")
+  pruebasAvisosDias       Int[]   @default([]) @map("pruebas_avisos_dias")
 
   /// Preferencias de notificaciones internas (Épica C, HU-N02), por Empresa
   /// Revendedora. Los hitos de prueba usan `pruebas_avisos_dias` (parametrizado
   /// por el Operador Principal).
-  notifDispositivos               Boolean @default(true) @map("notif_dispositivos")
-  notifDispositivosFrecuenciaHoras Int    @default(24) @map("notif_dispositivos_frecuencia_horas")
-  notifVentanaAlta                Boolean @default(true) @map("notif_ventana_alta")
+  notifDispositivos                Boolean @default(true) @map("notif_dispositivos")
+  notifDispositivosFrecuenciaHoras Int     @default(24) @map("notif_dispositivos_frecuencia_horas")
+  notifVentanaAlta                 Boolean @default(true) @map("notif_ventana_alta")
   /// Múltiples hitos de anticipación en días (ej. [3, 1]).
-  notifVentanaAltaDias            Int[]   @default([3, 1]) @map("notif_ventana_alta_dias")
+  notifVentanaAltaDias             Int[]   @default([3, 1]) @map("notif_ventana_alta_dias")
 
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  clientesFinales        ClienteFinal[]
-  cuentas                Cuenta[]
-  ventasCompartidas      VentaCompartida[]
-  dispositivos           Dispositivo[]
-  solicitudesVinculacion SolicitudVinculacionDispositivo[]
-  incidenciasDispositivo IncidenciaDispositivoProveedor[]
-  teamMembers            TeamMember[]
-  auditLogs              AuditLog[]
-  ventanasCuriosidad     VentanaCuriosidad[]
-  plantillaWhatsApp      PlantillaWhatsApp?
-  consumosPrueba         ConsumoCuentaPrueba[]
-  notificaciones         Notificacion[]
-  notificacionesLeidas   NotificacionLectura[]
+  clientesFinales         ClienteFinal[]
+  cuentas                 Cuenta[]
+  ventasCompartidas       VentaCompartida[]
+  dispositivos            Dispositivo[]
+  solicitudesVinculacion  SolicitudVinculacionDispositivo[]
+  incidenciasDispositivo  IncidenciaDispositivoProveedor[]
+  teamMembers             TeamMember[]
+  auditLogs               AuditLog[]
+  ventanasCuriosidad      VentanaCuriosidad[]
+  plantillaWhatsApp       PlantillaWhatsApp?
+  consumosPrueba          ConsumoCuentaPrueba[]
+  notificaciones          Notificacion[]
+  notificacionesLeidas    NotificacionLectura[]
+  credencialesIntegracion IntegracionCredencial[]
 
   @@index([operadorPrincipalId])
   @@map("empresa_revendedora")
@@ -552,10 +557,10 @@ model ClienteFinal {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  dispositivos       Dispositivo[]
-  ventasCompartidas  VentaCompartida[]
-  ventanasCuriosidad VentanaCuriosidad[]
-  cuentasExclusivas  Cuenta[]             @relation("ClienteFinalCuentaExclusiva")
+  dispositivos           Dispositivo[]
+  ventasCompartidas      VentaCompartida[]
+  ventanasCuriosidad     VentanaCuriosidad[]
+  cuentasExclusivas      Cuenta[]                          @relation("ClienteFinalCuentaExclusiva")
   solicitudesVinculacion SolicitudVinculacionDispositivo[] @relation("SolicitudVinculacionClienteFinal")
 
   @@unique([empresaRevendedoraId, numeroCliente])
@@ -584,12 +589,12 @@ model Cuenta {
   /// No es un DNI real de una persona física (reglas de negocio, 2.3).
   dniAltaSensa String @unique @map("dni_alta_sensa") @db.VarChar(12)
 
-  usuario         String @db.VarChar(120)
+  usuario         String  @db.VarChar(120)
   /// Credenciales de la Cuenta en el Proveedor, cifradas con AES-256-GCM.
   /// Puede quedar pendiente al importar una Cuenta preexistente del Proveedor,
   /// porque SENSA no permite recuperar su contraseña actual.
   passwordCifrado String? @map("password_cifrado")
-  pinCifrado      String @map("pin_cifrado")
+  pinCifrado      String  @map("pin_cifrado")
 
   /// Correo derivado del email de la Empresa Revendedora + número creciente.
   emailContacto String @unique @map("email_contacto") @db.VarChar(180)
@@ -785,7 +790,7 @@ model SolicitudVinculacionDispositivo {
   /// reporta. `cliente_final_id` identifica al Cliente Final de la venta.
   /// En Cuentas exclusivas (y altas adicionales) la fila existe y `dispositivoId`
   /// la referencia, como antes.
-  dispositivoId String?     @map("dispositivo_id") @db.Uuid
+  dispositivoId String?      @map("dispositivo_id") @db.Uuid
   dispositivo   Dispositivo? @relation(fields: [dispositivoId], references: [id], onDelete: Cascade)
 
   clienteFinalId String?       @map("cliente_final_id") @db.Uuid
@@ -830,23 +835,23 @@ model IncidenciaDispositivoProveedor {
   empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
   empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
 
-  proveedorDeviceId   String                      @map("proveedor_device_id") @db.VarChar(60)
-  mac                 String?                     @db.VarChar(40)
-  tipoProveedor       String?                     @map("tipo_proveedor") @db.VarChar(40)
-  modelo              String?                     @db.VarChar(200)
-  ultimoInicio        DateTime?                   @map("ultimo_inicio")
-  estado              EstadoIncidenciaDispositivo @default(pendiente)
+  proveedorDeviceId         String                      @map("proveedor_device_id") @db.VarChar(60)
+  mac                       String?                     @db.VarChar(40)
+  tipoProveedor             String?                     @map("tipo_proveedor") @db.VarChar(40)
+  modelo                    String?                     @db.VarChar(200)
+  ultimoInicio              DateTime?                   @map("ultimo_inicio")
+  estado                    EstadoIncidenciaDispositivo @default(pendiente)
   /// Cuántos Clientes Finales ACTIVOS tenía la Cuenta al detectar el Dispositivo
   /// sin dueño (HU-D01). Los dados de baja y los suspendidos no cuentan. Es el
   /// dato que decide la autoasignación (1) o la notificación (0 / 2+) en D02/D03.
-  clientesActivosAlDetectar Int? @map("clientes_activos_al_detectar")
-  cantidadDetecciones Int                         @default(1) @map("cantidad_detecciones")
-  primeraDeteccionEn  DateTime                    @default(now()) @map("primera_deteccion_en")
-  ultimaDeteccionEn   DateTime                    @default(now()) @map("ultima_deteccion_en")
+  clientesActivosAlDetectar Int?                        @map("clientes_activos_al_detectar")
+  cantidadDetecciones       Int                         @default(1) @map("cantidad_detecciones")
+  primeraDeteccionEn        DateTime                    @default(now()) @map("primera_deteccion_en")
+  ultimaDeteccionEn         DateTime                    @default(now()) @map("ultima_deteccion_en")
   /// Último recordatorio enviado por este evento pendiente (HU-D04). Es la base
   /// para respetar la frecuencia configurada sin spamear en cada barrido.
-  ultimoRecordatorioEn DateTime?                 @map("ultimo_recordatorio_en")
-  resueltaEn          DateTime?                   @map("resuelta_en")
+  ultimoRecordatorioEn      DateTime?                   @map("ultimo_recordatorio_en")
+  resueltaEn                DateTime?                   @map("resuelta_en")
 
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
@@ -886,15 +891,59 @@ model TeamMember {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
-  auditLogs                     AuditLog[]
-  ventanasCuriosidadIniciadas   VentanaCuriosidad[] @relation("VentanaCuriosidadIniciadaPor")
-  ventanasCuriosidadFinalizadas VentanaCuriosidad[] @relation("VentanaCuriosidadFinalizadaPor")
-  plantillasWhatsAppActualizadas PlantillaWhatsApp[]  @relation("PlantillaWhatsAppActualizadaPor")
+  auditLogs                      AuditLog[]
+  ventanasCuriosidadIniciadas    VentanaCuriosidad[]     @relation("VentanaCuriosidadIniciadaPor")
+  ventanasCuriosidadFinalizadas  VentanaCuriosidad[]     @relation("VentanaCuriosidadFinalizadaPor")
+  plantillasWhatsAppActualizadas PlantillaWhatsApp[]     @relation("PlantillaWhatsAppActualizadaPor")
   notificacionesLeidas           NotificacionLectura[]
+  credencialesIntegracion        IntegracionCredencial[]
 
   @@index([empresaRevendedoraId])
   @@index([operadorPrincipalId])
   @@map("team_member")
+}
+
+/// Credencial de integración externa de una Empresa Revendedora.
+///
+/// Una sola credencial sirve para cualquier API de integración (bot de
+/// WhatsApp, Portal de Cliente o futuras). `scopes` permite acotarla por API;
+/// por defecto se otorgan todas. Solo se persiste el hash SHA-256: la key en
+/// texto plano se muestra una única vez al crearla.
+model IntegracionCredencial {
+  id String @id @default(uuid()) @db.Uuid
+
+  operadorPrincipalId String            @map("operador_principal_id") @db.Uuid
+  operadorPrincipal   OperadorPrincipal @relation(fields: [operadorPrincipalId], references: [id], onDelete: Cascade)
+
+  empresaRevendedoraId String             @map("empresa_revendedora_id") @db.Uuid
+  empresaRevendedora   EmpresaRevendedora @relation(fields: [empresaRevendedoraId], references: [id], onDelete: Cascade)
+
+  /// Etiqueta para el panel (ej. "Bot WhatsApp produccion").
+  nombre String @db.VarChar(80)
+
+  /// SHA-256 de la key completa. Nunca se guarda la key en claro.
+  keyHash   String @unique @map("key_hash") @db.VarChar(64)
+  /// Primeros caracteres, para identificar la credencial sin revelarla.
+  keyPrefix String @map("key_prefix") @db.VarChar(16)
+
+  /// APIs habilitadas: whatsapp_bot, portal_cliente. Default: todas.
+  scopes String[] @default(["whatsapp_bot", "portal_cliente"])
+
+  activa Boolean @default(true)
+
+  /// Team Member que figura como autor de las acciones de la integración.
+  teamMemberId String?     @map("team_member_id") @db.Uuid
+  teamMember   TeamMember? @relation(fields: [teamMemberId], references: [id], onDelete: SetNull)
+
+  ultimoUsoEn DateTime? @map("ultimo_uso_en")
+  revocadoEn  DateTime? @map("revocado_en")
+
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@index([empresaRevendedoraId])
+  @@index([operadorPrincipalId])
+  @@map("integracion_credencial")
 }
 
 /// Tabla de parametrización de modalidades y precios, gestionada por el

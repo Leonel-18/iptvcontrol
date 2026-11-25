@@ -33,7 +33,8 @@ export class PortalClienteController {
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiHeader({
     name: 'x-api-key',
-    description: 'API key de la integración (PORTAL_CLIENTE_API_KEY del servidor).',
+    description:
+      'Credencial de integración de la Empresa Revendedora (Configuración → Integraciones).',
     required: true,
   })
   @ApiOperation({

@@ -57,27 +57,31 @@ export interface AppConfig {
     dniInicialSensa: number;
   };
   /**
-   * Integración del bot de WhatsApp: crea Clientes Finales de UNA Empresa
-   * Revendedora sin login de panel, autenticando con una API key.
+   * Integración del bot de WhatsApp: crea Clientes Finales de la Empresa
+   * Revendedora de la credencial, sin login de panel.
    */
   whatsappBot: {
     apiKey?: string;
     empresaRevendedoraId?: string;
     teamMemberId?: string;
     ventanaMinutos: number;
-    rateLimit: number;
-    rateWindowSeconds: number;
   };
   /**
    * Portal de Cliente externo: el Cliente Final consulta sus credenciales,
    * servicios y dispositivos, y en cuentas exclusivas puede administrarlos.
-   * Se autentica con API key y opera sobre una Empresa Revendedora fija.
+   * Se autentica con la misma credencial de integración de la Empresa.
    */
   portalCliente: {
     apiKey?: string;
     empresaRevendedoraId?: string;
     /** Team Member de sistema para atribuir las acciones en el Audit Log. */
     teamMemberId?: string;
+  };
+  /** Configuración compartida por todas las APIs de integración. */
+  integraciones: {
+    rateLimit: number;
+    rateWindowSeconds: number;
+    fallbackEnv: boolean;
   };
 }
 
@@ -145,8 +149,21 @@ export const configuration = (): AppConfig => ({
     teamMemberId: process.env.WSP_BOT_TEAM_MEMBER_ID || undefined,
     // 96 h por defecto: duración de la Ventana que el bot aplica a la Cuenta elegida.
     ventanaMinutos: toInt(process.env.WSP_BOT_VENTANA_MINUTOS, 5760),
-    rateLimit: toInt(process.env.WSP_BOT_RATE_LIMIT, 30),
-    rateWindowSeconds: toInt(process.env.WSP_BOT_RATE_WINDOW_SECONDS, 60),
+  },
+  integraciones: {
+    // Configuración compartida por todas las APIs de integración. Las variables
+    // WSP_BOT_* se mantienen como fallback durante la transición.
+    rateLimit: toInt(
+      process.env.INTEGRACIONES_RATE_LIMIT ?? process.env.WSP_BOT_RATE_LIMIT,
+      30,
+    ),
+    rateWindowSeconds: toInt(
+      process.env.INTEGRACIONES_RATE_WINDOW_SECONDS ?? process.env.WSP_BOT_RATE_WINDOW_SECONDS,
+      60,
+    ),
+    // Mientras sea true, una key que no exista en la base se compara contra las
+    // variables de entorno históricas. Permite migrar sin cortar integraciones.
+    fallbackEnv: toBool(process.env.INTEGRACIONES_FALLBACK_ENV, true),
   },
   portalCliente: {
     apiKey: process.env.PORTAL_CLIENTE_API_KEY || undefined,

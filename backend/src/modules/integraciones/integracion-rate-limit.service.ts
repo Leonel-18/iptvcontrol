@@ -2,16 +2,16 @@ import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 
-export const BOT_REDIS_CLIENT = Symbol('BOT_REDIS_CLIENT');
+export const INTEGRACION_REDIS_CLIENT = Symbol('INTEGRACION_REDIS_CLIENT');
 
-export interface BotRedisClient {
+export interface IntegracionRedisClient {
   eval(script: string, numberOfKeys: number, ...args: string[]): Promise<unknown>;
 }
 
-export class BotRateLimitExcedidoError extends Error {
+export class IntegracionRateLimitExcedidoError extends Error {
   constructor(readonly retryAfterSeconds: number) {
     super('Se alcanzó el límite de solicitudes de la integración.');
-    this.name = 'BotRateLimitExcedidoError';
+    this.name = 'IntegracionRateLimitExcedidoError';
   }
 }
 
@@ -24,18 +24,25 @@ local ttl = redis.call('PTTL', KEYS[1])
 return {cantidad, ttl}
 `;
 
+/**
+ * Rate limit de las APIs de integración.
+ *
+ * El bucket es por hash de la key, así que cada Empresa tiene su propio cupo.
+ * Es independiente del throttler del panel (que limita por IP).
+ */
 @Injectable()
-export class BotRateLimitService {
-  private readonly logger = new Logger(BotRateLimitService.name);
+export class IntegracionRateLimitService {
+  private readonly logger = new Logger(IntegracionRateLimitService.name);
   private readonly limite: number;
   private readonly ventanaMs: number;
 
   constructor(
     config: ConfigService,
-    @Inject(BOT_REDIS_CLIENT) private readonly redis: BotRedisClient,
+    @Inject(INTEGRACION_REDIS_CLIENT) private readonly redis: IntegracionRedisClient,
   ) {
-    this.limite = Math.max(1, config.get<number>('whatsappBot.rateLimit') ?? 30);
-    this.ventanaMs = Math.max(1, config.get<number>('whatsappBot.rateWindowSeconds') ?? 60) * 1000;
+    this.limite = Math.max(1, config.get<number>('integraciones.rateLimit') ?? 30);
+    this.ventanaMs =
+      Math.max(1, config.get<number>('integraciones.rateWindowSeconds') ?? 60) * 1000;
   }
 
   async consumir(apiKey: string): Promise<void> {
@@ -45,11 +52,13 @@ export class BotRateLimitService {
       resultado = await this.redis.eval(
         CONSUMIR_SOLICITUD,
         1,
-        `iptvcontrol:bot:rate:${identificador}`,
+        `iptvcontrol:integracion:rate:${identificador}`,
         String(this.ventanaMs),
       );
     } catch (error) {
-      this.logger.error(`No se pudo verificar el rate limit del bot: ${(error as Error).message}`);
+      this.logger.error(
+        `No se pudo verificar el rate limit de la integración: ${(error as Error).message}`,
+      );
       throw new ServiceUnavailableException(
         'La integración no está disponible temporalmente porque no pudo verificar sus límites de seguridad.',
       );
@@ -67,7 +76,7 @@ export class BotRateLimitService {
       );
     }
     if (cantidad > this.limite) {
-      throw new BotRateLimitExcedidoError(Math.max(1, Math.ceil(ttlMs / 1000)));
+      throw new IntegracionRateLimitExcedidoError(Math.max(1, Math.ceil(ttlMs / 1000)));
     }
   }
 }

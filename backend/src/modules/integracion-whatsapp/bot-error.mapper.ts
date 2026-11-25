@@ -55,7 +55,10 @@ export const MENSAJES_ERROR_BOT: Record<CodigoErrorBot, string> = {
 export function mapearErrorBot(exception: unknown): ErrorBotMapeado {
   const detalle = exception instanceof Error ? exception.message : String(exception);
 
-  if (esErrorDeRespuesta(exception, 'BotRateLimited')) {
+  if (
+    esErrorDeRespuesta(exception, 'BotRateLimited') ||
+    esErrorDeRespuesta(exception, 'IntegrationRateLimited')
+  ) {
     return conCodigo('RATE_LIMITED', detalle, 'warn');
   }
 

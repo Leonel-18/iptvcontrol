@@ -1,11 +1,12 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import { BotRedisClient } from './bot-rate-limit.service';
+import { IntegracionRedisClient } from './integracion-rate-limit.service';
 
+/** Cliente Redis dedicado al rate limit de integraciones. */
 @Injectable()
-export class BotRedisService implements BotRedisClient, OnModuleDestroy {
-  private readonly logger = new Logger(BotRedisService.name);
+export class IntegracionRedisService implements IntegracionRedisClient, OnModuleDestroy {
+  private readonly logger = new Logger(IntegracionRedisService.name);
   private readonly cliente: Redis;
 
   constructor(config: ConfigService) {
@@ -18,7 +19,7 @@ export class BotRedisService implements BotRedisClient, OnModuleDestroy {
       connectTimeout: 5000,
     });
     this.cliente.on('error', (error) => {
-      this.logger.warn(`Redis del rate limit del bot no está disponible: ${error.message}`);
+      this.logger.warn(`Redis del rate limit de integraciones no está disponible: ${error.message}`);
     });
   }
 
