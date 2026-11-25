@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { crearRespuestaErrorBot, mapearErrorBot } from './bot-error.mapper';
@@ -26,6 +26,21 @@ export class BotErrorFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const requestId = this.contexto.get()?.requestId ?? '-';
 
+    // 401/403 son errores de la credencial, no del alta: se devuelven con su
+    // status real para que el integrador detecte una key revocada o sin acceso.
+    const credencial = this.credencialRechazada(exception);
+    if (credencial) {
+      const traza = `[${requestId}] ${request.method} ${request.url} → ${credencial.code}`;
+      this.logger.warn(traza);
+      response.status(credencial.status).json({
+        success: false,
+        whatsapp: { mensaje: credencial.message },
+        cuenta: { usuario: null, password: null, pin: null },
+        error: { code: credencial.code, message: credencial.message },
+      });
+      return;
+    }
+
     const { code, detalle, nivelLog } = mapearErrorBot(exception);
 
     const traza = `[${requestId}] ${request.method} ${request.url} → ${code}: ${detalle}`;
@@ -36,5 +51,28 @@ export class BotErrorFilter implements ExceptionFilter {
     }
 
     response.status(200).json(crearRespuestaErrorBot(exception));
+  }
+
+  /** 401/403 de la credencial de integración: no se transforman en HTTP 200. */
+  private credencialRechazada(
+    exception: unknown,
+  ): { status: number; code: string; message: string } | null {
+    if (!(exception instanceof HttpException)) return null;
+    const status = exception.getStatus();
+    if (status === 401) {
+      return {
+        status,
+        code: 'UNAUTHORIZED',
+        message: 'Credencial de integración inválida.',
+      };
+    }
+    if (status === 403) {
+      return {
+        status,
+        code: 'FORBIDDEN',
+        message: 'La credencial no tiene acceso a esta API.',
+      };
+    }
+    return null;
   }
 }

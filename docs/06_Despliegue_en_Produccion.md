@@ -304,11 +304,15 @@ Revendedora; si no pertenece, la integración responde 403.
 **Errores (respuesta consistente para ManyChat):** ante un error de negocio/controlado el endpoint
 responde **HTTP 200** con `success: false`, `whatsapp.mensaje` (texto entendible para el Cliente
 Final), las credenciales de `cuenta` en null y `error.code`. Se hace así porque ManyChat sólo mapea los "Campos de
-respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. Códigos posibles:
+respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. Las credenciales
+inválidas o sin alcance son la excepción: responden **401/403** para que el integrador detecte una
+key revocada. Códigos posibles:
 
 | `error.code` | Qué significa | Mensaje al Cliente Final |
 |---|---|---|
 | `ACCOUNT_ALREADY_EXISTS` | La Cuenta o el ID de gestión ya existen | "No pudimos generar el acceso porque ya existe una cuenta registrada para este servicio…" |
+| `UNAUTHORIZED` | Key inválida o revocada | Revisar la credencial en Configuración → Integraciones |
+| `FORBIDDEN` | Key sin alcance, Empresa suspendida o Team Member inválido | Revisar la credencial |
 | `INVALID_DATA` | Datos inválidos o faltantes | "Los datos enviados no son válidos o están incompletos…" |
 | `PROVIDER_AUTH` | Credenciales de SENSA rechazadas | "No pudimos conectarnos con el servicio de IPTV…" |
 | `PROVIDER_UNAVAILABLE` | SENSA caída, timeout o sin conexión | "El servicio de IPTV está demorando más de lo normal…" |

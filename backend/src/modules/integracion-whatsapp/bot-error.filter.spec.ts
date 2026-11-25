@@ -1,4 +1,10 @@
-import { ArgumentsHost, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   ProveedorAutenticacionError,
   ProveedorNoDisponibleError,
@@ -123,6 +129,34 @@ describe('BotErrorFilter / mapearErrorBot', () => {
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({ code: 'INTERNAL_ERROR' }),
+        }),
+      );
+    });
+
+    it('devuelve 401 real cuando la credencial es inválida', () => {
+      const { host, res } = crearHost();
+
+      crearFiltro().catch(new UnauthorizedException('Credencial inválida.'), host);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.objectContaining({ code: 'UNAUTHORIZED' }),
+        }),
+      );
+    });
+
+    it('devuelve 403 real cuando la credencial no tiene el alcance', () => {
+      const { host, res } = crearHost();
+
+      crearFiltro().catch(new ForbiddenException('Sin alcance.'), host);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.objectContaining({ code: 'FORBIDDEN' }),
         }),
       );
     });
