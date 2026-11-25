@@ -125,3 +125,46 @@ describe('CredencialesIntegracionService — autenticación', () => {
     );
   });
 });
+
+describe('CredencialesIntegracionService — creación', () => {
+  it('genera una key una sola vez y guarda solo su hash', async () => {
+    const create = jest.fn().mockImplementation(({ data }) => ({
+      id: 'cred-nueva',
+      ...data,
+      empresaRevendedora: { id: 'empresa-1', razonSocial: 'Empresa 1' },
+      teamMember: null,
+      ultimoUsoEn: null,
+      revocadoEn: null,
+      creadoEn: new Date('2026-11-25T12:00:00Z'),
+    }));
+    const prisma = {
+      db: {
+        empresaRevendedora: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ id: 'empresa-1', operadorPrincipalId: 'operador-1' }),
+        },
+        integracionCredencial: { create },
+      },
+    } as unknown as PrismaService;
+    const audit = { registrar: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const servicio = new CredencialesIntegracionService(
+      { get: jest.fn() } as unknown as ConfigService,
+      prisma,
+      audit,
+      { operadorPrincipalId: 'operador-1' } as unknown as RequestContextService,
+    );
+
+    const resultado = await servicio.crear({
+      empresaRevendedoraId: 'empresa-1',
+      nombre: 'Bot producción',
+    });
+
+    expect(resultado.api_key).toMatch(/^iptv_[0-9a-f]{64}$/);
+    expect(resultado.credencial.prefijo).toHaveLength(12);
+    expect(resultado.credencial.scopes).toEqual(['whatsapp_bot', 'portal_cliente']);
+    const data = create.mock.calls[0][0].data;
+    expect(data.keyHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(data.keyHash).not.toContain(resultado.api_key);
+  });
+});

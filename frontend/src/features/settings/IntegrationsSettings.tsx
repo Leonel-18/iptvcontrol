@@ -477,8 +477,8 @@ export const IntegrationsSettings = () => {
         onConfirmar={() => aRotar && rotar.mutate(aRotar.id)}
       >
         <Alert tone="warning">
-          Actualice el integrador con la key nueva antes de descartar la anterior: la rotación
-          revoca la key vieja en el mismo momento.
+          Al confirmar, la key anterior deja de funcionar de inmediato. Copiá la nueva y actualizá
+          el integrador.
         </Alert>
       </ConfirmDialog>
     </div>

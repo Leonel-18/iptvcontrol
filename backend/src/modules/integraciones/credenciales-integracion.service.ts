@@ -71,6 +71,7 @@ const INCLUDE_RELACIONES = {
 @Injectable()
 export class CredencialesIntegracionService {
   private readonly logger = new Logger(CredencialesIntegracionService.name);
+  private readonly fallbackAvisado = new Set<ScopeIntegracion>();
 
   constructor(
     private readonly config: ConfigService,
@@ -128,10 +129,13 @@ export class CredencialesIntegracionService {
       throw new UnauthorizedException('Credencial de integración inválida.');
     }
 
-    this.logger.warn(
-      `Integración autenticada con variables de entorno (${scope}). ` +
-        'Crear una credencial en Configuración para dejar de usar el fallback.',
-    );
+    if (!this.fallbackAvisado.has(scope)) {
+      this.fallbackAvisado.add(scope);
+      this.logger.warn(
+        `Integración autenticada con variables de entorno (${scope}). ` +
+          'Crear una credencial en Configuración para dejar de usar el fallback.',
+      );
+    }
 
     return {
       empresaRevendedoraId: entorno.empresaRevendedoraId,
