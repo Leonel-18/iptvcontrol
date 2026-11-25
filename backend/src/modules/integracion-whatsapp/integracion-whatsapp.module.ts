@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ClientesModule } from '../clientes/clientes.module';
 import { ConfiguracionModule } from '../configuracion/configuracion.module';
+import { IntegracionesModule } from '../integraciones/integraciones.module';
 import { BotApiKeyGuard } from './bot-api-key.guard';
 import { BotErrorFilter } from './bot-error.filter';
 import { WhatsappBotController } from './whatsapp-bot.controller';
 import { WhatsappBotService } from './whatsapp-bot.service';
-import { BOT_REDIS_CLIENT, BotRateLimitService } from './bot-rate-limit.service';
-import { BotRedisService } from './bot-redis.service';
 
 /**
  * Integración de creación de Clientes Finales desde un bot de WhatsApp.
@@ -16,15 +15,8 @@ import { BotRedisService } from './bot-redis.service';
  * lógica de negocio.
  */
 @Module({
-  imports: [ClientesModule, ConfiguracionModule],
+  imports: [ClientesModule, ConfiguracionModule, IntegracionesModule],
   controllers: [WhatsappBotController],
-  providers: [
-    WhatsappBotService,
-    BotApiKeyGuard,
-    BotErrorFilter,
-    BotRateLimitService,
-    BotRedisService,
-    { provide: BOT_REDIS_CLIENT, useExisting: BotRedisService },
-  ],
+  providers: [WhatsappBotService, BotApiKeyGuard, BotErrorFilter],
 })
 export class IntegracionWhatsappModule {}

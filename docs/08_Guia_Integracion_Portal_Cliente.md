@@ -12,8 +12,8 @@
 
 ## 1. Objetivo y alcance
 
-El Portal de Cliente permite que un Cliente Final de **una Empresa Revendedora** (fija, definida en
-el servidor) pueda:
+El Portal de Cliente permite que un Cliente Final de **una Empresa Revendedora** (definida por la
+credencial de integración) pueda:
 
 1. **Consultar** sus credenciales (`usuario`, `password`, `pin`), sus **servicios** y sus
    **dispositivos**.
@@ -33,7 +33,9 @@ IPTVControl y en el Proveedor (SENSA).
 Por un canal seguro, se entregan dos valores:
 
 - `BASE_URL`: URL pública de IPTVControl (ej. `https://iptvcontrol.com.ar`).
-- `API_KEY`: credencial privada de la integración (equivale a `PORTAL_CLIENTE_API_KEY`).
+- `API_KEY`: credencial privada de **una Empresa Revendedora**, creada por el Operador Principal en
+  **Configuración → Integraciones**. Puede habilitar el Portal, el bot de WhatsApp o ambos según sus
+  `scopes`.
 
 **Reglas de manejo de la API key (obligatorias):**
 
@@ -66,8 +68,8 @@ Por un canal seguro, se entregan dos valores:
    agrega siempre.
 3. Un Cliente solo puede operar sobre **sus** cuentas. IPTVControl revalida la titularidad en cada
    request; el portal no es la única barrera.
-4. La Empresa Revendedora de la integración es **fija** (configurada en el servidor). El portal no
-   puede elegir a qué Empresa pertenece un DNI.
+4. La Empresa Revendedora de la integración es la **de la credencial**. El portal no puede elegir a
+   qué Empresa pertenece un DNI.
 
 ---
 
@@ -428,8 +430,9 @@ automáticamente `proveedorDeviceId` con el primer equipo desconocido.
 
 ## 12. Preguntas frecuentes / límites conocidos
 
-- **¿Puedo consultar por DNI a un cliente de otra Empresa Revendedora?** No. La empresa está fija
-  en la configuración del servidor; el DNI se busca solo dentro de esa Empresa.
+- **¿Puedo consultar por DNI a un cliente de otra Empresa Revendedora?** No. La credencial está
+  asociada a una Empresa Revendedora; el DNI se busca solo dentro de esa Empresa. Para otra empresa
+  se usa otra credencial.
 - **¿El DNI alcanza como seguridad?** No por sí solo. La seguridad la da la API key server-to-server
   y el hecho de que el portal autentica a su usuario antes. Tratar la API key como secreto crítico.
 - **¿Puedo cambiar el usuario?** No.

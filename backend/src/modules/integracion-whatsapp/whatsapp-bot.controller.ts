@@ -25,7 +25,8 @@ export class WhatsappBotController {
   @Public()
   @ApiHeader({
     name: 'x-api-key',
-    description: 'API key de la integración (WSP_BOT_API_KEY del servidor).',
+    description:
+      'Credencial de integración de la Empresa Revendedora (Configuración → Integraciones).',
     required: true,
   })
   @ApiOperation({
