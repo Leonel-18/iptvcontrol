@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SoloOperador } from '../../common/auth/decorators';
 import { CredencialesIntegracionService } from './credenciales-integracion.service';
 import {
+  ActualizarPermisosIntegracionDto,
   CrearCredencialIntegracionDto,
   ListarCredencialesQueryDto,
 } from './dto/credencial-integracion.dto';
@@ -51,8 +53,21 @@ export class IntegracionesController {
     return this.credenciales.crear({
       empresaRevendedoraId: dto.empresa_revendedora_id,
       nombre: dto.nombre,
+      permisos: dto.permisos,
       teamMemberId: dto.team_member_id,
     });
+  }
+
+  @Patch(':id/permissions')
+  @ApiOperation({
+    summary: 'Actualiza los permisos de una credencial.',
+    description: 'Los permisos se aplican al siguiente request; no hace falta rotar la key.',
+  })
+  actualizarPermisos(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ActualizarPermisosIntegracionDto,
+  ) {
+    return this.credenciales.actualizarPermisos(id, dto.permisos);
   }
 
   @Post(':id/revoke')

@@ -12,12 +12,19 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { AuditService } from '../../common/audit/audit.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { type ScopeIntegracion } from './scopes';
+import {
+  PERMISOS_INTEGRACION,
+  PERMISOS_POR_DEFECTO,
+  type PermisoIntegracion,
+  type ScopeIntegracion,
+} from './permisos';
 
 /** Resultado de autenticar una key, antes de fijar el contexto del request. */
 export interface CredencialAutenticada {
   empresaRevendedoraId: string;
   teamMemberId?: string;
+  /** Permisos habilitados; el fallback de entorno otorga todos. */
+  permisos: PermisoIntegracion[];
   /** null cuando la key vino del fallback de variables de entorno. */
   credencialId: string | null;
   origen: 'base' | 'env';
@@ -30,6 +37,7 @@ export interface CredencialSerializada {
   empresa: { id: string; razon_social: string };
   nombre: string;
   prefijo: string;
+  permisos: PermisoIntegracion[];
   activa: boolean;
   team_member: { id: string; email: string; nombre: string | null } | null;
   ultimo_uso_en: Date | null;
@@ -42,6 +50,7 @@ interface CredencialConRelaciones {
   empresaRevendedoraId: string;
   nombre: string;
   keyPrefix: string;
+  permisos: string[];
   activa: boolean;
   ultimoUsoEn: Date | null;
   revocadoEn: Date | null;
@@ -88,6 +97,7 @@ export class CredencialesIntegracionService {
         id: true,
         empresaRevendedoraId: true,
         teamMemberId: true,
+        permisos: true,
         activa: true,
         revocadoEn: true,
       },
@@ -100,6 +110,7 @@ export class CredencialesIntegracionService {
       return {
         empresaRevendedoraId: credencial.empresaRevendedoraId,
         teamMemberId: credencial.teamMemberId ?? undefined,
+        permisos: credencial.permisos as PermisoIntegracion[],
         credencialId: credencial.id,
         origen: 'base',
       };
@@ -130,6 +141,7 @@ export class CredencialesIntegracionService {
     return {
       empresaRevendedoraId: entorno.empresaRevendedoraId,
       teamMemberId: entorno.teamMemberId,
+      permisos: [...PERMISOS_POR_DEFECTO],
       credencialId: null,
       origen: 'env',
     };
@@ -139,6 +151,7 @@ export class CredencialesIntegracionService {
   async crear(params: {
     empresaRevendedoraId: string;
     nombre: string;
+    permisos?: PermisoIntegracion[];
     teamMemberId?: string;
   }): Promise<{ credencial: CredencialSerializada; api_key: string }> {
     const operadorPrincipalId = this.contexto.operadorPrincipalId;
@@ -165,6 +178,7 @@ export class CredencialesIntegracionService {
       await this.validarTeamMember(params.teamMemberId, empresa.id);
     }
 
+    const permisos = this.normalizarPermisos(params.permisos);
     const apiKey = `iptv_${randomBytes(32).toString('hex')}`;
 
     const creada = await this.prisma.db.integracionCredencial.create({
@@ -174,6 +188,7 @@ export class CredencialesIntegracionService {
         nombre,
         keyHash: this.hash(apiKey),
         keyPrefix: apiKey.slice(0, 12),
+        permisos,
         teamMemberId: params.teamMemberId ?? null,
       },
       include: INCLUDE_RELACIONES,
@@ -189,6 +204,7 @@ export class CredencialesIntegracionService {
         empresa_revendedora_id: empresa.id,
         nombre: creada.nombre,
         prefijo: creada.keyPrefix,
+        permisos,
       },
     });
 
@@ -245,17 +261,54 @@ export class CredencialesIntegracionService {
     return this.serializar(revocada as CredencialConRelaciones);
   }
 
+  /** Cambia los permisos de una credencial existente. */
+  async actualizarPermisos(
+    id: string,
+    permisos: PermisoIntegracion[],
+  ): Promise<CredencialSerializada> {
+    const permisosNuevos = this.normalizarPermisos(permisos);
+    const actual = await this.prisma.db.integracionCredencial.findUnique({
+      where: { id },
+      include: INCLUDE_RELACIONES,
+    });
+    if (!actual) throw new NotFoundException('La credencial no existe o no está disponible.');
+    if (!actual.activa) {
+      throw new BadRequestException('La credencial está revocada: cree una nueva.');
+    }
+
+    const actualizada = await this.prisma.db.integracionCredencial.update({
+      where: { id },
+      data: { permisos: permisosNuevos },
+      include: INCLUDE_RELACIONES,
+    });
+
+    await this.audit.registrar({
+      accion: AccionAuditoria.cambio_permisos_integracion_credencial,
+      entidad: EntidadAuditada.IntegracionCredencial,
+      entidadId: id,
+      empresaRevendedoraId: actualizada.empresaRevendedoraId,
+      detalle: {
+        empresa_revendedora_id: actualizada.empresaRevendedoraId,
+        nombre: actualizada.nombre,
+        permisos_anteriores: actual.permisos,
+        permisos_nuevos: permisosNuevos,
+      },
+    });
+
+    return this.serializar(actualizada as CredencialConRelaciones);
+  }
+
   /**
    * Crea una credencial nueva con los mismos datos y revoca la anterior.
    * La key nueva se devuelve una sola vez.
    */
-  async rotar(id: string): Promise<{ credencial: CredencialSerializada; api_key: string }> {
-    const actual = await this.prisma.db.integracionCredencial.findUnique({
+  async rotar(id: string): Promise<{ credencial: CredencialSerializada; api_key: string }> {    const actual = await this.prisma.db.integracionCredencial.findUnique({
       where: { id },
       select: {
         id: true,
         empresaRevendedoraId: true,
         nombre: true,
+        permisos: true,
         teamMemberId: true,
         activa: true,
       },
@@ -268,6 +321,7 @@ export class CredencialesIntegracionService {
     const nueva = await this.crear({
       empresaRevendedoraId: actual.empresaRevendedoraId,
       nombre: actual.nombre,
+      permisos: actual.permisos as PermisoIntegracion[],
       teamMemberId: actual.teamMemberId ?? undefined,
     });
 
@@ -310,6 +364,22 @@ export class CredencialesIntegracionService {
     }
   }
 
+  private normalizarPermisos(permisos?: PermisoIntegracion[]): PermisoIntegracion[] {
+    if (permisos === undefined) return [...PERMISOS_POR_DEFECTO];
+    if (permisos.length === 0) {
+      throw new BadRequestException('Seleccione al menos un permiso para la credencial.');
+    }
+
+    const unicos = [...new Set(permisos)];
+    const invalidos = unicos.filter(
+      (permiso) => !(PERMISOS_INTEGRACION as readonly string[]).includes(permiso),
+    );
+    if (invalidos.length > 0) {
+      throw new BadRequestException(`Permiso de integración inválido: ${invalidos.join(', ')}.`);
+    }
+    return unicos;
+  }
+
   private serializar(credencial: CredencialConRelaciones): CredencialSerializada {
     return {
       id: credencial.id,
@@ -320,6 +390,7 @@ export class CredencialesIntegracionService {
       },
       nombre: credencial.nombre,
       prefijo: credencial.keyPrefix,
+      permisos: credencial.permisos as PermisoIntegracion[],
       activa: credencial.activa,
       team_member: credencial.teamMember
         ? {

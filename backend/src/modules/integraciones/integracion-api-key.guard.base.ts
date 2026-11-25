@@ -7,6 +7,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { CredencialesIntegracionService } from './credenciales-integracion.service';
@@ -14,7 +15,9 @@ import {
   IntegracionRateLimitExcedidoError,
   IntegracionRateLimitService,
 } from './integracion-rate-limit.service';
-import type { ScopeIntegracion } from './scopes';
+import { PERMISO_INTEGRACION_KEY } from './integracion-permiso.decorator';
+import type { PermisoIntegracion } from './permisos';
+import type { ScopeIntegracion } from './permisos';
 
 /**
  * Autenticación común de las APIs de integración.
@@ -33,6 +36,7 @@ export abstract class IntegracionApiKeyGuardBase implements CanActivate {
     protected readonly rateLimit: IntegracionRateLimitService,
     protected readonly prisma: PrismaService,
     protected readonly contexto: RequestContextService,
+    protected readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -43,6 +47,16 @@ export abstract class IntegracionApiKeyGuardBase implements CanActivate {
     }
 
     const credencial = await this.credenciales.autenticar(recibida, this.scope);
+
+    const permisoRequerido = this.reflector.getAllAndOverride<PermisoIntegracion>(
+      PERMISO_INTEGRACION_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (permisoRequerido && !credencial.permisos.includes(permisoRequerido)) {
+      throw new ForbiddenException(
+        `La credencial no tiene el permiso requerido (${permisoRequerido}).`,
+      );
+    }
 
     try {
       await this.rateLimit.consumir(recibida);

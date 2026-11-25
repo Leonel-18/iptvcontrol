@@ -2,6 +2,7 @@ import { Body, Controller, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/auth/decorators';
+import { RequierePermisoIntegracion } from '../integraciones/integracion-permiso.decorator';
 import { PortalApiKeyGuard } from './portal-api-key.guard';
 import { PortalClienteService } from './portal-cliente.service';
 import {
@@ -29,6 +30,7 @@ export class PortalClienteController {
 
   @Post('session')
   @Public()
+  @RequierePermisoIntegracion('clientes.leer')
   // El endpoint expone credenciales: se limita más fuerte que el resto.
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiHeader({
@@ -49,6 +51,7 @@ export class PortalClienteController {
 
   @Patch('accounts/:cuentaId/password')
   @Public()
+  @RequierePermisoIntegracion('cuentas.editar')
   @ApiOperation({ summary: 'Cambia la contraseña de una cuenta exclusiva.' })
   cambiarPassword(
     @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
@@ -59,6 +62,7 @@ export class PortalClienteController {
 
   @Patch('accounts/:cuentaId/pin')
   @Public()
+  @RequierePermisoIntegracion('cuentas.editar')
   @ApiOperation({ summary: 'Cambia el PIN de una cuenta exclusiva.' })
   cambiarPin(@Param('cuentaId', ParseUUIDPipe) cuentaId: string, @Body() dto: CambiarPinPortalDto) {
     return this.portal.cambiarPin(dto.dni, cuentaId, dto.pin);
@@ -66,6 +70,7 @@ export class PortalClienteController {
 
   @Patch('accounts/:cuentaId/services')
   @Public()
+  @RequierePermisoIntegracion('cuentas.editar')
   @ApiOperation({ summary: 'Cambia los servicios de una cuenta exclusiva.' })
   cambiarServicios(
     @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
@@ -76,6 +81,7 @@ export class PortalClienteController {
 
   @Post('accounts/:cuentaId/devices/sync')
   @Public()
+  @RequierePermisoIntegracion('dispositivos.leer')
   @ApiOperation({ summary: 'Consulta el inventario de dispositivos del proveedor.' })
   sincronizarDispositivos(
     @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
@@ -86,6 +92,7 @@ export class PortalClienteController {
 
   @Post('accounts/:cuentaId/devices/claim')
   @Public()
+  @RequierePermisoIntegracion('dispositivos.gestionar')
   @ApiOperation({ summary: 'Asigna al titular un dispositivo detectado sin dueño.' })
   reclamarDispositivo(
     @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
@@ -96,6 +103,7 @@ export class PortalClienteController {
 
   @Post('accounts/:cuentaId/devices/:dispositivoId/remove')
   @Public()
+  @RequierePermisoIntegracion('dispositivos.gestionar')
   @ApiOperation({
     summary: 'Baja definitiva de un dispositivo propio.',
     description: 'Elimina el Dispositivo en el proveedor y borra la fila local. Irreversible.',

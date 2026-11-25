@@ -40,6 +40,7 @@ describe('CredencialesIntegracionService — autenticación', () => {
         id: 'cred-1',
         empresaRevendedoraId: 'empresa-1',
         teamMemberId: 'team-1',
+        permisos: ['clientes.leer', 'clientes.crear'],
         activa: true,
         revocadoEn: null,
       },
@@ -63,6 +64,7 @@ describe('CredencialesIntegracionService — autenticación', () => {
       credencial: {
         id: 'cred-1',
         empresaRevendedoraId: 'empresa-1',
+        permisos: ['clientes.leer'],
         activa: false,
         revocadoEn: new Date(),
       },
@@ -80,6 +82,7 @@ describe('CredencialesIntegracionService — autenticación', () => {
       credencial: {
         id: 'cred-1',
         empresaRevendedoraId: 'empresa-1',
+        permisos: ['clientes.leer'],
         activa: true,
         revocadoEn: null,
       },
@@ -158,6 +161,13 @@ describe('CredencialesIntegracionService — creación', () => {
 
     expect(resultado.api_key).toMatch(/^iptv_[0-9a-f]{64}$/);
     expect(resultado.credencial.prefijo).toHaveLength(12);
+    expect(resultado.credencial.permisos).toEqual([
+      'clientes.leer',
+      'clientes.crear',
+      'cuentas.editar',
+      'dispositivos.leer',
+      'dispositivos.gestionar',
+    ]);
     const data = create.mock.calls[0][0].data;
     expect(data.keyHash).toMatch(/^[0-9a-f]{64}$/);
     expect(data.keyHash).not.toContain(resultado.api_key);

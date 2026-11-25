@@ -17,8 +17,9 @@ IPTVControl entrega por un canal seguro:
   creada por el Operador Principal en **Configuración → Integraciones**.
 
 La API key no debe incluirse en aplicaciones web, mensajes, repositorios, capturas ni logs. Debe
-usarse exclusivamente desde el servidor del sistema integrador. La misma key sirve para todas las
-APIs de integración de la Empresa (bot, Portal de Cliente y futuras).
+usarse exclusivamente desde el servidor del sistema integrador. La credencial tiene permisos
+seleccionables: se le pueden dar solo los que el integrador necesite (por ejemplo, consultar
+clientes pero no crear cuentas nuevas).
 
 ## 3. Endpoint
 
@@ -40,6 +41,16 @@ request. Una key revocada deja de funcionar de inmediato.
 4. Para rotarla, usa **Rotar**: genera una key nueva y revoca la anterior. Actualizar el integrador
    antes de descartar la vieja.
 5. Para cortar el acceso, usa **Revocar**. No hace falta reiniciar el backend.
+
+Permisos disponibles (se pueden cambiar después con **Permisos**):
+
+| Permiso | Qué habilita |
+|---|---|
+| `clientes.leer` | Portal: consultar clientes, cuentas y credenciales por DNI |
+| `clientes.crear` | Bot: crear Clientes Finales y provisionar Cuentas |
+| `cuentas.editar` | Portal: cambiar contraseña, PIN y servicios |
+| `dispositivos.leer` | Portal: consultar el inventario de dispositivos |
+| `dispositivos.gestionar` | Portal: reclamar o dar de baja dispositivos |
 
 ## 4. Duplicados y reintentos
 
@@ -196,7 +207,7 @@ Los errores controlados responden HTTP 200 para que las plataformas de chat pued
 |---|---|---|
 | `ACCOUNT_ALREADY_EXISTS` | DNI, teléfono o ID de gestión ya registrado en la Empresa Revendedora | Revisar el cliente; no reintentar |
 | `UNAUTHORIZED` | Key inválida o revocada | Revisar la credencial en Configuración → Integraciones |
-| `FORBIDDEN` | La Empresa está suspendida o el Team Member no pertenece a la Empresa | Revisar la credencial |
+| `FORBIDDEN` | La credencial no tiene el permiso para esa operación, la Empresa está suspendida o el Team Member no pertenece a la Empresa | Revisar los permisos/credencial en Configuración → Integraciones |
 | `INVALID_DATA` | Datos faltantes, inválidos o combinación incompatible | Corregir el request |
 | `RATE_LIMITED` | Se superaron 30 requests en 60 segundos | Esperar los segundos de `Retry-After` |
 | `PROVIDER_AUTH` | Falló la autenticación con el Proveedor | Informar a soporte |

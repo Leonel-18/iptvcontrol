@@ -1,4 +1,5 @@
 import { ExecutionContext, HttpException, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { BotApiKeyGuard } from './bot-api-key.guard';
@@ -9,9 +10,11 @@ import {
 } from '../integraciones/integracion-rate-limit.service';
 
 describe('BotApiKeyGuard', () => {
+  const permisoRequerido = 'clientes.crear';
   const credencialAutenticada = {
     empresaRevendedoraId: 'empresa-1',
     teamMemberId: 'team-1',
+    permisos: ['clientes.leer', 'clientes.crear'],
     credencialId: 'cred-1',
     origen: 'base' as const,
   };
@@ -22,6 +25,7 @@ describe('BotApiKeyGuard', () => {
     consumir?: jest.Mock;
     empresa?: Record<string, unknown> | null;
     teamMember?: Record<string, unknown> | null;
+    permiso?: string | undefined;
   }) => {
     const autenticar = opciones.autenticar ?? jest.fn().mockResolvedValue(credencialAutenticada);
     const consumir = opciones.consumir ?? jest.fn().mockResolvedValue(undefined);
@@ -53,6 +57,9 @@ describe('BotApiKeyGuard', () => {
       },
     } as unknown as PrismaService;
     const contexto = { set: jest.fn() } as unknown as RequestContextService;
+    const reflector = {
+      getAllAndOverride: jest.fn().mockReturnValue(opciones.permiso),
+    } as unknown as Reflector;
     const setHeader = jest.fn();
     const executionContext = {
       switchToHttp: () => ({
@@ -61,8 +68,10 @@ describe('BotApiKeyGuard', () => {
         }),
         getResponse: () => ({ setHeader }),
       }),
+      getHandler: () => undefined,
+      getClass: () => undefined,
     } as unknown as ExecutionContext;
-    const guard = new BotApiKeyGuard(credenciales, rateLimit, prisma, contexto);
+    const guard = new BotApiKeyGuard(credenciales, rateLimit, prisma, contexto, reflector);
     return { guard, executionContext, contexto, setHeader, autenticar, credenciales };
   };
 
@@ -117,5 +126,29 @@ describe('BotApiKeyGuard', () => {
     });
 
     await expect(guard.canActivate(executionContext)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('permite el endpoint cuando la credencial tiene el permiso', async () => {
+    const { guard, executionContext } = crearGuard({
+      key: 'api-key-valida',
+      permiso: 'clientes.crear',
+    });
+
+    await expect(guard.canActivate(executionContext)).resolves.toBe(true);
+  });
+
+  it('rechaza el endpoint cuando la credencial no tiene el permiso', async () => {
+    const { guard, executionContext } = crearGuard({
+      key: 'api-key-valida',
+      permiso: 'clientes.crear',
+      autenticar: jest.fn().mockResolvedValue({
+        ...credencialAutenticada,
+        permisos: ['clientes.leer'],
+      }),
+    });
+
+    await expect(guard.canActivate(executionContext)).rejects.toMatchObject({
+      status: 403,
+    });
   });
 });

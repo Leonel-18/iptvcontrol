@@ -177,6 +177,7 @@ enum AccionAuditoria {
   cambio_configuracion_notificaciones
   alta_integracion_credencial
   revocacion_integracion_credencial
+  cambio_permisos_integracion_credencial
 }
 
 enum EntidadAuditada {
@@ -924,6 +925,10 @@ model IntegracionCredencial {
   keyHash   String @unique @map("key_hash") @db.VarChar(64)
   /// Primeros caracteres, para identificar la credencial sin revelarla.
   keyPrefix String @map("key_prefix") @db.VarChar(16)
+
+  /// Operaciones habilitadas (clientes.leer, clientes.crear, etc.).
+  /// Default: todas.
+  permisos String[] @default(["clientes.leer", "clientes.crear", "cuentas.editar", "dispositivos.leer", "dispositivos.gestionar"])
 
   activa Boolean @default(true)
 

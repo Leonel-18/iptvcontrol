@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { CredencialesIntegracionService } from '../integraciones/credenciales-integracion.service';
@@ -20,7 +21,8 @@ export class BotApiKeyGuard extends IntegracionApiKeyGuardBase {
     rateLimit: IntegracionRateLimitService,
     prisma: PrismaService,
     contexto: RequestContextService,
+    reflector: Reflector,
   ) {
-    super(credenciales, rateLimit, prisma, contexto);
+    super(credenciales, rateLimit, prisma, contexto, reflector);
   }
 }
