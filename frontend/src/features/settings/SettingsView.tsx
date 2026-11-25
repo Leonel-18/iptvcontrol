@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/primitives';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/overlays';
 import { ProviderSection } from './ProviderSection';
+import { IntegrationsSettings } from './IntegrationsSettings';
 
 /**
  * =============================================================================
@@ -43,7 +44,11 @@ import { ProviderSection } from './ProviderSection';
  */
 export const SettingsView = () => {
   const [params, setParams] = useSearchParams();
-  const seccion = params.get('section') === 'providers' ? 'providers' : 'conexion';
+  const seccionParam = params.get('section');
+  const seccion =
+    seccionParam === 'providers' || seccionParam === 'integraciones'
+      ? seccionParam
+      : 'conexion';
 
   const cambiarSeccion = (siguiente: string) => {
     const nuevos = new URLSearchParams(params);
@@ -57,19 +62,23 @@ export const SettingsView = () => {
       <PageHeader
         eyebrow="Parametrización"
         titulo="Configuración"
-        descripcion="Conexión con el proveedor de contenido, registros, paquetes y licencias."
+        descripcion="Conexión con el proveedor, registros, paquetes, licencias y credenciales de integración."
       />
 
       <Tabs value={seccion} onValueChange={cambiarSeccion}>
         <TabsList>
           <TabsTrigger value="conexion">Conexión</TabsTrigger>
           <TabsTrigger value="providers">Proveedores</TabsTrigger>
+          <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
         </TabsList>
         <TabsContent value="conexion">
           <ConnectionSection />
         </TabsContent>
         <TabsContent value="providers">
           <ProviderSection />
+        </TabsContent>
+        <TabsContent value="integraciones">
+          <IntegrationsSettings />
         </TabsContent>
       </Tabs>
     </>
