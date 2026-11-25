@@ -249,8 +249,8 @@ para una fase posterior; no reemplaza al panel, reutiliza su misma lógica de ne
 **Endpoint:** `POST /api/v1/integration/whatsapp/customers`
 **Autenticación:** header `x-api-key: <credencial de la Empresa>`. No usa Auth0.
 **Alcance:** la credencial identifica a la Empresa Revendedora. Cada empresa tiene su propia key,
-creada por el Operador Principal en **Configuración → Integraciones**. La misma key puede habilitar
-el bot y el Portal de Cliente según sus `scopes`.
+creada por el Operador Principal en **Configuración → Integraciones**. La misma key sirve para
+todas las APIs de integración de esa Empresa (bot, Portal de Cliente y futuras).
 
 Reglas que impone el servidor (el bot no las elige):
 - **Servicios:** se aplican los 7 del catálogo para ambos tipos de Cuenta. Requiere que el Operador
@@ -305,14 +305,13 @@ Revendedora; si no pertenece, la integración responde 403.
 responde **HTTP 200** con `success: false`, `whatsapp.mensaje` (texto entendible para el Cliente
 Final), las credenciales de `cuenta` en null y `error.code`. Se hace así porque ManyChat sólo mapea los "Campos de
 respuesta" cuando el status es 2xx; con 4xx/5xx no setea `MensajeIPTVCONTROL`. Las credenciales
-inválidas o sin alcance son la excepción: responden **401/403** para que el integrador detecte una
-key revocada. Códigos posibles:
+inválidas son la excepción: responden **401/403** para que el integrador detecte una key revocada. Códigos posibles:
 
 | `error.code` | Qué significa | Mensaje al Cliente Final |
 |---|---|---|
 | `ACCOUNT_ALREADY_EXISTS` | La Cuenta o el ID de gestión ya existen | "No pudimos generar el acceso porque ya existe una cuenta registrada para este servicio…" |
 | `UNAUTHORIZED` | Key inválida o revocada | Revisar la credencial en Configuración → Integraciones |
-| `FORBIDDEN` | Key sin alcance, Empresa suspendida o Team Member inválido | Revisar la credencial |
+| `FORBIDDEN` | Empresa suspendida o Team Member inválido | Revisar la credencial |
 | `INVALID_DATA` | Datos inválidos o faltantes | "Los datos enviados no son válidos o están incompletos…" |
 | `PROVIDER_AUTH` | Credenciales de SENSA rechazadas | "No pudimos conectarnos con el servicio de IPTV…" |
 | `PROVIDER_UNAVAILABLE` | SENSA caída, timeout o sin conexión | "El servicio de IPTV está demorando más de lo normal…" |

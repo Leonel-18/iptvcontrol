@@ -31,7 +31,7 @@ export class IntegracionesController {
   @ApiOperation({
     summary: 'Lista credenciales de integración.',
     description:
-      'Devuelve una fila por credencial con su prefijo, estado, alcances y último uso. ' +
+      'Devuelve una fila por credencial con su prefijo, estado y último uso. ' +
       'Nunca devuelve la key completa ni su hash.',
   })
   listar(@Query() query: ListarCredencialesQueryDto) {
@@ -51,7 +51,6 @@ export class IntegracionesController {
     return this.credenciales.crear({
       empresaRevendedoraId: dto.empresa_revendedora_id,
       nombre: dto.nombre,
-      scopes: dto.scopes,
       teamMemberId: dto.team_member_id,
     });
   }

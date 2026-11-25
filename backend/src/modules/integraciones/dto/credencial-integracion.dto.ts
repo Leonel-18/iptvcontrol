@@ -1,16 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
-  ArrayUnique,
-  IsArray,
   IsBoolean,
-  IsIn,
   IsOptional,
   IsString,
   IsUUID,
   Length,
 } from 'class-validator';
-import { SCOPES_INTEGRACION, type ScopeIntegracion } from '../scopes';
 
 export class CrearCredencialIntegracionDto {
   @ApiProperty({ description: 'Empresa Revendedora dueña de la credencial.' })
@@ -23,18 +19,6 @@ export class CrearCredencialIntegracionDto {
   @IsString()
   @Length(2, 80)
   nombre!: string;
-
-  @ApiPropertyOptional({
-    enum: SCOPES_INTEGRACION,
-    isArray: true,
-    default: [...SCOPES_INTEGRACION],
-    description: 'APIs habilitadas. Si se omite, la credencial sirve para todas.',
-  })
-  @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @IsIn([...SCOPES_INTEGRACION], { each: true })
-  scopes?: ScopeIntegracion[];
 
   @ApiPropertyOptional({
     description:

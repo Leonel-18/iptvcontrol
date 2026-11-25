@@ -8,8 +8,8 @@ import { IntegracionApiKeyGuardBase } from '../integraciones/integracion-api-key
 /**
  * Autenticación del Portal de Cliente externo.
  *
- * Comparte el mismo resolvedor de credenciales que el bot: una key puede
- * habilitar el portal, el bot o ambos (según `scopes`). El fallback a
+ * Comparte el mismo resolvedor de credenciales que el bot: una key habilita
+ * todas las APIs de integración de la Empresa. El fallback a
  * `PORTAL_CLIENTE_*` se mantiene durante la transición.
  */
 @Injectable()

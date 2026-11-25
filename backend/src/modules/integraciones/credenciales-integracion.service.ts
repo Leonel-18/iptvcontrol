@@ -12,11 +12,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { AuditService } from '../../common/audit/audit.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import {
-  SCOPES_INTEGRACION,
-  SCOPES_POR_DEFECTO,
-  type ScopeIntegracion,
-} from './scopes';
+import { type ScopeIntegracion } from './scopes';
 
 /** Resultado de autenticar una key, antes de fijar el contexto del request. */
 export interface CredencialAutenticada {
@@ -34,7 +30,6 @@ export interface CredencialSerializada {
   empresa: { id: string; razon_social: string };
   nombre: string;
   prefijo: string;
-  scopes: ScopeIntegracion[];
   activa: boolean;
   team_member: { id: string; email: string; nombre: string | null } | null;
   ultimo_uso_en: Date | null;
@@ -47,7 +42,6 @@ interface CredencialConRelaciones {
   empresaRevendedoraId: string;
   nombre: string;
   keyPrefix: string;
-  scopes: string[];
   activa: boolean;
   ultimoUsoEn: Date | null;
   revocadoEn: Date | null;
@@ -81,7 +75,7 @@ export class CredencialesIntegracionService {
   ) {}
 
   /**
-   * Resuelve una key y valida que pueda usar el alcance pedido.
+   * Resuelve una key contra la credencial de la Empresa.
    *
    * Primero busca en base. Si la key no existe y el fallback está habilitado,
    * compara contra las variables de entorno históricas. Una key revocada en
@@ -94,7 +88,6 @@ export class CredencialesIntegracionService {
         id: true,
         empresaRevendedoraId: true,
         teamMemberId: true,
-        scopes: true,
         activa: true,
         revocadoEn: true,
       },
@@ -103,9 +96,6 @@ export class CredencialesIntegracionService {
     if (credencial) {
       if (!credencial.activa || credencial.revocadoEn) {
         throw new UnauthorizedException('Credencial de integración inválida.');
-      }
-      if (!credencial.scopes.includes(scope)) {
-        throw new ForbiddenException('La credencial no está habilitada para esta API.');
       }
       return {
         empresaRevendedoraId: credencial.empresaRevendedoraId,
@@ -149,7 +139,6 @@ export class CredencialesIntegracionService {
   async crear(params: {
     empresaRevendedoraId: string;
     nombre: string;
-    scopes?: ScopeIntegracion[];
     teamMemberId?: string;
   }): Promise<{ credencial: CredencialSerializada; api_key: string }> {
     const operadorPrincipalId = this.contexto.operadorPrincipalId;
@@ -176,7 +165,6 @@ export class CredencialesIntegracionService {
       await this.validarTeamMember(params.teamMemberId, empresa.id);
     }
 
-    const scopes = this.normalizarScopes(params.scopes);
     const apiKey = `iptv_${randomBytes(32).toString('hex')}`;
 
     const creada = await this.prisma.db.integracionCredencial.create({
@@ -186,7 +174,6 @@ export class CredencialesIntegracionService {
         nombre,
         keyHash: this.hash(apiKey),
         keyPrefix: apiKey.slice(0, 12),
-        scopes,
         teamMemberId: params.teamMemberId ?? null,
       },
       include: INCLUDE_RELACIONES,
@@ -202,7 +189,6 @@ export class CredencialesIntegracionService {
         empresa_revendedora_id: empresa.id,
         nombre: creada.nombre,
         prefijo: creada.keyPrefix,
-        scopes,
       },
     });
 
@@ -270,7 +256,6 @@ export class CredencialesIntegracionService {
         id: true,
         empresaRevendedoraId: true,
         nombre: true,
-        scopes: true,
         teamMemberId: true,
         activa: true,
       },
@@ -283,7 +268,6 @@ export class CredencialesIntegracionService {
     const nueva = await this.crear({
       empresaRevendedoraId: actual.empresaRevendedoraId,
       nombre: actual.nombre,
-      scopes: actual.scopes as ScopeIntegracion[],
       teamMemberId: actual.teamMemberId ?? undefined,
     });
 
@@ -326,19 +310,6 @@ export class CredencialesIntegracionService {
     }
   }
 
-  private normalizarScopes(scopes?: ScopeIntegracion[]): ScopeIntegracion[] {
-    if (!scopes || scopes.length === 0) return [...SCOPES_POR_DEFECTO];
-
-    const unicos = [...new Set(scopes)];
-    const invalidos = unicos.filter(
-      (scope) => !(SCOPES_INTEGRACION as readonly string[]).includes(scope),
-    );
-    if (invalidos.length > 0) {
-      throw new BadRequestException(`Alcance de integración inválido: ${invalidos.join(', ')}.`);
-    }
-    return unicos;
-  }
-
   private serializar(credencial: CredencialConRelaciones): CredencialSerializada {
     return {
       id: credencial.id,
@@ -349,7 +320,6 @@ export class CredencialesIntegracionService {
       },
       nombre: credencial.nombre,
       prefijo: credencial.keyPrefix,
-      scopes: credencial.scopes as ScopeIntegracion[],
       activa: credencial.activa,
       team_member: credencial.teamMember
         ? {

@@ -723,15 +723,12 @@ export interface ConsumptionReport {
 // Integraciones API (credenciales por Empresa Revendedora)
 // -----------------------------------------------------------------------------
 
-export type IntegrationScope = "whatsapp_bot" | "portal_cliente";
-
 export interface IntegrationCredential {
   id: string;
   empresa_revendedora_id: string;
   empresa: { id: string; razon_social: string };
   nombre: string;
   prefijo: string;
-  scopes: IntegrationScope[];
   activa: boolean;
   team_member: { id: string; email: string; nombre: string | null } | null;
   ultimo_uso_en: string | null;

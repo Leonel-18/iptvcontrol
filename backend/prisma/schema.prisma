@@ -905,10 +905,9 @@ model TeamMember {
 
 /// Credencial de integración externa de una Empresa Revendedora.
 ///
-/// Una sola credencial sirve para cualquier API de integración (bot de
-/// WhatsApp, Portal de Cliente o futuras). `scopes` permite acotarla por API;
-/// por defecto se otorgan todas. Solo se persiste el hash SHA-256: la key en
-/// texto plano se muestra una única vez al crearla.
+/// Una sola credencial habilita todas las APIs de integración (bot de
+/// WhatsApp, Portal de Cliente o futuras) para esa Empresa. Solo se persiste
+/// el hash SHA-256: la key en texto plano se muestra una única vez al crearla.
 model IntegracionCredencial {
   id String @id @default(uuid()) @db.Uuid
 
@@ -925,9 +924,6 @@ model IntegracionCredencial {
   keyHash   String @unique @map("key_hash") @db.VarChar(64)
   /// Primeros caracteres, para identificar la credencial sin revelarla.
   keyPrefix String @map("key_prefix") @db.VarChar(16)
-
-  /// APIs habilitadas: whatsapp_bot, portal_cliente. Default: todas.
-  scopes String[] @default(["whatsapp_bot", "portal_cliente"])
 
   activa Boolean @default(true)
 

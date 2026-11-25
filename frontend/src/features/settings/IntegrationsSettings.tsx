@@ -7,7 +7,6 @@ import { copiarAlPortapapeles, formatearFechaHora } from '@/lib/utils';
 import type {
   IntegrationCredential,
   IntegrationCredentialCreated,
-  IntegrationScope,
   Reseller,
   TeamMember,
 } from '@/lib/types';
@@ -33,21 +32,6 @@ import {
 } from '@/components/ui/overlays';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
-const SCOPES: { value: IntegrationScope; label: string; help: string }[] = [
-  {
-    value: 'whatsapp_bot',
-    label: 'Bot de WhatsApp',
-    help: 'Alta de Clientes Finales desde un sistema externo.',
-  },
-  {
-    value: 'portal_cliente',
-    label: 'Portal de Cliente',
-    help: 'Consulta y administración de credenciales y dispositivos por DNI.',
-  },
-];
-
-const SCOPES_TODOS: IntegrationScope[] = SCOPES.map((scope) => scope.value);
-
 const baseUrl = () => {
   const configurada = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
   return new URL(configurada, window.location.origin).toString().replace(/\/$/, '');
@@ -56,8 +40,8 @@ const baseUrl = () => {
 /**
  * Credenciales de integración por Empresa Revendedora.
  *
- * Una key sirve para cualquier API de integración habilitada por sus `scopes`.
- * La key completa se muestra una única vez al crearla o rotarla.
+ * Cada credencial habilita todas las APIs de integración de la Empresa. La key
+ * completa se muestra una única vez al crearla o rotarla.
  */
 export const IntegrationsSettings = () => {
   const queryClient = useQueryClient();
@@ -69,7 +53,6 @@ export const IntegrationsSettings = () => {
 
   const [empresaId, setEmpresaId] = useState('');
   const [nombre, setNombre] = useState('');
-  const [scopes, setScopes] = useState<IntegrationScope[]>(SCOPES_TODOS);
   const [teamMemberId, setTeamMemberId] = useState('');
   const [error, setError] = useState('');
 
@@ -105,7 +88,6 @@ export const IntegrationsSettings = () => {
         body: {
           empresa_revendedora_id: empresaId,
           nombre: nombre.trim(),
-          scopes,
           team_member_id: teamMemberId || undefined,
         },
       }),
@@ -115,7 +97,6 @@ export const IntegrationsSettings = () => {
       setNombre('');
       setTeamMemberId('');
       setEmpresaId('');
-      setScopes(SCOPES_TODOS);
       setError('');
       void invalidar();
     },
@@ -165,16 +146,9 @@ export const IntegrationsSettings = () => {
     [teamMembers.data],
   );
 
-  const alternarScope = (scope: IntegrationScope, activo: boolean) => {
-    setScopes((actuales) =>
-      activo ? [...new Set([...actuales, scope])] : actuales.filter((item) => item !== scope),
-    );
-  };
-
   const enviar = () => {
     if (!empresaId) return setError('Seleccione la Empresa Revendedora.');
     if (nombre.trim().length < 2) return setError('Ingrese un nombre de al menos 2 caracteres.');
-    if (scopes.length === 0) return setError('Seleccione al menos una API.');
     setError('');
     crear.mutate();
   };
@@ -234,7 +208,6 @@ export const IntegrationsSettings = () => {
                 <TR>
                   <TH>Empresa</TH>
                   <TH>Credencial</TH>
-                  <TH>APIs</TH>
                   <TH>Estado</TH>
                   <TH>Último uso</TH>
                   <TH>Creada</TH>
@@ -256,15 +229,6 @@ export const IntegrationsSettings = () => {
                             Autor: {credencial.team_member.nombre ?? credencial.team_member.email}
                           </span>
                         ) : null}
-                      </div>
-                    </TD>
-                    <TD>
-                      <div className="flex flex-wrap gap-1">
-                        {credencial.scopes.map((scope) => (
-                          <Badge key={scope} tone="neutral">
-                            {SCOPES.find((item) => item.value === scope)?.label ?? scope}
-                          </Badge>
-                        ))}
                       </div>
                     </TD>
                     <TD>
@@ -345,25 +309,10 @@ export const IntegrationsSettings = () => {
               />
             </Field>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">APIs habilitadas</p>
-              {SCOPES.map((scope) => (
-                <label
-                  key={scope.value}
-                  className="flex items-start justify-between gap-3 rounded border p-3"
-                >
-                  <span>
-                    <span className="text-sm font-medium">{scope.label}</span>
-                    <span className="mt-0.5 block text-xs texto-suave">{scope.help}</span>
-                  </span>
-                  <Switch
-                    checked={scopes.includes(scope.value)}
-                    onCheckedChange={(activo) => alternarScope(scope.value, activo)}
-                    aria-label={`Habilitar ${scope.label}`}
-                  />
-                </label>
-              ))}
-            </div>
+            <Alert tone="info">
+              La credencial habilita todas las APIs de integración de la Empresa (bot de WhatsApp,
+              Portal de Cliente y futuras). No hace falta elegir permisos.
+            </Alert>
 
             <Field
               label="Team Member para Auditoría"

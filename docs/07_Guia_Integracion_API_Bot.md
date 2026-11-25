@@ -17,8 +17,8 @@ IPTVControl entrega por un canal seguro:
   creada por el Operador Principal en **Configuración → Integraciones**.
 
 La API key no debe incluirse en aplicaciones web, mensajes, repositorios, capturas ni logs. Debe
-usarse exclusivamente desde el servidor del sistema integrador. La misma key puede habilitar el bot
-de WhatsApp, el Portal de Cliente o ambas APIs, según sus `scopes`.
+usarse exclusivamente desde el servidor del sistema integrador. La misma key sirve para todas las
+APIs de integración de la Empresa (bot, Portal de Cliente y futuras).
 
 ## 3. Endpoint
 
@@ -196,7 +196,7 @@ Los errores controlados responden HTTP 200 para que las plataformas de chat pued
 |---|---|---|
 | `ACCOUNT_ALREADY_EXISTS` | DNI, teléfono o ID de gestión ya registrado en la Empresa Revendedora | Revisar el cliente; no reintentar |
 | `UNAUTHORIZED` | Key inválida o revocada | Revisar la credencial en Configuración → Integraciones |
-| `FORBIDDEN` | La credencial no tiene el alcance pedido, la Empresa está suspendida o el Team Member no pertenece a la Empresa | Revisar la credencial |
+| `FORBIDDEN` | La Empresa está suspendida o el Team Member no pertenece a la Empresa | Revisar la credencial |
 | `INVALID_DATA` | Datos faltantes, inválidos o combinación incompatible | Corregir el request |
 | `RATE_LIMITED` | Se superaron 30 requests en 60 segundos | Esperar los segundos de `Retry-After` |
 | `PROVIDER_AUTH` | Falló la autenticación con el Proveedor | Informar a soporte |
