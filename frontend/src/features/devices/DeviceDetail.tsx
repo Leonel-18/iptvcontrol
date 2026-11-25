@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, Trash2, UserCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, ApiError, type Paginado } from '@/lib/api';
 import { useSesion } from '@/lib/session';
-import { formatearFecha, formatearMac } from '@/lib/utils';
+import { formatearFechaHora, formatearMac } from '@/lib/utils';
 import type { AccountDevice, Customer } from '@/lib/types';
 import { deviceStatusHelp } from '@/i18n/entityLabels';
 import {
@@ -37,14 +37,21 @@ interface DeviceDetailData extends AccountDevice {
  *
  * Concentra las tres acciones sobre un dispositivo suelto:
  *  - editar la nota interna,
- *  - baja individual (no afecta al resto de los dispositivos del cliente),
- *  - reasignación, sólo si está liberado.
+ *  - baja individual (borra la fila; no afecta al resto de los dispositivos del cliente),
+ *  - reasignación, sólo si quedó liberado (filas legacy en estado `disponible`).
  */
 export const DeviceDetail = () => {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { esOperador } = useSesion();
   const queryClient = useQueryClient();
+
+  // Origen desde el que se abrió el dispositivo (tabla de Dispositivos, Cuenta o
+  // Cliente). Se usa para volver exactamente ahí.
+  const origen = (location.state as { from?: string } | null)?.from;
+  const volverA = origen ?? '/devices';
+  const volverADispositivos = volverA.startsWith('/devices');
 
   const [nota, setNota] = useState('');
   const [confirmarBaja, setConfirmarBaja] = useState(false);
@@ -73,10 +80,15 @@ export const DeviceDetail = () => {
   const darDeBaja = useMutation({
     mutationFn: () => api(`/devices/${id}`, { metodo: 'DELETE' }),
     onSuccess: () => {
-      toast.success('Dispositivo dado de baja. Queda disponible para reasignar.');
+      toast.success('Dispositivo eliminado del proveedor y del sistema.');
       setConfirmarBaja(false);
-      void queryClient.invalidateQueries({ queryKey: ['devices'] });
       void queryClient.invalidateQueries({ queryKey: ['device', id] });
+      void queryClient.invalidateQueries({ queryKey: ['devices'] });
+      void queryClient.invalidateQueries({ queryKey: ['account'] });
+      void queryClient.invalidateQueries({ queryKey: ['customer'] });
+      void queryClient.invalidateQueries({ queryKey: ['customers'] });
+      // Vuelve a la pantalla desde la que se abrió (Cuenta o Cliente).
+      navigate(volverA, { replace: true });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -97,14 +109,17 @@ export const DeviceDetail = () => {
 
   return (
     <>
-      <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate('/devices')}>
+      <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate(volverA)}>
         <ArrowLeft />
-        Volver a dispositivos
+        {volverADispositivos ? 'Volver a dispositivos' : 'Volver'}
       </Button>
 
       <PageHeader
         eyebrow="Dispositivo"
-        titulo={data.proveedor_device_id ?? 'Pendiente de activación'}
+        titulo={
+          data.proveedor_device_id ??
+          (disponible ? 'Dispositivo liberado' : 'Pendiente de activación')
+        }
         descripcion={deviceStatusHelp[data.estado]}
         acciones={
           <>
@@ -116,7 +131,7 @@ export const DeviceDetail = () => {
                 Reasignar a un cliente
               </Button>
             ) : null}
-            {!esOperador && activo ? (
+            {!esOperador && (activo || disponible) ? (
               <Button variant="danger" size="sm" onClick={() => setConfirmarBaja(true)}>
                 <Trash2 />
                 Dar de baja
@@ -184,7 +199,7 @@ export const DeviceDetail = () => {
                   )}
                 </DetailRow>
               ) : null}
-              <DetailRow etiqueta="Alta">{formatearFecha(data.creado_en)}</DetailRow>
+              <DetailRow etiqueta="Alta">{formatearFechaHora(data.creado_en)}</DetailRow>
             </dl>
           </CardContent>
         </Card>
@@ -227,15 +242,15 @@ export const DeviceDetail = () => {
         abierto={confirmarBaja}
         onCambio={setConfirmarBaja}
         titulo="Dar de baja el dispositivo"
-        descripcion="Se elimina en el proveedor y se resta un dispositivo habilitado de la cuenta."
+        descripcion="Se elimina en el proveedor (si existe) y su fila se borra del sistema."
         etiquetaConfirmar="Dar de baja"
         tono="danger"
         cargando={darDeBaja.isPending}
         onConfirmar={() => darDeBaja.mutate()}
       >
-        <Alert tone="info">
-          No afecta a los demás dispositivos del cliente ni a su estado general. El dispositivo queda
-          disponible para reasignar.
+        <Alert tone="danger">
+          Esta acción no se puede deshacer. El dispositivo no queda disponible para reasignar: si
+          el cliente necesita otro equipo, hay que darlo de alta de nuevo.
         </Alert>
       </ConfirmDialog>
 

@@ -652,3 +652,74 @@ describe('DispositivosService — ubicación automática de una venta compartida
     );
   });
 });
+
+/**
+ * =============================================================================
+ * Baja individual = baja definitiva
+ * =============================================================================
+ * "Dar de baja" un Dispositivo ya no lo deja `disponible`: la fila se borra
+ * (y el equipo se elimina en el Proveedor si existía). Así no queda una MAC
+ * vieja colgada en la Cuenta ni en el panel del Cliente Final.
+ * =============================================================================
+ */
+describe('DispositivosService — bajaIndividual elimina la fila', () => {
+  const dispositivoActivo = {
+    id: 'dispositivo-1',
+    cuentaId: 'cuenta-1',
+    empresaRevendedoraId: 'empresa-1',
+    clienteFinalId: 'cliente-1',
+    proveedorDeviceId: 'sensa-1',
+    estado: EstadoDispositivo.activo,
+  };
+
+  const crearServicio = () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 0 });
+    const dispositivoDelete = jest.fn().mockResolvedValue(undefined);
+    const tx = {
+      solicitudVinculacionDispositivo: { updateMany },
+      dispositivo: { delete: dispositivoDelete },
+    };
+    const prisma = {
+      db: { dispositivo: { findUnique: jest.fn().mockResolvedValue(dispositivoActivo) } },
+      transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    const eliminarDispositivo = jest.fn().mockResolvedValue(undefined);
+    const proveedor = { eliminarDispositivo } as unknown as ProveedorService;
+    const registrar = jest.fn().mockResolvedValue(undefined);
+    const audit = { registrar } as unknown as AuditService;
+    const sincronizarContadoresVenta = jest.fn().mockResolvedValue(undefined);
+    const provisioning = { sincronizarContadoresVenta } as unknown as CuentasProvisioningService;
+    const encolarSincronizacionContadoresVenta = jest.fn().mockResolvedValue(undefined);
+    const cola = { encolarSincronizacionContadoresVenta } as unknown as ColaProveedorService;
+
+    const servicio = new DispositivosService(
+      prisma,
+      audit,
+      {} as RequestContextService,
+      proveedor,
+      provisioning,
+      cola,
+      {} as VentanasCuriosidadService,
+    );
+    return { servicio, eliminarDispositivo, dispositivoDelete, sincronizarContadoresVenta };
+  };
+
+  it('borra la fila en vez de dejarla disponible y limpia el equipo en el Proveedor', async () => {
+    const { servicio, eliminarDispositivo, dispositivoDelete } = crearServicio();
+
+    const resultado = await servicio.bajaIndividual('dispositivo-1', 'operador-1');
+
+    expect(resultado).toEqual({ id: 'dispositivo-1' });
+    expect(eliminarDispositivo).toHaveBeenCalledWith('operador-1', 'sensa-1');
+    expect(dispositivoDelete).toHaveBeenCalledWith({ where: { id: 'dispositivo-1' } });
+  });
+
+  it('resincroniza los contadores de la Cuenta tras eliminar el Dispositivo', async () => {
+    const { servicio, sincronizarContadoresVenta } = crearServicio();
+
+    await servicio.bajaIndividual('dispositivo-1', 'operador-1');
+
+    expect(sincronizarContadoresVenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
+  });
+});
+

@@ -5,6 +5,7 @@ import {
   PauseCircle,
   Pencil,
   PlayCircle,
+  RefreshCw,
   UserX,
 } from "lucide-react";
 import { useState } from "react";
@@ -13,7 +14,7 @@ import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { useSesion } from "@/lib/session";
 import { accountModality } from "@/lib/account-modality";
-import { formatearFecha, formatearMac } from "@/lib/utils";
+import { formatearFecha, formatearFechaHora, formatearMac } from "@/lib/utils";
 import type {
   AccountDevice,
   CustomerDetail as CustomerDetailData,
@@ -65,7 +66,7 @@ export const CustomerDetail = () => {
   >(null);
   const [editarContactoAbierto, setEditarContactoAbierto] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, refetch, error } = useQuery({
     queryKey: ["customer", id],
     queryFn: () => api<CustomerDetailData>(`/customers/${id}`),
     enabled: Boolean(id),
@@ -89,7 +90,7 @@ export const CustomerDetail = () => {
         reactivate:
           "Cliente reactivado. Su dispositivo volvió a habilitarse en el proveedor.",
         terminate:
-          "Cliente dado de baja. Su dispositivo quedó disponible para reasignar.",
+          "Cliente dado de baja. Sus dispositivos se eliminaron del sistema.",
       } as const;
       toast.success(mensajes[tipo]);
       setAccion(null);
@@ -99,6 +100,14 @@ export const CustomerDetail = () => {
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
+
+  /** Refresh local: vuelve a leer la base sin esperar a otro evento. */
+  const actualizar = async () => {
+    await refetch();
+    void queryClient.invalidateQueries({ queryKey: ["devices"] });
+    void queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    toast.success("Datos actualizados");
+  };
 
   if (isLoading) return <Skeleton className="h-64" />;
 
@@ -133,6 +142,15 @@ export const CustomerDetail = () => {
         acciones={
           <>
             <CustomerStatusBadge estado={data.estado} />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void actualizar()}
+              disabled={isFetching}
+            >
+              <RefreshCw />
+              {isFetching ? "Actualizando…" : "Actualizar"}
+            </Button>
             {!esOperador && activo ? (
               <>
                 <Button
@@ -187,8 +205,9 @@ export const CustomerDetail = () => {
 
       {dadoDeBaja ? (
         <Alert tone="info" titulo="Cliente dado de baja" className="mb-4">
-          Sus dispositivos quedaron disponibles y pueden asignarse a un cliente
-          nuevo desde la sección Dispositivos.
+          Sus dispositivos se eliminaron del proveedor y del sistema. La cuenta
+          queda libre para asignarse a un cliente nuevo con las mismas
+          credenciales.
         </Alert>
       ) : null}
 
@@ -226,6 +245,7 @@ export const CustomerDetail = () => {
                         <TD>
                           <Link
                             to={`/devices/${dispositivo.id}`}
+                            state={{ from: `/customers/${id}` }}
                             className="id-tecnico text-azure-600 hover:underline dark:text-azure-400"
                           >
                             {dispositivo.proveedor_device_id ?? "Pendiente"}
@@ -261,8 +281,8 @@ export const CustomerDetail = () => {
                           </TD>
                         ) : null}
                         <TD align="right">
-                          <span className="text-sm texto-suave">
-                            {formatearFecha(dispositivo.creado_en)}
+                          <span className="whitespace-nowrap text-sm texto-suave">
+                            {formatearFechaHora(dispositivo.creado_en)}
                           </span>
                         </TD>
                       </TR>
@@ -473,15 +493,16 @@ export const CustomerDetail = () => {
         abierto={accion === "terminate"}
         onCambio={(abierto) => setAccion(abierto ? "terminate" : null)}
         titulo="Dar de baja definitiva"
-        descripcion="Se elimina el Dispositivo en el Proveedor y la capacidad liberada queda protegida por una reserva técnica."
+        descripcion="Se eliminan sus Dispositivos en el Proveedor y del sistema; la capacidad queda liberada para un cliente nuevo."
         etiquetaConfirmar="Dar de baja"
         tono="danger"
         cargando={transicion.isPending}
         onConfirmar={() => transicion.mutate("terminate")}
       >
         <Alert tone="danger">
-          El dispositivo queda disponible para otro cliente, que va a recibir
-          las mismas credenciales de esta cuenta. La contraseña no se rota.
+          Los dispositivos se eliminan del proveedor y del sistema. La cuenta
+          puede asignarse a otro cliente con las mismas credenciales: la
+          contraseña no se rota.
         </Alert>
       </ConfirmDialog>
 

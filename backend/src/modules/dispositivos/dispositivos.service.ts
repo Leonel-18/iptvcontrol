@@ -818,22 +818,11 @@ export class DispositivosService {
     return actualizado;
   }
 
-  async bajaIndividual(dispositivoId: string, operadorPrincipalId: string): Promise<Dispositivo> {
-    const dispositivo = await this.prisma.db.dispositivo.findUnique({
-      where: { id: dispositivoId },
-    });
-    if (!dispositivo) throw new NotFoundException('El Dispositivo no existe.');
-    if (dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension) {
-      throw new BadRequestException(
-        'El Dispositivo está bloqueado por suspensión y no puede reasignarse.',
-      );
-    }
-    return this.liberar(
-      dispositivoId,
-      EstadoDispositivo.disponible,
-      operadorPrincipalId,
-      AccionAuditoria.baja_dispositivo,
-    );
+  async bajaIndividual(dispositivoId: string, operadorPrincipalId: string): Promise<{ id: string }> {
+    // A diferencia de la baja del cliente (que reserva el cupo), la baja de un
+    // Dispositivo individual lo borra: no se conserva como `disponible` con su
+    // MAC vieja ni aparece más en el panel del Cliente Final.
+    return this.eliminarDefinitivamente(dispositivoId, operadorPrincipalId);
   }
 
   async actualizarNota(dispositivoId: string, nota: string | null): Promise<Dispositivo> {
@@ -845,25 +834,34 @@ export class DispositivosService {
 
   /**
    * Baja definitiva de un Dispositivo: borra la fila de la base local (y lo
-   * elimina en el Proveedor si todavía existía allí). Sirve para limpiar filas
-   * que quedaron huérfanas: `disponible`, `pendiente` sin proveedor, o un equipo
-   * que ya no se quiere conservar.
+   * elimina en el Proveedor si todavía existía allí). Es también la acción de
+   * "Dar de baja" sobre un Dispositivo individual: la fila desaparece y no se
+   * conserva como `disponible`, así no queda una MAC vieja colgada en la Cuenta
+   * ni en el panel del Cliente Final.
    *
-   * Único caso bloqueado: un Dispositivo `bloqueado_por_suspensión`. Su
+   * Por defecto se bloquea un Dispositivo `bloqueado_por_suspensión`: su
    * capacidad queda reservada para el Cliente Final suspendido (regla de
-   * negocio 3): borrarlo en silencio la liberaría por una vía que no existe.
-   * Primero hay que reactivar al cliente o pasarlo a baja definitiva.
+   * negocio 3). Quien da de baja al cliente completo usa `permitirBloqueado`
+   * porque esa es la única vía válida para liberarlo.
    */
   async eliminarDefinitivamente(
     dispositivoId: string,
     operadorPrincipalId: string,
+    opciones: {
+      permitirBloqueado?: boolean;
+      motivo?: AccionAuditoria;
+      sincronizarContadores?: boolean;
+    } = {},
   ): Promise<{ id: string }> {
     const dispositivo = await this.prisma.db.dispositivo.findUnique({
       where: { id: dispositivoId },
     });
     if (!dispositivo) throw new NotFoundException('El Dispositivo no existe.');
 
-    if (dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension) {
+    if (
+      dispositivo.estado === EstadoDispositivo.bloqueado_por_suspension &&
+      !opciones.permitirBloqueado
+    ) {
       throw new BadRequestException(
         'Este Dispositivo está bloqueado por suspensión de su Cliente Final. ' +
           'Para liberarlo hay que reactivar al cliente o pasarlo a baja definitiva.',
@@ -879,7 +877,11 @@ export class DispositivosService {
         where: {
           dispositivoId,
           estado: {
-            in: [EstadoSolicitudVinculacion.pendiente, EstadoSolicitudVinculacion.observando],
+            in: [
+              EstadoSolicitudVinculacion.pendiente,
+              EstadoSolicitudVinculacion.observando,
+              EstadoSolicitudVinculacion.ambiguo,
+            ],
           },
         },
         data: { estado: EstadoSolicitudVinculacion.cancelado },
@@ -888,7 +890,7 @@ export class DispositivosService {
     });
 
     await this.audit.registrar({
-      accion: AccionAuditoria.baja_dispositivo,
+      accion: opciones.motivo ?? AccionAuditoria.baja_dispositivo,
       entidad: EntidadAuditada.Dispositivo,
       entidadId: dispositivoId,
       empresaRevendedoraId: dispositivo.empresaRevendedoraId,
@@ -899,6 +901,25 @@ export class DispositivosService {
         eliminacion_definitiva: true,
       },
     });
+
+    if (opciones.sincronizarContadores !== false) {
+      try {
+        await this.provisioning.sincronizarContadoresVenta(
+          dispositivo.cuentaId,
+          operadorPrincipalId,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `No se pudo sincronizar los contadores de la Cuenta ${dispositivo.cuentaId} tras ` +
+            `eliminar el Dispositivo ${dispositivoId}: ${(error as Error).message}. ` +
+            'Se encola un reintento.',
+        );
+        await this.cola.encolarSincronizacionContadoresVenta({
+          cuentaId: dispositivo.cuentaId,
+          operadorPrincipalId,
+        });
+      }
+    }
 
     return { id: dispositivoId };
   }

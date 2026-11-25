@@ -213,6 +213,7 @@ describe('ClientesService — ciclo de vida de una venta compartida', () => {
     const dispositivos = {
       operadorPrincipalId: jest.fn().mockResolvedValue('operador-1'),
       liberar: jest.fn().mockResolvedValue(undefined),
+      eliminarDefinitivamente: jest.fn().mockResolvedValue(undefined),
       sincronizarCapacidadCuenta: jest.fn().mockResolvedValue(undefined),
     } as unknown as DispositivosService;
     const audit = {
@@ -246,6 +247,11 @@ describe('ClientesService — ciclo de vida de una venta compartida', () => {
 
     await servicio.darDeBaja('cliente-1');
 
+    expect(dispositivos.eliminarDefinitivamente).toHaveBeenCalledWith(
+      'dispositivo-1',
+      'operador-1',
+      expect.objectContaining({ permitirBloqueado: true, sincronizarContadores: false }),
+    );
     expect(ventaDeleteMany).toHaveBeenCalledWith({ where: { clienteFinalId: 'cliente-1' } });
     expect(dispositivos.sincronizarCapacidadCuenta).toHaveBeenCalledWith('cuenta-1', 'operador-1');
   });

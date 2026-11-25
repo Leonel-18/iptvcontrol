@@ -87,6 +87,9 @@ export const AccountDevicesTab = ({
       }),
     onSuccess: (resultado) => {
       setInventario(resultado);
+      // La consulta al proveedor puede completar MAC/modelo/último inicio de
+      // los equipos ya vinculados: se refresca la Cuenta para que se vean.
+      void queryClient.invalidateQueries({ queryKey: ["account", cuenta.id] });
       const desconocidos = getUnlinkedProviderDevices(cuenta, resultado);
       if (desconocidos.length > 0) {
         toast.warning(
@@ -147,6 +150,7 @@ export const AccountDevicesTab = ({
       void queryClient.invalidateQueries({ queryKey: ["account", cuenta.id] });
       void queryClient.invalidateQueries({ queryKey: ["devices"] });
       void queryClient.invalidateQueries({ queryKey: ["customers"] });
+      void queryClient.invalidateQueries({ queryKey: ["customer"] });
     },
     onError: (causa: ApiError) => toast.error(causa.message),
   });
@@ -254,6 +258,7 @@ export const AccountDevicesTab = ({
                   <div className="flex flex-col gap-0.5">
                     <Link
                       to={`/devices/${dispositivo.id}`}
+                      state={{ from: `/accounts/${cuenta.id}` }}
                       className="id-tecnico text-azure-600 hover:underline dark:text-azure-400"
                     >
                       {dispositivo.proveedor_device_id ?? "Pendiente"}

@@ -95,7 +95,7 @@ export const AccountDetail = () => {
   const [actividadAbierta, setActividadAbierta] = useState(false);
   const navegar = useNavigate();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, refetch, error } = useQuery({
     queryKey: ["account", id],
     queryFn: () => api<AccountDetailData>(`/accounts/${id}`),
     enabled: Boolean(id),
@@ -135,15 +135,32 @@ export const AccountDetail = () => {
   });
 
   const sincronizar = useMutation({
-    mutationFn: () => api(`/accounts/${id}/sync-services`, { metodo: "POST" }),
+    // La API del proveedor no tiene webhooks: se consultan contenido e
+    // inventario de Dispositivos para traer cualquier cambio hecho afuera.
+    mutationFn: async () => {
+      await api(`/accounts/${id}/sync-services`, { metodo: "POST" });
+      await api(`/accounts/${id}/sync-devices`, { metodo: "POST" });
+    },
     onSuccess: () => {
-      toast.success(
-        "Parametrización de contenido actualizada desde el proveedor",
-      );
+      toast.success("Datos actualizados desde el proveedor.");
+    },
+    onSettled: () => {
+      // Aun si falla una de las dos consultas, se refresca lo que sí llegó.
       void queryClient.invalidateQueries({ queryKey: ["account", id] });
+      void queryClient.invalidateQueries({ queryKey: ["devices"] });
+      void queryClient.invalidateQueries({ queryKey: ["customer"] });
+      void queryClient.invalidateQueries({ queryKey: ["customers"] });
     },
     onError: (causa: Error) => toast.error(causa.message),
   });
+
+  /** Refresh local: vuelve a leer la base para reflejar cambios ya guardados. */
+  const actualizar = async () => {
+    await refetch();
+    void queryClient.invalidateQueries({ queryKey: ["account-credentials", id] });
+    void queryClient.invalidateQueries({ queryKey: ["devices"] });
+    toast.success("Datos actualizados");
+  };
 
   const liberarVentanaCuriosidad = useMutation({
     mutationFn: () =>
@@ -322,13 +339,24 @@ export const AccountDetail = () => {
               <Button
                 variant="secondary"
                 size="sm"
+                onClick={() => void actualizar()}
+                disabled={isFetching}
+              >
+                <RefreshCw />
+                {isFetching ? "Actualizando…" : "Actualizar"}
+              </Button>
+            ) : null}
+            {!esOperador ? (
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => sincronizar.mutate()}
                 disabled={sincronizar.isPending}
               >
                 <RefreshCw />
                 {sincronizar.isPending
                   ? "Consultando…"
-                  : "Sincronizar contenido"}
+                  : "Sincronizar con proveedor"}
               </Button>
             ) : null}
             {!esOperador && data.es_exclusiva && data.estado === "activa" ? (
