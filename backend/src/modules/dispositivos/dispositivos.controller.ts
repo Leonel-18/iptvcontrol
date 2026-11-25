@@ -82,7 +82,14 @@ export class DispositivosController {
         { encabezado: 'Nota', valor: (fila) => fila.nota_descriptiva ?? '' },
         {
           encabezado: 'Alta',
-          valor: (fila) => new Date(fila.creado_en).toLocaleDateString('es-AR'),
+          valor: (fila) =>
+            new Date(fila.creado_en).toLocaleString('es-AR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
         },
       ]);
       responderCsv(res, 'dispositivos', csv);
@@ -200,11 +207,11 @@ export class DispositivosController {
     summary: 'Baja individual de un Dispositivo.',
     description:
       'No afecta a los demás Dispositivos del Cliente Final ni a su estado general (regla 2.2). ' +
-      'El Dispositivo queda disponible para reasignar.',
+      'El Dispositivo se elimina en el Proveedor (si existe) y su fila se borra del sistema: ' +
+      'no queda como `disponible` para reasignar.',
   })
   async baja(@Param('id', ParseUUIDPipe) id: string) {
     const operadorPrincipalId = await this.dispositivos.operadorPrincipalId();
-    const dispositivo = await this.dispositivos.bajaIndividual(id, operadorPrincipalId);
-    return { id: dispositivo.id, estado: dispositivo.estado };
+    return this.dispositivos.bajaIndividual(id, operadorPrincipalId);
   }
 }

@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { MonitorPlay } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { api, descargarCsv, type Paginado } from '@/lib/api';
 import { useSesion } from '@/lib/session';
-import { formatearFecha, formatearMac } from '@/lib/utils';
+import { formatearFechaHora, formatearMac } from '@/lib/utils';
 import type { AccountDevice } from '@/lib/types';
 import { deviceStatusLabels, deviceTypeLabels } from '@/i18n/entityLabels';
 import {
@@ -28,6 +28,9 @@ import { Paginacion, Table, TableSkeleton, TBody, TD, TH, THead, TR } from '@/co
 export const DeviceList = () => {
   const { esOperador } = useSesion();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  // Se conserva la ruta con filtros/página para volver exactamente a esta tabla.
+  const origen = `${location.pathname}${location.search}`;
 
   const pagina = Number(params.get('page') ?? 1);
   const estado = params.get('status') ?? '';
@@ -134,6 +137,7 @@ export const DeviceList = () => {
                   <TD>
                     <Link
                       to={`/devices/${dispositivo.id}`}
+                      state={{ from: origen }}
                       className="id-tecnico font-medium text-azure-600 hover:underline dark:text-azure-400"
                     >
                       {dispositivo.proveedor_device_id ?? 'Pendiente'}
@@ -188,8 +192,8 @@ export const DeviceList = () => {
                     </TD>
                   ) : null}
                   <TD align="right">
-                    <span className="text-sm texto-suave">
-                      {formatearFecha(dispositivo.creado_en)}
+                    <span className="whitespace-nowrap text-sm texto-suave">
+                      {formatearFechaHora(dispositivo.creado_en)}
                     </span>
                   </TD>
                 </TR>

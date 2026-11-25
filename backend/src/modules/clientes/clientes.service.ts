@@ -986,12 +986,14 @@ export class ClientesService {
       ) {
         continue;
       }
-      await this.dispositivos.liberar(
-        dispositivo.id,
-        EstadoDispositivo.disponible,
-        operadorPrincipalId,
-        AccionAuditoria.baja_cliente,
-      );
+      await this.dispositivos.eliminarDefinitivamente(dispositivo.id, operadorPrincipalId, {
+        // La baja del cliente es la única vía que puede liberar un Dispositivo
+        // reservado por suspensión.
+        permitirBloqueado: true,
+        motivo: AccionAuditoria.baja_cliente,
+        // Se resincroniza una sola vez por Cuenta al final de la baja.
+        sincronizarContadores: false,
+      });
     }
 
     await this.prisma.transaction(async (tx) => {
