@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
@@ -10,7 +11,7 @@ import {
   IsUUID,
   Length,
 } from 'class-validator';
-import { SCOPES_INTEGRACION, type ScopeIntegracion } from '../scopes';
+import { PERMISOS_INTEGRACION, type PermisoIntegracion } from '../permisos';
 
 export class CrearCredencialIntegracionDto {
   @ApiProperty({ description: 'Empresa Revendedora dueña de la credencial.' })
@@ -25,16 +26,16 @@ export class CrearCredencialIntegracionDto {
   nombre!: string;
 
   @ApiPropertyOptional({
-    enum: SCOPES_INTEGRACION,
+    enum: PERMISOS_INTEGRACION,
     isArray: true,
-    default: [...SCOPES_INTEGRACION],
-    description: 'APIs habilitadas. Si se omite, la credencial sirve para todas.',
+    default: [...PERMISOS_INTEGRACION],
+    description: 'Operaciones habilitadas. Si se omite, se otorgan todas.',
   })
   @IsOptional()
   @IsArray()
   @ArrayUnique()
-  @IsIn([...SCOPES_INTEGRACION], { each: true })
-  scopes?: ScopeIntegracion[];
+  @IsIn([...PERMISOS_INTEGRACION], { each: true })
+  permisos?: PermisoIntegracion[];
 
   @ApiPropertyOptional({
     description:
@@ -44,6 +45,19 @@ export class CrearCredencialIntegracionDto {
   @IsOptional()
   @IsUUID()
   team_member_id?: string;
+}
+
+export class ActualizarPermisosIntegracionDto {
+  @ApiProperty({
+    enum: PERMISOS_INTEGRACION,
+    isArray: true,
+    description: 'Operaciones habilitadas para la credencial. Al menos una.',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique()
+  @IsIn([...PERMISOS_INTEGRACION], { each: true })
+  permisos!: PermisoIntegracion[];
 }
 
 export class ListarCredencialesQueryDto {

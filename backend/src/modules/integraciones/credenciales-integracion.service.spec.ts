@@ -1,8 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import {
-  ForbiddenException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { RequestContextService } from '../../common/context/request-context.service';
@@ -43,7 +40,7 @@ describe('CredencialesIntegracionService — autenticación', () => {
         id: 'cred-1',
         empresaRevendedoraId: 'empresa-1',
         teamMemberId: 'team-1',
-        scopes: ['whatsapp_bot', 'portal_cliente'],
+        permisos: ['clientes.leer', 'clientes.crear'],
         activa: true,
         revocadoEn: null,
       },
@@ -67,7 +64,7 @@ describe('CredencialesIntegracionService — autenticación', () => {
       credencial: {
         id: 'cred-1',
         empresaRevendedoraId: 'empresa-1',
-        scopes: ['whatsapp_bot'],
+        permisos: ['clientes.leer'],
         activa: false,
         revocadoEn: new Date(),
       },
@@ -80,20 +77,22 @@ describe('CredencialesIntegracionService — autenticación', () => {
     );
   });
 
-  it('rechaza una credencial que no tiene el alcance pedido', async () => {
+  it('la misma credencial sirve para cualquier API', async () => {
     const { servicio } = crearServicio({
       credencial: {
         id: 'cred-1',
         empresaRevendedoraId: 'empresa-1',
-        scopes: ['whatsapp_bot'],
+        permisos: ['clientes.leer'],
         activa: true,
         revocadoEn: null,
       },
     });
 
-    await expect(servicio.autenticar('iptv_key', 'portal_cliente')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(servicio.autenticar('iptv_key', 'portal_cliente')).resolves.toMatchObject({
+      empresaRevendedoraId: 'empresa-1',
+      credencialId: 'cred-1',
+      origen: 'base',
+    });
   });
 
   it('usa las variables de entorno cuando la key no existe en la base', async () => {
@@ -162,7 +161,13 @@ describe('CredencialesIntegracionService — creación', () => {
 
     expect(resultado.api_key).toMatch(/^iptv_[0-9a-f]{64}$/);
     expect(resultado.credencial.prefijo).toHaveLength(12);
-    expect(resultado.credencial.scopes).toEqual(['whatsapp_bot', 'portal_cliente']);
+    expect(resultado.credencial.permisos).toEqual([
+      'clientes.leer',
+      'clientes.crear',
+      'cuentas.editar',
+      'dispositivos.leer',
+      'dispositivos.gestionar',
+    ]);
     const data = create.mock.calls[0][0].data;
     expect(data.keyHash).toMatch(/^[0-9a-f]{64}$/);
     expect(data.keyHash).not.toContain(resultado.api_key);

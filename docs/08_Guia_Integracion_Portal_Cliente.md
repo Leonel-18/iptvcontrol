@@ -34,8 +34,8 @@ Por un canal seguro, se entregan dos valores:
 
 - `BASE_URL`: URL pública de IPTVControl (ej. `https://iptvcontrol.com.ar`).
 - `API_KEY`: credencial privada de **una Empresa Revendedora**, creada por el Operador Principal en
-  **Configuración → Integraciones**. Puede habilitar el Portal, el bot de WhatsApp o ambos según sus
-  `scopes`.
+  **Configuración → Integraciones**. La credencial tiene permisos seleccionables por operación; por
+  defecto se otorgan todos.
 
 **Reglas de manejo de la API key (obligatorias):**
 

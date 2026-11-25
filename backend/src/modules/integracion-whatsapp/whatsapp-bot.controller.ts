@@ -3,6 +3,7 @@ import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/auth/decorators';
 import { BotApiKeyGuard } from './bot-api-key.guard';
 import { BotErrorFilter } from './bot-error.filter';
+import { RequierePermisoIntegracion } from '../integraciones/integracion-permiso.decorator';
 import { CrearClienteBotDto } from './dto/crear-cliente-bot.dto';
 import { WhatsappBotService } from './whatsapp-bot.service';
 
@@ -23,6 +24,7 @@ export class WhatsappBotController {
 
   @Post('customers')
   @Public()
+  @RequierePermisoIntegracion('clientes.crear')
   @ApiHeader({
     name: 'x-api-key',
     description:

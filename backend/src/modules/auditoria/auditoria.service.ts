@@ -57,6 +57,7 @@ const ETIQUETAS_ACCION: Record<AccionAuditoria, string> = {
   cambio_configuracion_notificaciones: 'Cambio de configuración de notificaciones',
   alta_integracion_credencial: 'Alta de credencial de integración',
   revocacion_integracion_credencial: 'Revocación de credencial de integración',
+  cambio_permisos_integracion_credencial: 'Cambio de permisos de credencial de integración',
 };
 
 /**

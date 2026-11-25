@@ -6,6 +6,7 @@
 
 ALTER TYPE "AccionAuditoria" ADD VALUE IF NOT EXISTS 'alta_integracion_credencial';
 ALTER TYPE "AccionAuditoria" ADD VALUE IF NOT EXISTS 'revocacion_integracion_credencial';
+ALTER TYPE "AccionAuditoria" ADD VALUE IF NOT EXISTS 'cambio_permisos_integracion_credencial';
 ALTER TYPE "EntidadAuditada" ADD VALUE IF NOT EXISTS 'IntegracionCredencial';
 
 CREATE TABLE "integracion_credencial" (
@@ -15,7 +16,7 @@ CREATE TABLE "integracion_credencial" (
     "nombre" VARCHAR(80) NOT NULL,
     "key_hash" VARCHAR(64) NOT NULL,
     "key_prefix" VARCHAR(16) NOT NULL,
-    "scopes" TEXT[] NOT NULL DEFAULT ARRAY['whatsapp_bot', 'portal_cliente']::TEXT[],
+    "permisos" TEXT[] NOT NULL DEFAULT ARRAY['clientes.leer', 'clientes.crear', 'cuentas.editar', 'dispositivos.leer', 'dispositivos.gestionar']::TEXT[],
     "activa" BOOLEAN NOT NULL DEFAULT true,
     "team_member_id" UUID,
     "ultimo_uso_en" TIMESTAMP(3),

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Plus, RotateCw, Trash2 } from 'lucide-react';
+import { KeyRound, Plus, RotateCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { api, ApiError, type Paginado } from '@/lib/api';
@@ -7,7 +7,7 @@ import { copiarAlPortapapeles, formatearFechaHora } from '@/lib/utils';
 import type {
   IntegrationCredential,
   IntegrationCredentialCreated,
-  IntegrationScope,
+  IntegrationPermiso,
   Reseller,
   TeamMember,
 } from '@/lib/types';
@@ -33,20 +33,42 @@ import {
 } from '@/components/ui/overlays';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
-const SCOPES: { value: IntegrationScope; label: string; help: string }[] = [
+const PERMISOS: { value: IntegrationPermiso; label: string; help: string }[] = [
   {
-    value: 'whatsapp_bot',
-    label: 'Bot de WhatsApp',
-    help: 'Alta de Clientes Finales desde un sistema externo.',
+    value: 'clientes.leer',
+    label: 'Consultar clientes y credenciales',
+    help: 'Portal de Cliente: sesión por DNI, cuentas y dispositivos del cliente.',
   },
   {
-    value: 'portal_cliente',
-    label: 'Portal de Cliente',
-    help: 'Consulta y administración de credenciales y dispositivos por DNI.',
+    value: 'clientes.crear',
+    label: 'Crear clientes y cuentas',
+    help: 'Bot de WhatsApp: alta de Clientes Finales y provisión de la Cuenta.',
+  },
+  {
+    value: 'cuentas.editar',
+    label: 'Editar contraseña, PIN y servicios',
+    help: 'Portal de Cliente: cambios sobre cuentas exclusivas.',
+  },
+  {
+    value: 'dispositivos.leer',
+    label: 'Consultar dispositivos',
+    help: 'Portal de Cliente: inventario real de la Cuenta en el proveedor.',
+  },
+  {
+    value: 'dispositivos.gestionar',
+    label: 'Gestionar dispositivos',
+    help: 'Portal de Cliente: reclamar un equipo o darlo de baja.',
   },
 ];
 
-const SCOPES_TODOS: IntegrationScope[] = SCOPES.map((scope) => scope.value);
+const PERMISOS_TODOS: IntegrationPermiso[] = PERMISOS.map((permiso) => permiso.value);
+
+const resumenPermisos = (permisos: IntegrationPermiso[]): string => {
+  if (permisos.length === PERMISOS_TODOS.length) return 'Todos';
+  return permisos
+    .map((permiso) => PERMISOS.find((item) => item.value === permiso)?.label ?? permiso)
+    .join(' · ');
+};
 
 const baseUrl = () => {
   const configurada = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
@@ -56,8 +78,8 @@ const baseUrl = () => {
 /**
  * Credenciales de integración por Empresa Revendedora.
  *
- * Una key sirve para cualquier API de integración habilitada por sus `scopes`.
- * La key completa se muestra una única vez al crearla o rotarla.
+ * Cada credencial tiene permisos seleccionables por operación (consultar,
+ * crear, editar, gestionar). La key completa se muestra una sola vez.
  */
 export const IntegrationsSettings = () => {
   const queryClient = useQueryClient();
@@ -66,10 +88,12 @@ export const IntegrationsSettings = () => {
   const [creada, setCreada] = useState<IntegrationCredentialCreated | null>(null);
   const [aRevocar, setARevocar] = useState<IntegrationCredential | null>(null);
   const [aRotar, setARotar] = useState<IntegrationCredential | null>(null);
+  const [editandoPermisos, setEditandoPermisos] = useState<IntegrationCredential | null>(null);
+  const [permisosEdicion, setPermisosEdicion] = useState<IntegrationPermiso[]>([]);
 
   const [empresaId, setEmpresaId] = useState('');
   const [nombre, setNombre] = useState('');
-  const [scopes, setScopes] = useState<IntegrationScope[]>(SCOPES_TODOS);
+  const [permisos, setPermisos] = useState<IntegrationPermiso[]>(PERMISOS_TODOS);
   const [teamMemberId, setTeamMemberId] = useState('');
   const [error, setError] = useState('');
 
@@ -105,7 +129,7 @@ export const IntegrationsSettings = () => {
         body: {
           empresa_revendedora_id: empresaId,
           nombre: nombre.trim(),
-          scopes,
+          permisos,
           team_member_id: teamMemberId || undefined,
         },
       }),
@@ -115,7 +139,7 @@ export const IntegrationsSettings = () => {
       setNombre('');
       setTeamMemberId('');
       setEmpresaId('');
-      setScopes(SCOPES_TODOS);
+      setPermisos(PERMISOS_TODOS);
       setError('');
       void invalidar();
     },
@@ -146,6 +170,20 @@ export const IntegrationsSettings = () => {
     onError: (causa: ApiError) => toast.error(causa.message),
   });
 
+  const actualizarPermisos = useMutation({
+    mutationFn: ({ id, permisos: nuevos }: { id: string; permisos: IntegrationPermiso[] }) =>
+      api<IntegrationCredential>(`/integrations/credentials/${id}/permissions`, {
+        metodo: 'PATCH',
+        body: { permisos: nuevos },
+      }),
+    onSuccess: () => {
+      toast.success('Permisos actualizados.');
+      setEditandoPermisos(null);
+      void invalidar();
+    },
+    onError: (causa: ApiError) => toast.error(causa.message),
+  });
+
   const opcionesEmpresas = useMemo(
     () =>
       (resellers.data?.data ?? []).map((reseller) => ({
@@ -165,18 +203,29 @@ export const IntegrationsSettings = () => {
     [teamMembers.data],
   );
 
-  const alternarScope = (scope: IntegrationScope, activo: boolean) => {
-    setScopes((actuales) =>
-      activo ? [...new Set([...actuales, scope])] : actuales.filter((item) => item !== scope),
-    );
-  };
-
   const enviar = () => {
     if (!empresaId) return setError('Seleccione la Empresa Revendedora.');
     if (nombre.trim().length < 2) return setError('Ingrese un nombre de al menos 2 caracteres.');
-    if (scopes.length === 0) return setError('Seleccione al menos una API.');
+    if (permisos.length === 0) return setError('Seleccione al menos un permiso.');
     setError('');
     crear.mutate();
+  };
+
+  const alternarPermiso = (permiso: IntegrationPermiso, activo: boolean) => {
+    setPermisos((actuales) =>
+      activo ? [...new Set([...actuales, permiso])] : actuales.filter((item) => item !== permiso),
+    );
+  };
+
+  const alternarPermisoEdicion = (permiso: IntegrationPermiso, activo: boolean) => {
+    setPermisosEdicion((actuales) =>
+      activo ? [...new Set([...actuales, permiso])] : actuales.filter((item) => item !== permiso),
+    );
+  };
+
+  const abrirPermisos = (credencial: IntegrationCredential) => {
+    setEditandoPermisos(credencial);
+    setPermisosEdicion(credencial.permisos);
   };
 
   const copiarKey = async () => {
@@ -193,8 +242,9 @@ export const IntegrationsSettings = () => {
           <div className="space-y-1">
             <CardTitle>Credenciales de integración</CardTitle>
             <p className="text-sm texto-suave">
-              Una key por Empresa Revendedora, usable en el bot de WhatsApp, el Portal de Cliente o
-              cualquier integración futura. La key completa se muestra una sola vez.
+              Una key por Empresa Revendedora, con permisos seleccionables por operación. Sirve para
+              el bot de WhatsApp, el Portal de Cliente y futuras integraciones. La key completa se
+              muestra una sola vez.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -234,7 +284,7 @@ export const IntegrationsSettings = () => {
                 <TR>
                   <TH>Empresa</TH>
                   <TH>Credencial</TH>
-                  <TH>APIs</TH>
+                  <TH>Permisos</TH>
                   <TH>Estado</TH>
                   <TH>Último uso</TH>
                   <TH>Creada</TH>
@@ -259,13 +309,14 @@ export const IntegrationsSettings = () => {
                       </div>
                     </TD>
                     <TD>
-                      <div className="flex flex-wrap gap-1">
-                        {credencial.scopes.map((scope) => (
-                          <Badge key={scope} tone="neutral">
-                            {SCOPES.find((item) => item.value === scope)?.label ?? scope}
-                          </Badge>
-                        ))}
-                      </div>
+                      <span
+                        className="text-xs texto-suave"
+                        title={resumenPermisos(credencial.permisos)}
+                      >
+                        {credencial.permisos.length === PERMISOS_TODOS.length
+                          ? 'Todos'
+                          : `${credencial.permisos.length} de ${PERMISOS_TODOS.length}`}
+                      </span>
                     </TD>
                     <TD>
                       <Badge tone={credencial.activa ? 'success' : 'neutral'}>
@@ -285,6 +336,14 @@ export const IntegrationsSettings = () => {
                     <TD align="right">
                       {credencial.activa ? (
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => abrirPermisos(credencial)}
+                          >
+                            <ShieldCheck />
+                            Permisos
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -346,20 +405,20 @@ export const IntegrationsSettings = () => {
             </Field>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">APIs habilitadas</p>
-              {SCOPES.map((scope) => (
+              <p className="text-sm font-medium">Permisos</p>
+              {PERMISOS.map((permiso) => (
                 <label
-                  key={scope.value}
+                  key={permiso.value}
                   className="flex items-start justify-between gap-3 rounded border p-3"
                 >
                   <span>
-                    <span className="text-sm font-medium">{scope.label}</span>
-                    <span className="mt-0.5 block text-xs texto-suave">{scope.help}</span>
+                    <span className="text-sm font-medium">{permiso.label}</span>
+                    <span className="mt-0.5 block text-xs texto-suave">{permiso.help}</span>
                   </span>
                   <Switch
-                    checked={scopes.includes(scope.value)}
-                    onCheckedChange={(activo) => alternarScope(scope.value, activo)}
-                    aria-label={`Habilitar ${scope.label}`}
+                    checked={permisos.includes(permiso.value)}
+                    onCheckedChange={(activo) => alternarPermiso(permiso.value, activo)}
+                    aria-label={`Habilitar ${permiso.label}`}
                   />
                 </label>
               ))}
@@ -481,6 +540,60 @@ export const IntegrationsSettings = () => {
           el integrador.
         </Alert>
       </ConfirmDialog>
+
+      <Dialog
+        open={Boolean(editandoPermisos)}
+        onOpenChange={(abierto) => !abierto && setEditandoPermisos(null)}
+      >
+        <DialogContent
+          titulo="Permisos de la credencial"
+          descripcion={`Empresa: ${editandoPermisos?.empresa.razon_social ?? ''}. Se aplican al siguiente request, sin rotar la key.`}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
+              {PERMISOS.map((permiso) => (
+                <label
+                  key={permiso.value}
+                  className="flex items-start justify-between gap-3 rounded border p-3"
+                >
+                  <span>
+                    <span className="text-sm font-medium">{permiso.label}</span>
+                    <span className="mt-0.5 block text-xs texto-suave">{permiso.help}</span>
+                  </span>
+                  <Switch
+                    checked={permisosEdicion.includes(permiso.value)}
+                    onCheckedChange={(activo) => alternarPermisoEdicion(permiso.value, activo)}
+                    aria-label={`Habilitar ${permiso.label}`}
+                  />
+                </label>
+              ))}
+            </div>
+
+            {permisosEdicion.length === 0 ? (
+              <Alert tone="warning">Seleccione al menos un permiso.</Alert>
+            ) : null}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setEditandoPermisos(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                disabled={permisosEdicion.length === 0 || actualizarPermisos.isPending}
+                onClick={() => {
+                  if (!editandoPermisos) return;
+                  actualizarPermisos.mutate({
+                    id: editandoPermisos.id,
+                    permisos: permisosEdicion,
+                  });
+                }}
+              >
+                {actualizarPermisos.isPending ? 'Guardando…' : 'Guardar permisos'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
