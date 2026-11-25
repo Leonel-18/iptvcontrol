@@ -2,13 +2,16 @@
  * =============================================================================
  * Cliente HTTP del panel
  * =============================================================================
- * Un único punto de salida hacia el backend. Concentra tres cosas que si se
+ * Un único punto de salida hacia el backend. Concentra cuatro cosas que si se
  * repartieran por los componentes se desincronizarían enseguida:
  *
  *  1. El token de Auth0 en cada request.
  *  2. La traducción de errores a mensajes en español listos para mostrar.
  *  3. La descarga de CSV, que es el mismo endpoint con `format=csv`
  *     (docs/IPTVControl_URL_Routing_Convention.md, sección 5.2).
+ *  4. El aviso central de sesión inválida: un 401 del backend significa que el
+ *     token ya no es válido, y eso lo resuelve el proveedor de sesión, no cada
+ *     pantalla por separado.
  */
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
@@ -18,6 +21,35 @@ let obtenerToken: (() => Promise<string | null>) | null = null;
 
 export const registrarProveedorDeToken = (proveedor: () => Promise<string | null>): void => {
   obtenerToken = proveedor;
+};
+
+/**
+ * Aviso de pérdida de autenticación. Lo inyecta el proveedor de sesión.
+ *
+ * Se dispara una sola vez por carga de página aunque lleguen varios 401 en
+ * paralelo (una por cada consulta en vuelo): el usuario debe ver una única
+ * redirección, no una por request.
+ */
+type ManejadorSesionExpirada = () => void;
+
+let manejarSesionExpirada: ManejadorSesionExpirada | null = null;
+let sesionExpiradaNotificada = false;
+
+export const registrarManejadorDeSesionExpirada = (
+  manejador: ManejadorSesionExpirada | null,
+): void => {
+  manejarSesionExpirada = manejador;
+  sesionExpiradaNotificada = false;
+};
+
+const notificarSesionExpirada = (): void => {
+  if (sesionExpiradaNotificada) return;
+  sesionExpiradaNotificada = true;
+  try {
+    manejarSesionExpirada?.();
+  } catch {
+    // Si el manejador falla, igual se propaga el ApiError original.
+  }
 };
 
 /** Error de API con el mensaje ya listo para el usuario. */
@@ -66,14 +98,16 @@ const construirUrl = (ruta: string, params?: Opciones['params']): string => {
   return cadena ? `${url}?${cadena}` : url;
 };
 
-const armarCabeceras = async (conCuerpo: boolean): Promise<HeadersInit> => {
+const armarCabeceras = async (
+  conCuerpo: boolean,
+): Promise<{ cabeceras: HeadersInit; conToken: boolean }> => {
   const cabeceras: Record<string, string> = { Accept: 'application/json' };
   if (conCuerpo) cabeceras['Content-Type'] = 'application/json';
 
   const token = obtenerToken ? await obtenerToken() : null;
   if (token) cabeceras.Authorization = `Bearer ${token}`;
 
-  return cabeceras;
+  return { cabeceras, conToken: Boolean(token) };
 };
 
 /** Mensajes para los casos donde el backend no dice nada útil. */
@@ -100,10 +134,13 @@ export const api = async <T>(ruta: string, opciones: Opciones = {}): Promise<T> 
   const { metodo = 'GET', body, params, signal } = opciones;
 
   let respuesta: Response;
+  let conToken = false;
   try {
+    const cabeceras = await armarCabeceras(body !== undefined);
+    conToken = cabeceras.conToken;
     respuesta = await fetch(construirUrl(ruta, params), {
       method: metodo,
-      headers: await armarCabeceras(body !== undefined),
+      headers: cabeceras.cabeceras,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal,
     });
@@ -119,6 +156,11 @@ export const api = async <T>(ruta: string, opciones: Opciones = {}): Promise<T> 
   const datos = texto ? (JSON.parse(texto) as Record<string, unknown>) : {};
 
   if (!respuesta.ok) {
+    // 401 con token adjunto = el backend confirmó que la sesión ya no sirve.
+    // Sin token no se avisa: puede ser una request anterior al registro del
+    // proveedor de token, y desloguear por eso sería un falso positivo.
+    if (respuesta.status === 401 && conToken) notificarSesionExpirada();
+
     const mensaje = Array.isArray(datos.message)
       ? (datos.message as string[]).join(' ')
       : ((datos.message as string) ?? mensajePorEstado(respuesta.status));
@@ -138,11 +180,13 @@ export const descargarCsv = async (
   params: Opciones['params'],
   nombreArchivo: string,
 ): Promise<void> => {
+  const { cabeceras, conToken } = await armarCabeceras(false);
   const respuesta = await fetch(construirUrl(ruta, { ...params, format: 'csv' }), {
-    headers: await armarCabeceras(false),
+    headers: cabeceras,
   });
 
   if (!respuesta.ok) {
+    if (respuesta.status === 401 && conToken) notificarSesionExpirada();
     throw new ApiError(respuesta.status, mensajePorEstado(respuesta.status));
   }
 

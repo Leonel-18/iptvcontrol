@@ -2,6 +2,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { AlertTriangle, LogIn } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
+import { ApiError } from '@/lib/api';
 import { useSesion } from '@/lib/session';
 import { Alert, Button, Skeleton } from '../ui/primitives';
 
@@ -97,6 +98,31 @@ const SinAcceso = ({ mensaje }: { mensaje: string }) => {
   );
 };
 
+/**
+ * No se pudo validar el acceso y el motivo no es falta de permisos (backend
+ * caído, error de red). No se cierra la sesión: se ofrece reintentar.
+ */
+const ErrorDeValidacion = ({ mensaje }: { mensaje: string }) => (
+  <div className="grid min-h-full place-items-center px-4 py-10">
+    <div className="w-full max-w-md space-y-4">
+      <Alert tone="warning" titulo="No pudimos validar su acceso">
+        {mensaje}
+      </Alert>
+      <Button variant="secondary" onClick={() => window.location.reload()}>
+        Reintentar
+      </Button>
+    </div>
+  </div>
+);
+
+/** 401: el backend confirmó que el token ya no es válido. */
+const esSesionInvalida = (error: Error): boolean =>
+  error instanceof ApiError && error.status === 401;
+
+/** 403: autenticado, pero sin alta/permisos o con la empresa suspendida. */
+const esFaltaDePermiso = (error: Error): boolean =>
+  error instanceof ApiError && error.status === 403;
+
 /** Exige sesión válida con Team Member habilitado. */
 export const RequiereSesion = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth0();
@@ -107,12 +133,26 @@ export const RequiereSesion = ({ children }: { children: ReactNode }) => {
   if (cargando) return <Cargando mensaje="Cargando su panel…" />;
 
   if (error) {
+    // La sesión ya se está limpiando y redirigiendo desde `lib/session.tsx`:
+    // no corresponde mostrar "no tiene acceso habilitado".
+    if (esSesionInvalida(error)) {
+      return <Cargando mensaje="Su sesión expiró. Redirigiendo al inicio…" />;
+    }
+
+    if (esFaltaDePermiso(error)) {
+      return (
+        <SinAcceso
+          mensaje={
+            error.message ||
+            'No pudimos validar su acceso. Verifique con el operador principal que su usuario esté dado de alta.'
+          }
+        />
+      );
+    }
+
     return (
-      <SinAcceso
-        mensaje={
-          error.message ||
-          'No pudimos validar su acceso. Verifique con el operador principal que su usuario esté dado de alta.'
-        }
+      <ErrorDeValidacion
+        mensaje={error.message || 'No pudimos validar su acceso. Intente nuevamente.'}
       />
     );
   }
