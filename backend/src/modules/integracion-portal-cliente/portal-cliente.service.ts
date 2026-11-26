@@ -185,13 +185,13 @@ export class PortalClienteService {
   async suspenderCliente(dni: string) {
     const cliente = await this.buscarCliente(dni);
     const actualizado = await this.clientes.suspender(cliente.id);
-    return { cliente: actualizado };
+    return { cliente: this.mapDetalleResumen(actualizado) };
   }
 
   async reactivarCliente(dni: string) {
     const cliente = await this.buscarCliente(dni);
     const actualizado = await this.clientes.reactivar(cliente.id);
-    return { cliente: actualizado };
+    return { cliente: this.mapDetalleResumen(actualizado) };
   }
 
   async darDeBajaCliente(dni: string, confirmarBajaDefinitiva = false) {
@@ -206,7 +206,7 @@ export class PortalClienteService {
     }
     const cliente = await this.buscarCliente(dni);
     const actualizado = await this.clientes.darDeBaja(cliente.id);
-    return { cliente: actualizado };
+    return { cliente: this.mapDetalleResumen(actualizado) };
   }
 
   /**
@@ -502,6 +502,33 @@ export class PortalClienteService {
       estado: cliente.estado,
       tipo_alta: cliente.tipoAlta,
       creado_en: cliente.creadoEn,
+    };
+  }
+
+  /** Resumen seguro del detalle que devuelven las transiciones del Cliente. */
+  private mapDetalleResumen(cliente: {
+    id: string;
+    numero_cliente?: number;
+    nombre?: string | null;
+    apellido?: string | null;
+    nombre_completo?: string;
+    dni?: string | null;
+    estado: string;
+    tipo_alta?: string;
+    creado_en?: Date;
+  }) {
+    return {
+      id: cliente.id,
+      numero_cliente: cliente.numero_cliente ?? null,
+      nombre: cliente.nombre ?? null,
+      apellido: cliente.apellido ?? null,
+      nombre_completo:
+        cliente.nombre_completo ??
+        [cliente.nombre, cliente.apellido].filter(Boolean).join(' '),
+      dni: cliente.dni ?? null,
+      estado: cliente.estado,
+      tipo_alta: cliente.tipo_alta ?? null,
+      creado_en: cliente.creado_en ?? null,
     };
   }
 
