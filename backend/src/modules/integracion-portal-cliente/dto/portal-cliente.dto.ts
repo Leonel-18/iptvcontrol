@@ -1,5 +1,20 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsString, Length, Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import {
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
+
+const booleanoDeTexto = ({ value }: { value: unknown }): unknown => {
+  if (value === 'true' || value === true) return true;
+  if (value === 'false' || value === false) return false;
+  return value;
+};
 
 /**
  * DTOs de la integración del Portal de Cliente.
@@ -16,33 +31,37 @@ export class SesionPortalDto {
 }
 
 export class CambiarPasswordPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
-
   @ApiProperty({ description: 'Contraseña numérica nueva (8 a 20 dígitos).' })
   @Matches(/^\d{8,20}$/, { message: 'La contraseña debe tener entre 8 y 20 dígitos numéricos.' })
   password!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio en Cuentas compartidas. Confirma que la contraseña nueva se aplicará a ' +
+      'TODOS los Clientes Finales de la Cuenta. En exclusivas no hace falta.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_cambio_compartida?: boolean;
 }
 
 export class CambiarPinPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
-
   @ApiProperty({ description: 'PIN numérico nuevo (6 dígitos).' })
   @Matches(/^\d{6}$/, { message: 'El PIN debe tener exactamente 6 dígitos numéricos.' })
   pin!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio en Cuentas compartidas. Confirma que el PIN aplica a TODOS los Clientes Finales.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_cambio_compartida?: boolean;
 }
 
 export class CambiarServiciosPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
-
   @ApiProperty({
     type: [String],
     description: 'Códigos de servicio nuevos. Se validan contra lo contratado por el Operador.',
@@ -51,17 +70,19 @@ export class CambiarServiciosPortalDto {
   @ArrayUnique()
   @IsString({ each: true })
   servicios!: string[];
-}
 
-export class SincronizarDispositivosPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio en Cuentas compartidas. Confirma que el contenido aplica a TODOS los Clientes Finales.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_cambio_compartida?: boolean;
 }
 
 export class ReclamarDispositivoPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
+  @ApiProperty({ description: 'DNI del Cliente Final que recibe el Dispositivo.' })
   @IsString()
   @Length(1, 20)
   dni!: string;
@@ -70,11 +91,4 @@ export class ReclamarDispositivoPortalDto {
   @IsString()
   @Length(1, 60)
   proveedor_device_id!: string;
-}
-
-export class BajaDispositivoPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
 }

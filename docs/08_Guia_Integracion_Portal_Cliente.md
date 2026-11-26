@@ -17,11 +17,12 @@ credencial de integración) pueda:
 
 1. **Consultar** sus credenciales (`usuario`, `password`, `pin`), sus **servicios** y sus
    **dispositivos**.
-2. En **cuentas exclusivas**, **administrar** su servicio: cambiar contraseña, PIN y servicios, y
-   gestionar sus dispositivos (asignar los detectados en el Proveedor y dar de baja los propios).
+2. En **cualquier cuenta**, **administrar** contraseña, PIN y servicios por el
+   `proveedor_cuenta_id`. En cuentas compartidas se exige confirmación porque afecta a todos los
+   Clientes Finales. La gestión de dispositivos también usa el ID de la Cuenta en el Proveedor.
 
-En **cuentas compartidas** (más de un Cliente Final), el portal es **solo lectura**: el Cliente ve
-únicamente los dispositivos que la Empresa Revendedora le asignó y **no puede editar nada**.
+En **cuentas compartidas** el Cliente ve únicamente los dispositivos que la Empresa Revendedora le
+asignó.
 
 No existe modo de prueba o `dry-run`. Las operaciones de escritura son **reales**: cambian datos en
 IPTVControl y en el Proveedor (SENSA).
@@ -56,7 +57,7 @@ Por un canal seguro, se entregan dos valores:
 | Cliente Final | La persona. Se identifica por su **DNI** dentro de la Empresa Revendedora. |
 | Cuenta | La unidad de servicio IPTV. Tiene `usuario`, `password` y `pin`. |
 | Cuenta **exclusiva** | Un único Cliente Final. El portal permite **editar**. |
-| Cuenta **compartida** | Varios Clientes Finales comparten la misma Cuenta y credenciales. El portal es **solo lectura**. |
+| Cuenta **compartida** | Varios Clientes Finales comparten la misma Cuenta y credenciales. Las ediciones de contraseña/PIN/servicios requieren confirmación explícita. |
 | Servicios | Paquetes de contenido (códigos). Se validan contra lo contratado por el Operador Principal. |
 | Dispositivo | Equipo del Cliente. En SENSA se identifica por `proveedor_device_id`. |
 | Incidencia | Dispositivo detectado en el Proveedor **sin dueño asignado** en IPTVControl. El Cliente (cuenta exclusiva) puede reclamarlo. |
@@ -103,8 +104,9 @@ portal usa **HTTP estándar**. El integrador debe evaluar el **status code**.
 | `200` | OK | Procesar la respuesta |
 | `400` | Datos inválidos / combinación no permitida | Corregir el request; mostrar el mensaje |
 | `401` | API key inválida/ausente | Error de integración (no del usuario) |
-| `403` | Regla de negocio: cuenta compartida, cuenta ajena, cuenta inactiva | Mostrar en modo lectura; no reintentar |
+| `403` | Regla de negocio: cuenta ajena, cuenta inactiva o escritura no permitida | Mostrar en modo lectura; no reintentar |
 | `404` | DNI o cuenta o dispositivo inexistente | Mostrar "no encontrado" |
+| `409` | `SharedAccountConfirmationRequired`: falta confirmar un cambio de contraseña en cuenta compartida | Mostrar la advertencia y reenviar con `confirmar_cambio_compartida: true` |
 | `429` | Rate limit | Esperar y reintentar con backoff |
 | `503` | Integración no habilitada o dependencia caída | Reintentar más tarde |
 | `500` | Error inesperado | Reintentar; avisar a soporte con fecha/hora |
@@ -113,9 +115,9 @@ El cuerpo de error sigue el formato de NestJS:
 
 ```json
 {
-  "statusCode": 403,
-  "error": "Forbidden",
-  "message": "Esta Cuenta es compartida: el portal sólo permite consultar su información.",
+  "statusCode": 409,
+  "error": "SharedAccountConfirmationRequired",
+  "message": "Esta Cuenta es compartida: cambiar la contraseña afecta a TODOS sus Clientes Finales. Reenviar el request con \"confirmar_cambio_compartida\": true para continuar.",
   "path": "/api/v1/integration/portal-cliente/accounts/.../password",
   "timestamp": "2026-10-14T13:59:06.355Z",
   "requestId": "f04d0c80-eb18-4850-bc05-61c2c94276e4"
@@ -168,6 +170,8 @@ x-api-key: <API_KEY>
       "servicios": "1|2|3|4|5|6|7",
       "servicios_nombres": ["Básico", "..."],
       "puede_editar": true,
+      "puede_cambiar_password": true,
+      "requiere_confirmacion_cambio_compartida": false,
       "dispositivos": [
         {
           "id": "b1e0c3...",
@@ -190,7 +194,9 @@ x-api-key: <API_KEY>
 | Campo | Descripción |
 |---|---|
 | `es_exclusiva` | `true` = exclusiva, `false` = compartida |
-| `puede_editar` | `true` **solo** si es exclusiva, del titular y la cuenta está activa. **El portal debe basarse en este campo para mostrar u ocultar las acciones de edición.** |
+| `puede_editar` | `true` si la Cuenta está activa. Las ediciones usan el `proveedor_cuenta_id`. |
+| `puede_cambiar_password` | `true` si la Cuenta está activa |
+| `requiere_confirmacion_cambio_compartida` | `true` en Cuentas compartidas: antes de cambiar contraseña/PIN/servicios hay que confirmar |
 | `es_prueba` / `prueba_vence_en` | Si es cuenta de prueba, avisar al usuario que se cierra sola en esa fecha |
 | `aislada` | Cuenta compartida que no recibe clientes nuevos temporalmente |
 | `servicios` | Cadena de códigos (ej. `"1|3|5"`) para enviar en el cambio de servicios |
@@ -199,145 +205,110 @@ x-api-key: <API_KEY>
 
 **Errores:** `404` si no hay un Cliente Final con ese DNI. `429` si se supera el límite (30/min).
 
-> **Importante:** en cuentas compartidas los `dispositivos` que devuelve `session` son **solo los
-> asignados al Cliente**; no hay endpoint de dispositivos para compartidas.
+> **Importante:** las operaciones sobre una Cuenta usan el `proveedor_cuenta_id` que devuelve
+> `session` (ej. `3000002`), no el `id` interno ni el DNI. El DNI solo se usa para `session` y para
+> asignar un dispositivo detectado a un Cliente.
 
 ---
 
-### 6.2. `PATCH /accounts/{cuentaId}/password` — Cambiar contraseña
+### 6.2. `PATCH /accounts/{proveedorCuentaId}/password` — Cambiar contraseña
 
-Solo cuentas exclusivas del titular.
+Funciona en cuentas exclusivas y compartidas. La Cuenta se identifica por su **ID en el Proveedor**
+(ej. `3000002`), no por el UUID interno ni por el DNI.
 
 ```http
-PATCH /api/v1/integration/portal-cliente/accounts/{cuentaId}/password
+PATCH /api/v1/integration/portal-cliente/accounts/{proveedorCuentaId}/password
 Content-Type: application/json
 x-api-key: <API_KEY>
 
-{ "dni": "30123456", "password": "87654321" }
+{ "password": "87654321" }
 ```
 
 - `password`: numérica, **8 a 20 dígitos**.
-- Se aplica en SENSA y en IPTVControl.
-- `200` → `{ "id": "<cuentaId>" }`.
+- En **cuenta exclusiva**: `200` con `cuenta_compartida: false`.
+- En **cuenta compartida**: primero responde **409** `SharedAccountConfirmationRequired`. Reenviar
+  con `"confirmar_cambio_compartida": true`; la respuesta incluye `cuenta_compartida: true` y
+  `advertencia`, porque la contraseña nueva afecta a **todos** los Clientes Finales.
 
 ---
 
-### 6.3. `PATCH /accounts/{cuentaId}/pin` — Cambiar PIN
+### 6.3. `PATCH /accounts/{proveedorCuentaId}/pin` — Cambiar PIN
 
-Solo cuentas exclusivas del titular.
+Funciona en cuentas exclusivas y compartidas.
 
 ```http
-PATCH /api/v1/integration/portal-cliente/accounts/{cuentaId}/pin
+PATCH /api/v1/integration/portal-cliente/accounts/{proveedorCuentaId}/pin
 x-api-key: <API_KEY>
 
-{ "dni": "30123456", "pin": "654321" }
+{ "pin": "654321" }
 ```
 
 - `pin`: numérico, **6 dígitos**.
-- Se aplica en SENSA y en IPTVControl. `200` → `{ "id": "<cuentaId>" }`.
+- En compartida, reenviar con `"confirmar_cambio_compartida": true`.
+- `200` con `cuenta_compartida` y `advertencia`.
 
 ---
 
-### 6.4. `PATCH /accounts/{cuentaId}/services` — Cambiar servicios
+### 6.4. `PATCH /accounts/{proveedorCuentaId}/services` — Cambiar servicios
 
-Solo cuentas exclusivas del titular.
+Funciona en cuentas exclusivas y compartidas.
 
 ```http
-PATCH /api/v1/integration/portal-cliente/accounts/{cuentaId}/services
+PATCH /api/v1/integration/portal-cliente/accounts/{proveedorCuentaId}/services
 x-api-key: <API_KEY>
 
-{ "dni": "30123456", "servicios": ["1", "3", "5"] }
+{ "servicios": ["1", "3", "5"] }
 ```
 
 - Se validan contra lo contratado por el Operador Principal. El básico (`"1"`) se agrega siempre.
-- `200` → devuelve la Cuenta actualizada (sin credenciales).
+- En compartida, reenviar con `"confirmar_cambio_compartida": true`.
 - `400` si algún servicio no está contratado.
 
 ---
 
-### 6.5. `POST /accounts/{cuentaId}/devices/sync` — Ver dispositivos del Proveedor
+### 6.5. `POST /accounts/{proveedorCuentaId}/devices/sync` — Ver dispositivos del Proveedor
 
-Solo cuentas exclusivas del titular. Consulta el inventario real de la Cuenta en SENSA (como el
-botón "Consultar dispositivos en el proveedor" del panel).
+Consulta el inventario real de la Cuenta en SENSA. Funciona en exclusivas y compartidas.
 
 ```http
-POST /api/v1/integration/portal-cliente/accounts/{cuentaId}/devices/sync
+POST /api/v1/integration/portal-cliente/accounts/{proveedorCuentaId}/devices/sync
 x-api-key: <API_KEY>
-
-{ "dni": "30123456" }
 ```
 
-**Response 200 (resumida)**
-
-```json
-{
-  "cuenta_id": "...",
-  "proveedor_cuenta_id": "13000002",
-  "limite_dispositivos": 3,
-  "sincronizado_en": "2026-10-14T13:00:00.000Z",
-  "dispositivos": [
-    {
-      "proveedor_device_id": "40001234",
-      "tipo": "fijo",
-      "clasificacion": "vinculado",
-      "dispositivo_id": "b1e0c3...",
-      "cliente_final": { "id": "...", "numero_cliente": 1042, "nombre": "Juan Pérez" }
-    },
-    {
-      "proveedor_device_id": "40009999",
-      "tipo": "movil",
-      "clasificacion": "desconocido",
-      "incidencia_id": "d4f2...",
-      "mac": "AA:BB:CC:DD:EE:FF",
-      "modelo": "Celular",
-      "ventana_activa": false
-    }
-  ]
-}
-```
-
-- `clasificacion: "vinculado"` → el equipo ya tiene dueño (es del Cliente).
-- `clasificacion: "desconocido"` + `incidencia_id` → equipo detectado **sin dueño**, reclamable.
+Sin body. Devuelve `clasificacion: "vinculado"` o `"desconocido"` (este último con `incidencia_id`).
 
 ---
 
-### 6.6. `POST /accounts/{cuentaId}/devices/claim` — Reclamar un dispositivo
+### 6.6. `POST /accounts/{proveedorCuentaId}/devices/claim` — Reclamar un dispositivo
 
-Solo cuentas exclusivas del titular. Asigna al titular un dispositivo detectado sin dueño.
+Asigna un dispositivo detectado sin dueño a un Cliente Final. El DNI sigue siendo necesario porque
+define el destinatario.
 
 ```http
-POST /api/v1/integration/portal-cliente/accounts/{cuentaId}/devices/claim
+POST /api/v1/integration/portal-cliente/accounts/{proveedorCuentaId}/devices/claim
 x-api-key: <API_KEY>
 
 { "dni": "30123456", "proveedor_device_id": "40009999" }
 ```
 
-- `proveedor_device_id` se obtiene del `sync` (un equipo con `clasificacion: "desconocido"`).
-- Si el equipo era parte de una venta reservada, respeta los cupos comerciales.
-- `200` → `{ "id": "<incidenciaId>", "estado": "...", "resolucion": "vinculado", "dispositivo_id": "..." }`.
-- `404` si no hay una incidencia **pendiente** con ese `proveedor_device_id` (ya fue vinculado o no existe).
+- `proveedor_device_id` se obtiene del `sync`.
+- En una compartida, el Cliente debe pertenecer a esa Cuenta (venta o dispositivo).
+- `404` si no hay una incidencia pendiente con ese ID.
+- `200` → incidencia resuelta y `dispositivo_id` vinculado.
 
 ---
 
-### 6.7. `POST /accounts/{cuentaId}/devices/{dispositivoId}/remove` — Dar de baja un dispositivo propio
+### 6.7. `POST /accounts/{proveedorCuentaId}/devices/{proveedorDeviceId}/remove` — Dar de baja un dispositivo
 
-Solo cuentas exclusivas del titular. **IRREVERSIBLE.**
+**IRREVERSIBLE.** Funciona en exclusivas y compartidas; usa el ID del dispositivo en el Proveedor.
 
 ```http
-POST /api/v1/integration/portal-cliente/accounts/{cuentaId}/devices/{dispositivoId}/remove
+POST /api/v1/integration/portal-cliente/accounts/{proveedorCuentaId}/devices/{proveedorDeviceId}/remove
 x-api-key: <API_KEY>
-
-{ "dni": "30123456" }
 ```
 
-- Elimina el Dispositivo en el **Proveedor** y borra la fila local. Queda registrado en el Audit Log.
-- **El portal debe mostrar una advertencia explícita de que es irreversible antes de llamar.**
-- `200` → `{ "id": "<dispositivoId>" }`.
-- `404` si el dispositivo no pertenece a esa Cuenta.
-- `400` si el dispositivo está **bloqueado por suspensión** del Cliente.
-
-> `dispositivoId` es el `id` local que aparece en `session` (campo `dispositivos[].id`), **no** el
-> `proveedor_device_id`.
+Sin body. Elimina el Dispositivo en el Proveedor y borra la fila local. `404` si no pertenece a la
+Cuenta; `400` si está bloqueado por suspensión.
 
 ---
 
@@ -345,13 +316,14 @@ x-api-key: <API_KEY>
 
 El portal debe aplicar **dos capas**:
 
-1. **UX (portal):** según `cuenta.puede_editar` de `session`, mostrar las acciones de edición o el
-   modo solo lectura.
+1. **UX (portal):** usar `cuenta.puede_editar` y
+   `cuenta.requiere_confirmacion_cambio_compartida` para mostrar las acciones y la advertencia.
 2. **Seguridad (IPTVControl):** cada escritura revalida en el servidor. Aunque el portal llame de
    más, IPTVControl responde:
-   - `403` "Esta Cuenta es compartida: el portal sólo permite consultar su información."
-   - `403` "La Cuenta no pertenece a este Cliente."
+   - `409` `SharedAccountConfirmationRequired` si falta confirmar un cambio en una compartida.
    - `403` "La Cuenta no está activa."
+   - `404` si la Cuenta no existe en la Empresa de la credencial.
+   - `403` si falta el permiso de integración (`cuentas.editar` / `dispositivos.gestionar`).
 
 Otra verificación de seguridad implícita: si la Empresa Revendedora está **suspendida**, toda la
 integración responde `403` (el guard lo detecta).
@@ -370,24 +342,27 @@ integración responde `403` (el guard lo detecta).
    - Si cuenta.puede_editar === false → modo solo lectura.
 ```
 
-### 8.2. Edición (solo cuentas exclusivas)
+### 8.2. Edición (cualquier cuenta, por ID de proveedor)
 
 ```
-1. session → detectar cuenta con puede_editar === true.
-2. Cambiar contraseña:  PATCH /accounts/{id}/password
-   Cambiar PIN:         PATCH /accounts/{id}/pin
-   Cambiar servicios:   PATCH /accounts/{id}/services
+1. session → obtener proveedor_cuenta_id.
+2. Cambiar contraseña:  PATCH /accounts/{proveedorCuentaId}/password
+   Cambiar PIN:         PATCH /accounts/{proveedorCuentaId}/pin
+   Cambiar servicios:   PATCH /accounts/{proveedorCuentaId}/services
+   Si requiere_confirmacion_cambio_compartida === true, mostrar la advertencia y reenviar
+   con "confirmar_cambio_compartida": true.
 3. Refrescar con POST /session (o usar la respuesta) para reflejar el cambio.
 ```
 
-### 8.3. Dispositivos (solo cuentas exclusivas)
+### 8.3. Dispositivos (cualquier cuenta, por ID de proveedor)
 
 ```
-1. POST /accounts/{id}/devices/sync   → lista de equipos (vinculado / desconocido)
+1. POST /accounts/{proveedorCuentaId}/devices/sync   → vinculado / desconocido
 2. Para un "desconocido" con incidencia_id:
-      POST /accounts/{id}/devices/claim { proveedor_device_id }
-3. Para un dispositivo propio (dispositivos[].id de session):
-      POST /accounts/{id}/devices/{dispositivoId}/remove   (ADVERTIR: irreversible)
+      POST /accounts/{proveedorCuentaId}/devices/claim { dni, proveedor_device_id }
+3. Para un dispositivo propio:
+      POST /accounts/{proveedorCuentaId}/devices/{proveedorDeviceId}/remove
+      (ADVERTIR: irreversible)
 ```
 
 ---
@@ -408,7 +383,10 @@ integración responde `403` (el guard lo detecta).
 
 - [ ] Guardar `BASE_URL` y `API_KEY` como secretos del **servidor** del portal.
 - [ ] Enviar `Content-Type: application/json` y `x-api-key` en todas las requests.
-- [ ] Basar la UI en `cuenta.puede_editar` (exclusiva ⇒ editable; compartida ⇒ solo lectura).
+- [ ] Basar la UI en `cuenta.puede_editar` y `requiere_confirmacion_cambio_compartida`.
+- [ ] Usar `cuenta.proveedor_cuenta_id` para editar, no el `id` interno ni el DNI.
+- [ ] Antes de cambiar contraseña/PIN/servicios de una compartida, mostrar la advertencia y
+      reenviar con `confirmar_cambio_compartida: true`.
 - [ ] Evaluar el **status code** (no un campo `success`).
 - [ ] Advertir al usuario antes de **dar de baja** un dispositivo (irreversible).
 - [ ] Avisar cuando la cuenta es **de prueba** (`es_prueba`) y su `prueba_vence_en`.
@@ -422,9 +400,8 @@ integración responde `403` (el guard lo detecta).
 ## 11. Postman
 
 La colección `docs/postman/IPTVControl_PortalCliente.postman_collection.json` usa variables
-(`baseUrl`, `apiKey`, `dni`, `cuentaId`, `dispositivoId`, `proveedorDeviceId`) y no contiene datos
-reales. Orden sugerido: **Sesión → Sync → Claim → Remove**. El script de `sync` completa
-automáticamente `proveedorDeviceId` con el primer equipo desconocido.
+(`baseUrl`, `apiKey`, `dni`, `proveedorCuentaId`, `proveedorDeviceId`) y no contiene datos
+reales. Orden sugerido: **Sesión → Sync → Claim → Remove**.
 
 ---
 
@@ -438,6 +415,8 @@ automáticamente `proveedorDeviceId` con el primer equipo desconocido.
 - **¿Puedo cambiar el usuario?** No.
 - **¿Qué pasa si el Cliente está en más de una cuenta?** `session` devuelve el array `cuentas[]`.
   En la práctica un Cliente pertenece a una sola Cuenta.
-- **¿Puedo eliminar dispositivos en una compartida?** No; las compartidas son solo lectura.
+- **¿Puedo eliminar dispositivos en una compartida?** No; esas operaciones son solo para exclusivas.
+  La única escritura permitida en una compartida es **cambiar la contraseña**, con confirmación
+  explícita porque afecta a todos sus Clientes Finales.
 - **¿El cambio de contraseña/servicios se refleja en SENSA?** Sí; IPTVControl es la única vía, no se
   debe tocar SENSA directamente.
