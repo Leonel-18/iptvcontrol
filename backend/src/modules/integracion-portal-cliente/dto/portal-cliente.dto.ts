@@ -31,11 +31,6 @@ export class SesionPortalDto {
 }
 
 export class CambiarPasswordPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
-
   @ApiProperty({ description: 'Contraseña numérica nueva (8 a 20 dígitos).' })
   @Matches(/^\d{8,20}$/, { message: 'La contraseña debe tener entre 8 y 20 dígitos numéricos.' })
   password!: string;
@@ -52,22 +47,21 @@ export class CambiarPasswordPortalDto {
 }
 
 export class CambiarPinPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
-
   @ApiProperty({ description: 'PIN numérico nuevo (6 dígitos).' })
   @Matches(/^\d{6}$/, { message: 'El PIN debe tener exactamente 6 dígitos numéricos.' })
   pin!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio en Cuentas compartidas. Confirma que el PIN aplica a TODOS los Clientes Finales.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_cambio_compartida?: boolean;
 }
 
 export class CambiarServiciosPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
-
   @ApiProperty({
     type: [String],
     description: 'Códigos de servicio nuevos. Se validan contra lo contratado por el Operador.',
@@ -76,17 +70,19 @@ export class CambiarServiciosPortalDto {
   @ArrayUnique()
   @IsString({ each: true })
   servicios!: string[];
-}
 
-export class SincronizarDispositivosPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio en Cuentas compartidas. Confirma que el contenido aplica a TODOS los Clientes Finales.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_cambio_compartida?: boolean;
 }
 
 export class ReclamarDispositivoPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
+  @ApiProperty({ description: 'DNI del Cliente Final que recibe el Dispositivo.' })
   @IsString()
   @Length(1, 20)
   dni!: string;
@@ -95,11 +91,4 @@ export class ReclamarDispositivoPortalDto {
   @IsString()
   @Length(1, 60)
   proveedor_device_id!: string;
-}
-
-export class BajaDispositivoPortalDto {
-  @ApiProperty({ description: 'DNI del Cliente Final.' })
-  @IsString()
-  @Length(1, 20)
-  dni!: string;
 }

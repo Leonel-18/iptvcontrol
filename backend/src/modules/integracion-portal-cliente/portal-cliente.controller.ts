@@ -1,4 +1,4 @@
-import { Body, Controller, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/auth/decorators';
@@ -6,13 +6,11 @@ import { RequierePermisoIntegracion } from '../integraciones/integracion-permiso
 import { PortalApiKeyGuard } from './portal-api-key.guard';
 import { PortalClienteService } from './portal-cliente.service';
 import {
-  BajaDispositivoPortalDto,
   CambiarPasswordPortalDto,
   CambiarPinPortalDto,
   CambiarServiciosPortalDto,
   ReclamarDispositivoPortalDto,
   SesionPortalDto,
-  SincronizarDispositivosPortalDto,
 } from './dto/portal-cliente.dto';
 
 /**
@@ -21,6 +19,10 @@ import {
  * Fuera del flujo del panel: se autentica con `x-api-key` (tenant fijo) y no con
  * un token de Auth0. `@Public()` evita que los guards globales de JWT y Team
  * Member exijan un usuario humano; el guard propio fija el tenant y el actor.
+ *
+ * Las operaciones sobre una Cuenta usan su **ID en el Proveedor**
+ * (`proveedorCuentaId`), no el UUID interno ni el DNI del Cliente. Funcionan
+ * igual en Cuentas exclusivas y compartidas.
  */
 @ApiTags('integration')
 @Controller('integration/portal-cliente')
@@ -49,80 +51,110 @@ export class PortalClienteController {
     return this.portal.sesion(dto.dni);
   }
 
-  @Patch('accounts/:cuentaId/password')
+  @Patch('accounts/:proveedorCuentaId/password')
   @Public()
   @RequierePermisoIntegracion('cuentas.editar')
   @ApiOperation({
-    summary: 'Cambia la contraseña de una cuenta del cliente.',
+    summary: 'Cambia la contraseña de una Cuenta (exclusiva o compartida).',
     description:
-      'En cuentas compartidas la contraseña es de todos los Clientes Finales: se exige ' +
-      '`confirmar_cambio_compartida: true` y la respuesta incluye una advertencia.',
+      'La Cuenta se identifica por su ID en el Proveedor. En una compartida la contraseña ' +
+      'es de todos los Clientes Finales: se exige `confirmar_cambio_compartida: true` y la ' +
+      'respuesta incluye una advertencia.',
   })
   cambiarPassword(
-    @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
+    @Param('proveedorCuentaId') proveedorCuentaId: string,
     @Body() dto: CambiarPasswordPortalDto,
   ) {
     return this.portal.cambiarPassword(
-      dto.dni,
-      cuentaId,
+      proveedorCuentaId,
       dto.password,
       dto.confirmar_cambio_compartida,
     );
   }
 
-  @Patch('accounts/:cuentaId/pin')
+  @Patch('accounts/:proveedorCuentaId/pin')
   @Public()
   @RequierePermisoIntegracion('cuentas.editar')
-  @ApiOperation({ summary: 'Cambia el PIN de una cuenta exclusiva.' })
-  cambiarPin(@Param('cuentaId', ParseUUIDPipe) cuentaId: string, @Body() dto: CambiarPinPortalDto) {
-    return this.portal.cambiarPin(dto.dni, cuentaId, dto.pin);
+  @ApiOperation({
+    summary: 'Cambia el PIN de una Cuenta (exclusiva o compartida).',
+    description:
+      'En una compartida el PIN es de todos los Clientes: se exige ' +
+      '`confirmar_cambio_compartida: true`.',
+  })
+  cambiarPin(
+    @Param('proveedorCuentaId') proveedorCuentaId: string,
+    @Body() dto: CambiarPinPortalDto,
+  ) {
+    return this.portal.cambiarPin(
+      proveedorCuentaId,
+      dto.pin,
+      dto.confirmar_cambio_compartida,
+    );
   }
 
-  @Patch('accounts/:cuentaId/services')
+  @Patch('accounts/:proveedorCuentaId/services')
   @Public()
   @RequierePermisoIntegracion('cuentas.editar')
-  @ApiOperation({ summary: 'Cambia los servicios de una cuenta exclusiva.' })
+  @ApiOperation({
+    summary: 'Cambia los servicios de una Cuenta (exclusiva o compartida).',
+    description:
+      'En una compartida el contenido es de todos los Clientes: se exige ' +
+      '`confirmar_cambio_compartida: true`.',
+  })
   cambiarServicios(
-    @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
+    @Param('proveedorCuentaId') proveedorCuentaId: string,
     @Body() dto: CambiarServiciosPortalDto,
   ) {
-    return this.portal.cambiarServicios(dto.dni, cuentaId, dto.servicios);
+    return this.portal.cambiarServicios(
+      proveedorCuentaId,
+      dto.servicios,
+      dto.confirmar_cambio_compartida,
+    );
   }
 
-  @Post('accounts/:cuentaId/devices/sync')
+  @Post('accounts/:proveedorCuentaId/devices/sync')
   @Public()
   @RequierePermisoIntegracion('dispositivos.leer')
-  @ApiOperation({ summary: 'Consulta el inventario de dispositivos del proveedor.' })
-  sincronizarDispositivos(
-    @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
-    @Body() dto: SincronizarDispositivosPortalDto,
-  ) {
-    return this.portal.sincronizarDispositivos(dto.dni, cuentaId);
+  @ApiOperation({
+    summary: 'Consulta el inventario de dispositivos del proveedor.',
+    description: 'Funciona para Cuentas exclusivas y compartidas.',
+  })
+  sincronizarDispositivos(@Param('proveedorCuentaId') proveedorCuentaId: string) {
+    return this.portal.sincronizarDispositivos(proveedorCuentaId);
   }
 
-  @Post('accounts/:cuentaId/devices/claim')
-  @Public()
-  @RequierePermisoIntegracion('dispositivos.gestionar')
-  @ApiOperation({ summary: 'Asigna al titular un dispositivo detectado sin dueño.' })
-  reclamarDispositivo(
-    @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
-    @Body() dto: ReclamarDispositivoPortalDto,
-  ) {
-    return this.portal.reclamarDispositivo(dto.dni, cuentaId, dto.proveedor_device_id);
-  }
-
-  @Post('accounts/:cuentaId/devices/:dispositivoId/remove')
+  @Post('accounts/:proveedorCuentaId/devices/claim')
   @Public()
   @RequierePermisoIntegracion('dispositivos.gestionar')
   @ApiOperation({
-    summary: 'Baja definitiva de un dispositivo propio.',
-    description: 'Elimina el Dispositivo en el proveedor y borra la fila local. Irreversible.',
+    summary: 'Asigna a un Cliente Final un dispositivo detectado sin dueño.',
+    description:
+      'El DNI sigue siendo necesario porque define a qué Cliente Final se le asigna.',
+  })
+  reclamarDispositivo(
+    @Param('proveedorCuentaId') proveedorCuentaId: string,
+    @Body() dto: ReclamarDispositivoPortalDto,
+  ) {
+    return this.portal.reclamarDispositivo(
+      proveedorCuentaId,
+      dto.dni,
+      dto.proveedor_device_id,
+    );
+  }
+
+  @Post('accounts/:proveedorCuentaId/devices/:proveedorDeviceId/remove')
+  @Public()
+  @RequierePermisoIntegracion('dispositivos.gestionar')
+  @ApiOperation({
+    summary: 'Baja definitiva de un dispositivo por su ID en el proveedor.',
+    description:
+      'Elimina el Dispositivo en el proveedor y borra la fila local. Irreversible. ' +
+      'Funciona para Cuentas exclusivas y compartidas.',
   })
   darDeBaja(
-    @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
-    @Param('dispositivoId', ParseUUIDPipe) dispositivoId: string,
-    @Body() dto: BajaDispositivoPortalDto,
+    @Param('proveedorCuentaId') proveedorCuentaId: string,
+    @Param('proveedorDeviceId') proveedorDeviceId: string,
   ) {
-    return this.portal.darDeBajaDispositivo(dto.dni, cuentaId, dispositivoId);
+    return this.portal.darDeBajaDispositivo(proveedorCuentaId, proveedorDeviceId);
   }
 }
