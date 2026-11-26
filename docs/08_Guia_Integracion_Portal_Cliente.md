@@ -17,11 +17,14 @@ credencial de integración) pueda:
 
 1. **Consultar** sus credenciales (`usuario`, `password`, `pin`), sus **servicios** y sus
    **dispositivos**.
-2. En **cuentas exclusivas**, **administrar** su servicio: cambiar contraseña, PIN y servicios, y
-   gestionar sus dispositivos (asignar los detectados en el Proveedor y dar de baja los propios).
+2. En **cuentas exclusivas**, **administrar** su servicio: cambiar PIN y servicios, y gestionar sus
+   dispositivos (asignar los detectados en el Proveedor y dar de baja los propios).
+3. En **cuentas compartidas**, **cambiar la contraseña** con confirmación explícita
+   (`confirmar_cambio_compartida: true`), porque esa contraseña la usan todos los Clientes Finales
+   de la Cuenta. El resto sigue siendo solo lectura.
 
-En **cuentas compartidas** (más de un Cliente Final), el portal es **solo lectura**: el Cliente ve
-únicamente los dispositivos que la Empresa Revendedora le asignó y **no puede editar nada**.
+En **cuentas compartidas** el Cliente ve únicamente los dispositivos que la Empresa Revendedora le
+asignó.
 
 No existe modo de prueba o `dry-run`. Las operaciones de escritura son **reales**: cambian datos en
 IPTVControl y en el Proveedor (SENSA).
@@ -56,7 +59,7 @@ Por un canal seguro, se entregan dos valores:
 | Cliente Final | La persona. Se identifica por su **DNI** dentro de la Empresa Revendedora. |
 | Cuenta | La unidad de servicio IPTV. Tiene `usuario`, `password` y `pin`. |
 | Cuenta **exclusiva** | Un único Cliente Final. El portal permite **editar**. |
-| Cuenta **compartida** | Varios Clientes Finales comparten la misma Cuenta y credenciales. El portal es **solo lectura**. |
+| Cuenta **compartida** | Varios Clientes Finales comparten la misma Cuenta y credenciales. El portal es **solo lectura**, salvo el cambio de contraseña con confirmación explícita. |
 | Servicios | Paquetes de contenido (códigos). Se validan contra lo contratado por el Operador Principal. |
 | Dispositivo | Equipo del Cliente. En SENSA se identifica por `proveedor_device_id`. |
 | Incidencia | Dispositivo detectado en el Proveedor **sin dueño asignado** en IPTVControl. El Cliente (cuenta exclusiva) puede reclamarlo. |
@@ -103,8 +106,9 @@ portal usa **HTTP estándar**. El integrador debe evaluar el **status code**.
 | `200` | OK | Procesar la respuesta |
 | `400` | Datos inválidos / combinación no permitida | Corregir el request; mostrar el mensaje |
 | `401` | API key inválida/ausente | Error de integración (no del usuario) |
-| `403` | Regla de negocio: cuenta compartida, cuenta ajena, cuenta inactiva | Mostrar en modo lectura; no reintentar |
+| `403` | Regla de negocio: cuenta ajena, cuenta inactiva o escritura no permitida | Mostrar en modo lectura; no reintentar |
 | `404` | DNI o cuenta o dispositivo inexistente | Mostrar "no encontrado" |
+| `409` | `SharedAccountConfirmationRequired`: falta confirmar un cambio de contraseña en cuenta compartida | Mostrar la advertencia y reenviar con `confirmar_cambio_compartida: true` |
 | `429` | Rate limit | Esperar y reintentar con backoff |
 | `503` | Integración no habilitada o dependencia caída | Reintentar más tarde |
 | `500` | Error inesperado | Reintentar; avisar a soporte con fecha/hora |
@@ -113,9 +117,9 @@ El cuerpo de error sigue el formato de NestJS:
 
 ```json
 {
-  "statusCode": 403,
-  "error": "Forbidden",
-  "message": "Esta Cuenta es compartida: el portal sólo permite consultar su información.",
+  "statusCode": 409,
+  "error": "SharedAccountConfirmationRequired",
+  "message": "Esta Cuenta es compartida: cambiar la contraseña afecta a TODOS sus Clientes Finales. Reenviar el request con \"confirmar_cambio_compartida\": true para continuar.",
   "path": "/api/v1/integration/portal-cliente/accounts/.../password",
   "timestamp": "2026-10-14T13:59:06.355Z",
   "requestId": "f04d0c80-eb18-4850-bc05-61c2c94276e4"
@@ -206,7 +210,7 @@ x-api-key: <API_KEY>
 
 ### 6.2. `PATCH /accounts/{cuentaId}/password` — Cambiar contraseña
 
-Solo cuentas exclusivas del titular.
+Permitido en cuentas exclusivas y en compartidas.
 
 ```http
 PATCH /api/v1/integration/portal-cliente/accounts/{cuentaId}/password
@@ -218,7 +222,12 @@ x-api-key: <API_KEY>
 
 - `password`: numérica, **8 a 20 dígitos**.
 - Se aplica en SENSA y en IPTVControl.
-- `200` → `{ "id": "<cuentaId>" }`.
+- En **cuenta exclusiva**: `200` → `{ "id": "...", "cuenta_compartida": false, "advertencia": null }`.
+- En **cuenta compartida**: primero responde **409** con
+  `error: "SharedAccountConfirmationRequired"` y un mensaje de advertencia. Para confirmar, reenviar
+  el mismo request con `"confirmar_cambio_compartida": true`. La respuesta exitosa incluye
+  `cuenta_compartida: true` y `advertencia`, porque la contraseña nueva afecta a **todos** los
+  Clientes Finales de esa Cuenta.
 
 ---
 
@@ -408,7 +417,10 @@ integración responde `403` (el guard lo detecta).
 
 - [ ] Guardar `BASE_URL` y `API_KEY` como secretos del **servidor** del portal.
 - [ ] Enviar `Content-Type: application/json` y `x-api-key` en todas las requests.
-- [ ] Basar la UI en `cuenta.puede_editar` (exclusiva ⇒ editable; compartida ⇒ solo lectura).
+- [ ] Basar la UI en `cuenta.puede_editar` (exclusiva ⇒ editable; compartida ⇒ solo lectura) y en
+      `cuenta.puede_cambiar_password` / `cuenta.requiere_confirmacion_cambio_compartida`.
+- [ ] Antes de cambiar la contraseña de una compartida, mostrar la advertencia y reenviar con
+      `confirmar_cambio_compartida: true`.
 - [ ] Evaluar el **status code** (no un campo `success`).
 - [ ] Advertir al usuario antes de **dar de baja** un dispositivo (irreversible).
 - [ ] Avisar cuando la cuenta es **de prueba** (`es_prueba`) y su `prueba_vence_en`.
@@ -438,6 +450,8 @@ automáticamente `proveedorDeviceId` con el primer equipo desconocido.
 - **¿Puedo cambiar el usuario?** No.
 - **¿Qué pasa si el Cliente está en más de una cuenta?** `session` devuelve el array `cuentas[]`.
   En la práctica un Cliente pertenece a una sola Cuenta.
-- **¿Puedo eliminar dispositivos en una compartida?** No; las compartidas son solo lectura.
+- **¿Puedo eliminar dispositivos en una compartida?** No; esas operaciones son solo para exclusivas.
+  La única escritura permitida en una compartida es **cambiar la contraseña**, con confirmación
+  explícita porque afecta a todos sus Clientes Finales.
 - **¿El cambio de contraseña/servicios se refleja en SENSA?** Sí; IPTVControl es la única vía, no se
   debe tocar SENSA directamente.

@@ -1,10 +1,11 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { PortalClienteService } from './portal-cliente.service';
 
 describe('PortalClienteService', () => {
   const construir = (opciones: {
     cliente?: Record<string, unknown>;
     cuenta?: Record<string, unknown>;
+    perteneceCompartida?: boolean;
   }) => {
     const prisma = {
       db: {
@@ -13,6 +14,16 @@ describe('PortalClienteService', () => {
         },
         cuenta: {
           findUnique: jest.fn().mockResolvedValue(opciones.cuenta ?? null),
+        },
+        ventaCompartida: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue(
+              opciones.perteneceCompartida === false ? null : { id: 'venta-1' },
+            ),
+        },
+        dispositivo: {
+          findFirst: jest.fn().mockResolvedValue(null),
         },
       },
     };
@@ -31,7 +42,7 @@ describe('PortalClienteService', () => {
 
   const cliente = { id: 'cliente-1', empresaRevendedoraId: 'empresa-1', estado: 'activo' };
 
-  it('bloquea escrituras en una Cuenta compartida', async () => {
+  it('pide confirmación explícita para cambiar la contraseña de una Cuenta compartida', async () => {
     const { service, cuentas } = construir({
       cliente,
       cuenta: {
@@ -45,6 +56,51 @@ describe('PortalClienteService', () => {
 
     await expect(
       service.cambiarPassword('12345678', 'cuenta-1', '12345678'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(cuentas.cambiarPassword).not.toHaveBeenCalled();
+  });
+
+  it('permite cambiar la contraseña compartida con confirmación y devuelve advertencia', async () => {
+    const { service, cuentas } = construir({
+      cliente,
+      cuenta: {
+        id: 'cuenta-1',
+        empresaRevendedoraId: 'empresa-1',
+        esExclusiva: false,
+        clienteFinalExclusivoId: null,
+        estado: 'activa',
+      },
+    });
+
+    const resultado = await service.cambiarPassword(
+      '12345678',
+      'cuenta-1',
+      '87654321',
+      true,
+    );
+
+    expect(cuentas.cambiarPassword).toHaveBeenCalledWith('cuenta-1', '87654321');
+    expect(resultado).toMatchObject({
+      cuenta_compartida: true,
+      advertencia: expect.stringContaining('todos los Clientes Finales'),
+    });
+  });
+
+  it('bloquea una Cuenta compartida si el Cliente no pertenece a ella', async () => {
+    const { service, cuentas } = construir({
+      cliente,
+      cuenta: {
+        id: 'cuenta-1',
+        empresaRevendedoraId: 'empresa-1',
+        esExclusiva: false,
+        clienteFinalExclusivoId: null,
+        estado: 'activa',
+      },
+      perteneceCompartida: false,
+    });
+
+    await expect(
+      service.cambiarPassword('12345678', 'cuenta-1', '12345678', true),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(cuentas.cambiarPassword).not.toHaveBeenCalled();
   });

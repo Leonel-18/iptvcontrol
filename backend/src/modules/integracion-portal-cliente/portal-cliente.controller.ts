@@ -52,12 +52,22 @@ export class PortalClienteController {
   @Patch('accounts/:cuentaId/password')
   @Public()
   @RequierePermisoIntegracion('cuentas.editar')
-  @ApiOperation({ summary: 'Cambia la contraseña de una cuenta exclusiva.' })
+  @ApiOperation({
+    summary: 'Cambia la contraseña de una cuenta del cliente.',
+    description:
+      'En cuentas compartidas la contraseña es de todos los Clientes Finales: se exige ' +
+      '`confirmar_cambio_compartida: true` y la respuesta incluye una advertencia.',
+  })
   cambiarPassword(
     @Param('cuentaId', ParseUUIDPipe) cuentaId: string,
     @Body() dto: CambiarPasswordPortalDto,
   ) {
-    return this.portal.cambiarPassword(dto.dni, cuentaId, dto.password);
+    return this.portal.cambiarPassword(
+      dto.dni,
+      cuentaId,
+      dto.password,
+      dto.confirmar_cambio_compartida,
+    );
   }
 
   @Patch('accounts/:cuentaId/pin')

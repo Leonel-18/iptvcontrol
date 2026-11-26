@@ -1,5 +1,20 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { ArrayUnique, IsArray, IsString, Length, Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import {
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
+
+const booleanoDeTexto = ({ value }: { value: unknown }): unknown => {
+  if (value === 'true' || value === true) return true;
+  if (value === 'false' || value === false) return false;
+  return value;
+};
 
 /**
  * DTOs de la integración del Portal de Cliente.
@@ -24,6 +39,16 @@ export class CambiarPasswordPortalDto {
   @ApiProperty({ description: 'Contraseña numérica nueva (8 a 20 dígitos).' })
   @Matches(/^\d{8,20}$/, { message: 'La contraseña debe tener entre 8 y 20 dígitos numéricos.' })
   password!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio en Cuentas compartidas. Confirma que la contraseña nueva se aplicará a ' +
+      'TODOS los Clientes Finales de la Cuenta. En exclusivas no hace falta.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_cambio_compartida?: boolean;
 }
 
 export class CambiarPinPortalDto {

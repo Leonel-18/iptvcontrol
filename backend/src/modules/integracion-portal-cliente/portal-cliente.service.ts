@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   Cuenta,
   Dispositivo,
@@ -18,8 +24,10 @@ import { IncidenciasDispositivosService } from '../dispositivos/incidencias-disp
  * Portal de Cliente externo
  * =============================================================================
  * El Cliente Final (identificado por DNI) consulta sus credenciales, servicios y
- * dispositivos. En CUENTAS EXCLUSIVAS puede además editar contraseña, PIN,
- * servicios y administrar sus dispositivos; en COMPARTIDAS es sólo lectura.
+ * dispositivos. En CUENTAS EXCLUSIVAS puede además editar PIN, servicios y
+ * administrar sus dispositivos; en COMPARTIDAS es sólo lectura, salvo el cambio
+ * de contraseña, que se permite con confirmación explícita porque afecta a todos
+ * los Clientes de la Cuenta.
  *
  * No reimplementa nada: delega en `CuentasService` e `InventarioProveedorService`
  * / `DispositivosService`, los mismos caminos que usa el panel, y así conserva
@@ -88,10 +96,42 @@ export class PortalClienteService {
     };
   }
 
-  /** Cambia la contraseña de una cuenta exclusiva del cliente. */
-  async cambiarPassword(dni: string, cuentaId: string, password: string) {
-    await this.validarCuentaExclusiva(dni, cuentaId);
-    return this.cuentas.cambiarPassword(cuentaId, password);
+  /**
+   * Cambia la contraseña de una cuenta del cliente.
+   *
+   * En una cuenta compartida la contraseña la usan todos sus Clientes Finales.
+   * Por eso se exige `confirmar_cambio_compartida: true` y la respuesta incluye
+   * una advertencia explícita.
+   */
+  async cambiarPassword(
+    dni: string,
+    cuentaId: string,
+    password: string,
+    confirmarCambioCompartida = false,
+  ) {
+    const { cuenta } = await this.validarCuentaDelCliente(dni, cuentaId, {
+      permitirCompartida: true,
+    });
+
+    if (!cuenta.esExclusiva && !confirmarCambioCompartida) {
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'SharedAccountConfirmationRequired',
+        message:
+          'Esta Cuenta es compartida: cambiar la contraseña afecta a TODOS sus Clientes ' +
+          'Finales. Reenviar el request con "confirmar_cambio_compartida": true para continuar.',
+        cuenta_compartida: true,
+      });
+    }
+
+    const resultado = await this.cuentas.cambiarPassword(cuentaId, password);
+    return {
+      ...resultado,
+      cuenta_compartida: !cuenta.esExclusiva,
+      advertencia: cuenta.esExclusiva
+        ? null
+        : 'La contraseña nueva aplica a todos los Clientes Finales de esta Cuenta compartida.',
+    };
   }
 
   /** Cambia el PIN de una cuenta exclusiva del cliente. */
@@ -191,6 +231,8 @@ export class PortalClienteService {
       servicios: cuenta.servicios,
       servicios_nombres: nombresDeServicios(cuenta.servicios),
       puede_editar: esExclusivaDelCliente && cuenta.estado === 'activa',
+      puede_cambiar_password: cuenta.estado === 'activa',
+      requiere_confirmacion_cambio_compartida: !cuenta.esExclusiva,
       dispositivos: dispositivos.map((dispositivo) => this.mapDispositivo(dispositivo)),
     };
   }
@@ -233,11 +275,22 @@ export class PortalClienteService {
   }
 
   /**
-   * Verifica que la Cuenta sea exclusiva y del cliente del DNI. Cualquier
-   * escritura pasa por acá, así nadie puede operar sobre la cuenta de otro
-   * pasando un `cuentaId` ajeno.
+   * Verifica que la Cuenta sea del cliente del DNI. Las escrituras de PIN,
+   * servicios y dispositivos siguen exigiendo una Cuenta exclusiva; el cambio
+   * de contraseña puede habilitarse para una compartida con confirmación.
    */
   private async validarCuentaExclusiva(dni: string, cuentaId: string) {
+    const { cliente, cuenta } = await this.validarCuentaDelCliente(dni, cuentaId, {
+      permitirCompartida: false,
+    });
+    return { cliente, cuenta };
+  }
+
+  private async validarCuentaDelCliente(
+    dni: string,
+    cuentaId: string,
+    opciones: { permitirCompartida: boolean },
+  ) {
     const cliente = await this.buscarCliente(dni);
 
     const cuenta = await this.prisma.db.cuenta.findUnique({ where: { id: cuentaId } });
@@ -246,18 +299,45 @@ export class PortalClienteService {
     if (cuenta.empresaRevendedoraId !== cliente.empresaRevendedoraId) {
       throw new ForbiddenException('La Cuenta no pertenece a la Empresa del Cliente.');
     }
-    if (!cuenta.esExclusiva) {
-      throw new ForbiddenException(
-        'Esta Cuenta es compartida: el portal sólo permite consultar su información.',
-      );
+
+    if (cuenta.esExclusiva) {
+      if (cuenta.clienteFinalExclusivoId !== cliente.id) {
+        throw new ForbiddenException('La Cuenta no pertenece a este Cliente.');
+      }
+    } else {
+      if (!opciones.permitirCompartida) {
+        throw new ForbiddenException(
+          'Esta Cuenta es compartida: el portal sólo permite consultar su información.',
+        );
+      }
+      const pertenece = await this.clientePerteneceACuentaCompartida(cliente.id, cuentaId);
+      if (!pertenece) {
+        throw new ForbiddenException('La Cuenta no pertenece a este Cliente.');
+      }
     }
-    if (cuenta.clienteFinalExclusivoId !== cliente.id) {
-      throw new ForbiddenException('La Cuenta no pertenece a este Cliente.');
-    }
+
     if (cuenta.estado !== 'activa') {
       throw new ForbiddenException('La Cuenta no está activa.');
     }
 
     return { cliente, cuenta };
+  }
+
+  /** Un cliente pertenece a una compartida por su venta o por un dispositivo. */
+  private async clientePerteneceACuentaCompartida(
+    clienteId: string,
+    cuentaId: string,
+  ): Promise<boolean> {
+    const [venta, dispositivo] = await Promise.all([
+      this.prisma.db.ventaCompartida.findUnique({
+        where: { cuentaId_clienteFinalId: { cuentaId, clienteFinalId: clienteId } },
+        select: { id: true },
+      }),
+      this.prisma.db.dispositivo.findFirst({
+        where: { cuentaId, clienteFinalId: clienteId },
+        select: { id: true },
+      }),
+    ]);
+    return Boolean(venta || dispositivo);
   }
 }
