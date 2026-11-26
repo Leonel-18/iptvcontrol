@@ -48,6 +48,8 @@ Permisos disponibles (se pueden cambiar después con **Permisos**):
 |---|---|
 | `clientes.leer` | Portal: consultar clientes, cuentas y credenciales por DNI |
 | `clientes.crear` | Bot: crear Clientes Finales y provisionar Cuentas |
+| `clientes.editar` | Portal: actualizar datos de contacto del Cliente |
+| `clientes.estado` | Portal: suspender, reactivar o dar de baja un Cliente |
 | `cuentas.editar` | Portal: cambiar contraseña, PIN y servicios |
 | `dispositivos.leer` | Portal: consultar el inventario de dispositivos |
 | `dispositivos.gestionar` | Portal: reclamar o dar de baja dispositivos |

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CuentasModule } from '../cuentas/cuentas.module';
+import { ClientesModule } from '../clientes/clientes.module';
 import { DispositivosModule } from '../dispositivos/dispositivos.module';
 import { IntegracionesModule } from '../integraciones/integraciones.module';
 import { PortalApiKeyGuard } from './portal-api-key.guard';
@@ -14,7 +15,7 @@ import { PortalClienteService } from './portal-cliente.service';
  * / `IncidenciasDispositivosService` (asignación y baja). No duplica lógica.
  */
 @Module({
-  imports: [CuentasModule, DispositivosModule, IntegracionesModule],
+  imports: [CuentasModule, ClientesModule, DispositivosModule, IntegracionesModule],
   controllers: [PortalClienteController],
   providers: [PortalClienteService, PortalApiKeyGuard],
 })

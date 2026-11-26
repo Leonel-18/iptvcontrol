@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -14,6 +15,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RequestContextService } from '../../common/context/request-context.service';
 import { CuentasService } from '../cuentas/cuentas.service';
+import { ClientesService } from '../clientes/clientes.service';
 import { InventarioProveedorService } from '../cuentas/inventario-proveedor.service';
 import { nombresDeServicios } from '../cuentas/cuentas.mapper';
 import { DispositivosService } from '../dispositivos/dispositivos.service';
@@ -41,6 +43,7 @@ export class PortalClienteService {
     private readonly prisma: PrismaService,
     private readonly contexto: RequestContextService,
     private readonly cuentas: CuentasService,
+    private readonly clientes: ClientesService,
     private readonly inventario: InventarioProveedorService,
     private readonly dispositivos: DispositivosService,
     private readonly incidencias: IncidenciasDispositivosService,
@@ -49,37 +52,7 @@ export class PortalClienteService {
   /** Datos del cliente, sus cuentas, credenciales, servicios y dispositivos. */
   async sesion(dni: string) {
     const cliente = await this.buscarCliente(dni);
-
-    const [exclusivas, porDispositivo, porVenta] = await Promise.all([
-      this.prisma.db.cuenta.findMany({
-        where: { clienteFinalExclusivoId: cliente.id },
-        select: { id: true },
-      }),
-      this.prisma.db.dispositivo.findMany({
-        where: { clienteFinalId: cliente.id },
-        select: { cuentaId: true },
-      }),
-      this.prisma.db.ventaCompartida.findMany({
-        where: { clienteFinalId: cliente.id },
-        select: { cuentaId: true },
-      }),
-    ]);
-
-    const cuentaIds = [
-      ...new Set<string>([
-        ...exclusivas.map((cuenta) => cuenta.id),
-        ...porDispositivo.map((dispositivo) => dispositivo.cuentaId),
-        ...porVenta.map((venta) => venta.cuentaId),
-      ]),
-    ];
-
-    const cuentas = cuentaIds.length
-      ? await this.prisma.db.cuenta.findMany({
-          where: { id: { in: cuentaIds } },
-          include: { dispositivos: { orderBy: { creadoEn: 'asc' } } },
-        })
-      : [];
-
+    const cuentas = await this.cuentasDelCliente(cliente.id);
     const cuentasDto = await Promise.all(
       cuentas.map((cuenta) => this.armarCuentaDto(cuenta, cliente.id)),
     );
@@ -94,6 +67,146 @@ export class PortalClienteService {
       },
       cuentas: cuentasDto,
     };
+  }
+
+  /** Lee una Cuenta por su ID en el Proveedor. */
+  async obtenerCuenta(proveedorCuentaId: string) {
+    const cuenta = await this.buscarCuentaPorProveedor(proveedorCuentaId);
+    const credenciales = await this.cuentas.obtenerCredenciales(cuenta.id);
+    const dispositivos = await this.prisma.db.dispositivo.findMany({
+      where: { cuentaId: cuenta.id },
+      include: {
+        clienteFinal: { select: { id: true, numeroCliente: true, nombre: true, apellido: true } },
+      },
+      orderBy: { creadoEn: 'asc' },
+    });
+
+    return {
+      id: cuenta.id,
+      proveedor_cuenta_id: cuenta.proveedorCuentaId,
+      es_exclusiva: cuenta.esExclusiva,
+      es_prueba: cuenta.esPrueba,
+      prueba_vence_en: cuenta.esPrueba ? cuenta.pruebaVenceEn : null,
+      aislada: cuenta.aislada,
+      estado: cuenta.estado,
+      usuario: credenciales.usuario,
+      password: credenciales.password,
+      pin: credenciales.pin,
+      servicios: cuenta.servicios,
+      servicios_nombres: nombresDeServicios(cuenta.servicios),
+      puede_editar: cuenta.estado === 'activa',
+      puede_cambiar_password: cuenta.estado === 'activa',
+      requiere_confirmacion_cambio_compartida: !cuenta.esExclusiva,
+      dispositivos: dispositivos.map((dispositivo) => ({
+        ...this.mapDispositivo(dispositivo),
+        cliente_final: dispositivo.clienteFinal
+          ? {
+              id: dispositivo.clienteFinal.id,
+              numero_cliente: dispositivo.clienteFinal.numeroCliente,
+              nombre: [dispositivo.clienteFinal.nombre, dispositivo.clienteFinal.apellido]
+                .filter(Boolean)
+                .join(' '),
+            }
+          : null,
+      })),
+    };
+  }
+
+  /** Búsqueda liviana del Cliente por DNI o ID de CRM, con sus Cuentas. */
+  async buscarClienteResumen(dni?: string, idGestionExterno?: string) {
+    if (!dni && !idGestionExterno) {
+      throw new BadRequestException('Indique `dni` o `id_gestion_externo`.');
+    }
+
+    const cliente = dni
+      ? await this.buscarCliente(dni)
+      : await this.buscarClientePorGestion(idGestionExterno!);
+    const cuentas = await this.cuentasDelCliente(cliente.id);
+
+    return {
+      cliente: this.mapClienteResumen(cliente),
+      cuentas: cuentas.map((cuenta) => ({
+        id: cuenta.id,
+        proveedor_cuenta_id: cuenta.proveedorCuentaId,
+        es_exclusiva: cuenta.esExclusiva,
+        estado: cuenta.estado,
+        servicios: cuenta.servicios,
+        servicios_nombres: nombresDeServicios(cuenta.servicios),
+        dispositivos: cuenta.dispositivos.length,
+      })),
+    };
+  }
+
+  /** Lee un Dispositivo por Cuenta + ID de Proveedor. */
+  async obtenerDispositivo(proveedorCuentaId: string, proveedorDeviceId: string) {
+    const cuenta = await this.buscarCuentaPorProveedor(proveedorCuentaId);
+    const dispositivo = await this.prisma.db.dispositivo.findFirst({
+      where: { cuentaId: cuenta.id, proveedorDeviceId },
+      include: {
+        clienteFinal: { select: { id: true, numeroCliente: true, nombre: true, apellido: true } },
+      },
+    });
+    if (!dispositivo) {
+      throw new NotFoundException('El Dispositivo no pertenece a esta Cuenta.');
+    }
+    return {
+      ...this.mapDispositivo(dispositivo),
+      cuenta_id: cuenta.id,
+      proveedor_cuenta_id: cuenta.proveedorCuentaId,
+      cliente_final: dispositivo.clienteFinal
+        ? {
+            id: dispositivo.clienteFinal.id,
+            numero_cliente: dispositivo.clienteFinal.numeroCliente,
+            nombre: [dispositivo.clienteFinal.nombre, dispositivo.clienteFinal.apellido]
+              .filter(Boolean)
+              .join(' '),
+          }
+        : null,
+    };
+  }
+
+  /** Actualiza los datos de contacto de un Cliente (por DNI). */
+  async actualizarCliente(
+    dni: string,
+    dto: {
+      nombre?: string;
+      apellido?: string;
+      telefono?: string;
+      email?: string;
+      direccion?: string;
+      id_gestion_externo?: string;
+    },
+  ) {
+    const cliente = await this.buscarCliente(dni);
+    const actualizado = await this.clientes.actualizar(cliente.id, dto);
+    return { cliente: this.mapClienteResumen(actualizado) };
+  }
+
+  async suspenderCliente(dni: string) {
+    const cliente = await this.buscarCliente(dni);
+    const actualizado = await this.clientes.suspender(cliente.id);
+    return { cliente: actualizado };
+  }
+
+  async reactivarCliente(dni: string) {
+    const cliente = await this.buscarCliente(dni);
+    const actualizado = await this.clientes.reactivar(cliente.id);
+    return { cliente: actualizado };
+  }
+
+  async darDeBajaCliente(dni: string, confirmarBajaDefinitiva = false) {
+    if (!confirmarBajaDefinitiva) {
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'ClientTerminationConfirmationRequired',
+        message:
+          'Dar de baja al Cliente elimina sus Dispositivos en el Proveedor y libera sus Cuentas. ' +
+          'Reenviar con "confirmar_baja_definitiva": true para continuar.',
+      });
+    }
+    const cliente = await this.buscarCliente(dni);
+    const actualizado = await this.clientes.darDeBaja(cliente.id);
+    return { cliente: actualizado };
   }
 
   /**
@@ -181,7 +294,20 @@ export class PortalClienteService {
    * Baja definitiva de un Dispositivo de la Cuenta, identificado por su ID en el
    * Proveedor. No requiere DNI: la Cuenta se identifica por su ID de proveedor.
    */
-  async darDeBajaDispositivo(proveedorCuentaId: string, proveedorDeviceId: string) {
+  async darDeBajaDispositivo(
+    proveedorCuentaId: string,
+    proveedorDeviceId: string,
+    confirmarBajaDefinitiva = false,
+  ) {
+    if (!confirmarBajaDefinitiva) {
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'DeviceRemovalConfirmationRequired',
+        message:
+          'La baja elimina el Dispositivo en el Proveedor y la fila local, y es irreversible. ' +
+          'Reenviar con "confirmar_baja_definitiva": true para continuar.',
+      });
+    }
     const cuenta = await this.buscarCuentaActiva(proveedorCuentaId);
 
     const dispositivo = await this.prisma.db.dispositivo.findFirst({
@@ -279,16 +405,104 @@ export class PortalClienteService {
 
   /** Busca una Cuenta activa por su ID en el Proveedor (no por el UUID interno). */
   private async buscarCuentaActiva(proveedorCuentaId: string) {
+    const cuenta = await this.buscarCuentaPorProveedor(proveedorCuentaId);
+    if (cuenta.estado !== 'activa') {
+      throw new ForbiddenException('La Cuenta no está activa.');
+    }
+    return cuenta;
+  }
+
+  private async buscarCuentaPorProveedor(proveedorCuentaId: string) {
     const cuenta = await this.prisma.db.cuenta.findFirst({
       where: { proveedorCuentaId },
     });
     if (!cuenta) {
       throw new NotFoundException('La Cuenta no existe o no está disponible.');
     }
-    if (cuenta.estado !== 'activa') {
-      throw new ForbiddenException('La Cuenta no está activa.');
-    }
     return cuenta;
+  }
+
+  private async cuentasDelCliente(clienteId: string) {
+    const [exclusivas, porDispositivo, porVenta] = await Promise.all([
+      this.prisma.db.cuenta.findMany({
+        where: { clienteFinalExclusivoId: clienteId },
+        select: { id: true },
+      }),
+      this.prisma.db.dispositivo.findMany({
+        where: { clienteFinalId: clienteId },
+        select: { cuentaId: true },
+      }),
+      this.prisma.db.ventaCompartida.findMany({
+        where: { clienteFinalId: clienteId },
+        select: { cuentaId: true },
+      }),
+    ]);
+
+    const cuentaIds = [
+      ...new Set<string>([
+        ...exclusivas.map((cuenta) => cuenta.id),
+        ...porDispositivo.map((dispositivo) => dispositivo.cuentaId),
+        ...porVenta.map((venta) => venta.cuentaId),
+      ]),
+    ];
+
+    return cuentaIds.length
+      ? this.prisma.db.cuenta.findMany({
+          where: { id: { in: cuentaIds } },
+          include: { dispositivos: { orderBy: { creadoEn: 'asc' } } },
+        })
+      : [];
+  }
+
+  private async buscarClientePorGestion(idGestionExterno: string) {
+    const empresaRevendedoraId = this.contexto.empresaRevendedoraId;
+    if (!empresaRevendedoraId) {
+      throw new ForbiddenException('El request no tiene una Empresa Revendedora asignada.');
+    }
+
+    const cliente = await this.prisma.db.clienteFinal.findFirst({
+      where: {
+        empresaRevendedoraId,
+        idGestionExterno: idGestionExterno.trim(),
+        estado: { in: [EstadoClienteFinal.activo, EstadoClienteFinal.suspendido] },
+      },
+      orderBy: { creadoEn: 'asc' },
+    });
+    if (!cliente) {
+      throw new NotFoundException('No encontramos un Cliente Final con ese ID de gestión.');
+    }
+    return cliente;
+  }
+
+  private mapClienteResumen(cliente: {
+    id: string;
+    numeroCliente: number;
+    nombre: string | null;
+    apellido: string | null;
+    dni: string | null;
+    telefono: string | null;
+    email: string | null;
+    direccion: string | null;
+    idGestionExterno: string | null;
+    estado: string;
+    tipoAlta: string;
+    creadoEn: Date;
+  }) {
+    return {
+      id: cliente.id,
+      numero_cliente: cliente.numeroCliente,
+      nombre: cliente.nombre,
+      apellido: cliente.apellido,
+      nombre_completo: [cliente.nombre, cliente.apellido].filter(Boolean).join(' '),
+      dni: cliente.dni,
+      telefono: cliente.telefono,
+      email: cliente.email,
+      direccion: cliente.direccion,
+      id_gestion_externo: cliente.idGestionExterno,
+      estado: cliente.estado,
+      tipo_alta: cliente.tipoAlta,
+      creado_en: cliente.creadoEn,
+    };
   }
 
   /**

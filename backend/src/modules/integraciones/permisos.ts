@@ -7,6 +7,8 @@
 export const PERMISOS_INTEGRACION = [
   'clientes.leer',
   'clientes.crear',
+  'clientes.editar',
+  'clientes.estado',
   'cuentas.editar',
   'dispositivos.leer',
   'dispositivos.gestionar',

@@ -1,4 +1,13 @@
-import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/auth/decorators';
@@ -6,11 +15,15 @@ import { RequierePermisoIntegracion } from '../integraciones/integracion-permiso
 import { PortalApiKeyGuard } from './portal-api-key.guard';
 import { PortalClienteService } from './portal-cliente.service';
 import {
+  ActualizarClientePortalDto,
+  BajaDispositivoPortalDto,
+  BuscarClientePortalQueryDto,
   CambiarPasswordPortalDto,
   CambiarPinPortalDto,
   CambiarServiciosPortalDto,
   ReclamarDispositivoPortalDto,
   SesionPortalDto,
+  TerminarClientePortalDto,
 } from './dto/portal-cliente.dto';
 
 /**
@@ -49,6 +62,83 @@ export class PortalClienteController {
   })
   sesion(@Body() dto: SesionPortalDto) {
     return this.portal.sesion(dto.dni);
+  }
+
+  @Get('customers')
+  @Public()
+  @RequierePermisoIntegracion('clientes.leer')
+  @ApiOperation({
+    summary: 'Busca un Cliente por DNI o ID de gestión.',
+    description: 'Devuelve datos de contacto y cuentas, sin credenciales ni dispositivos.',
+  })
+  buscarCliente(@Query() query: BuscarClientePortalQueryDto) {
+    return this.portal.buscarClienteResumen(query.dni, query.id_gestion_externo);
+  }
+
+  @Patch('customers/:dni')
+  @Public()
+  @RequierePermisoIntegracion('clientes.editar')
+  @ApiOperation({ summary: 'Actualiza los datos de contacto de un Cliente.' })
+  actualizarCliente(
+    @Param('dni') dni: string,
+    @Body() dto: ActualizarClientePortalDto,
+  ) {
+    return this.portal.actualizarCliente(dni, dto);
+  }
+
+  @Post('customers/:dni/suspend')
+  @Public()
+  @RequierePermisoIntegracion('clientes.estado')
+  @ApiOperation({ summary: 'Suspende al Cliente y reserva sus Dispositivos.' })
+  suspenderCliente(@Param('dni') dni: string) {
+    return this.portal.suspenderCliente(dni);
+  }
+
+  @Post('customers/:dni/reactivate')
+  @Public()
+  @RequierePermisoIntegracion('clientes.estado')
+  @ApiOperation({ summary: 'Reactiva al Cliente y vuelve a habilitar sus Dispositivos.' })
+  reactivarCliente(@Param('dni') dni: string) {
+    return this.portal.reactivarCliente(dni);
+  }
+
+  @Post('customers/:dni/terminate')
+  @Public()
+  @RequierePermisoIntegracion('clientes.estado')
+  @ApiOperation({
+    summary: 'Baja definitiva del Cliente.',
+    description:
+      'Elimina sus Dispositivos en el Proveedor y libera sus Cuentas. Requiere ' +
+      '`confirmar_baja_definitiva: true`.',
+  })
+  darDeBajaCliente(
+    @Param('dni') dni: string,
+    @Body() dto: TerminarClientePortalDto,
+  ) {
+    return this.portal.darDeBajaCliente(dni, dto.confirmar_baja_definitiva);
+  }
+
+  @Get('accounts/:proveedorCuentaId')
+  @Public()
+  @RequierePermisoIntegracion('clientes.leer')
+  @ApiOperation({
+    summary: 'Lee una Cuenta por su ID en el Proveedor.',
+    description:
+      'Devuelve estado, credenciales, servicios y todos sus Dispositivos con dueño.',
+  })
+  obtenerCuenta(@Param('proveedorCuentaId') proveedorCuentaId: string) {
+    return this.portal.obtenerCuenta(proveedorCuentaId);
+  }
+
+  @Get('accounts/:proveedorCuentaId/devices/:proveedorDeviceId')
+  @Public()
+  @RequierePermisoIntegracion('dispositivos.leer')
+  @ApiOperation({ summary: 'Lee un Dispositivo por Cuenta + ID de Proveedor.' })
+  obtenerDispositivo(
+    @Param('proveedorCuentaId') proveedorCuentaId: string,
+    @Param('proveedorDeviceId') proveedorDeviceId: string,
+  ) {
+    return this.portal.obtenerDispositivo(proveedorCuentaId, proveedorDeviceId);
   }
 
   @Patch('accounts/:proveedorCuentaId/password')
@@ -149,12 +239,17 @@ export class PortalClienteController {
     summary: 'Baja definitiva de un dispositivo por su ID en el proveedor.',
     description:
       'Elimina el Dispositivo en el proveedor y borra la fila local. Irreversible. ' +
-      'Funciona para Cuentas exclusivas y compartidas.',
+      'Requiere `confirmar_baja_definitiva: true`. Funciona para Cuentas exclusivas y compartidas.',
   })
   darDeBaja(
     @Param('proveedorCuentaId') proveedorCuentaId: string,
     @Param('proveedorDeviceId') proveedorDeviceId: string,
+    @Body() dto: BajaDispositivoPortalDto,
   ) {
-    return this.portal.darDeBajaDispositivo(proveedorCuentaId, proveedorDeviceId);
+    return this.portal.darDeBajaDispositivo(
+      proveedorCuentaId,
+      proveedorDeviceId,
+      dto.confirmar_baja_definitiva,
+    );
   }
 }

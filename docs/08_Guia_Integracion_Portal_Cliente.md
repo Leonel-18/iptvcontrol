@@ -308,7 +308,70 @@ x-api-key: <API_KEY>
 ```
 
 Sin body. Elimina el Dispositivo en el Proveedor y borra la fila local. `404` si no pertenece a la
-Cuenta; `400` si está bloqueado por suspensión.
+Cuenta; `400` si está bloqueado por suspensión. Requiere `confirmar_baja_definitiva: true`; sin ese
+campo responde `409 DeviceRemovalConfirmationRequired`.
+
+---
+
+### 6.8. `GET /accounts/{proveedorCuentaId}` — Leer Cuenta por ID de proveedor
+
+Devuelve estado, credenciales, servicios y **todos** los dispositivos de la Cuenta, con su dueño.
+Permiso: `clientes.leer`.
+
+```http
+GET /api/v1/integration/portal-cliente/accounts/3000002
+x-api-key: <API_KEY>
+```
+
+---
+
+### 6.9. `GET /customers?dni=...` — Buscar Cliente
+
+Búsqueda liviana por DNI o `id_gestion_externo`. Devuelve datos de contacto y cuentas, sin
+credenciales ni dispositivos. Permiso: `clientes.leer`.
+
+```http
+GET /api/v1/integration/portal-cliente/customers?dni=30123456
+x-api-key: <API_KEY>
+```
+
+También: `GET /customers?id_gestion_externo=CRM-1042`.
+
+---
+
+### 6.10. `PATCH /customers/{dni}` — Actualizar datos de contacto
+
+Permite cambiar `nombre`, `apellido`, `telefono`, `email`, `direccion` e `id_gestion_externo`.
+Permiso: `clientes.editar`.
+
+```http
+PATCH /api/v1/integration/portal-cliente/customers/30123456
+x-api-key: <API_KEY>
+
+{ "telefono": "2615550001", "email": "cliente@example.com" }
+```
+
+---
+
+### 6.11. `POST /customers/{dni}/suspend|reactivate|terminate`
+
+- `suspend`: suspende y reserva los Dispositivos.
+- `reactivate`: reactiva al Cliente y sus Dispositivos.
+- `terminate`: baja definitiva; elimina sus Dispositivos y libera las Cuentas. Requiere
+  `{ "confirmar_baja_definitiva": true }`; sin ese campo responde `409`
+  `ClientTerminationConfirmationRequired`.
+- Permiso: `clientes.estado`.
+
+---
+
+### 6.12. `GET /accounts/{proveedorCuentaId}/devices/{proveedorDeviceId}` — Leer Dispositivo
+
+Devuelve estado, MAC, modelo, último inicio y Cliente dueño. Permiso: `dispositivos.leer`.
+
+```http
+GET /api/v1/integration/portal-cliente/accounts/3000002/devices/40009999
+x-api-key: <API_KEY>
+```
 
 ---
 

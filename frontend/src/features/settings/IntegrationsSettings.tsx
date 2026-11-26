@@ -45,6 +45,16 @@ const PERMISOS: { value: IntegrationPermiso; label: string; help: string }[] = [
     help: 'Bot de WhatsApp: alta de Clientes Finales y provisión de la Cuenta.',
   },
   {
+    value: 'clientes.editar',
+    label: 'Editar datos de contacto',
+    help: 'Cambiar nombre, teléfono, email, dirección o ID de CRM.',
+  },
+  {
+    value: 'clientes.estado',
+    label: 'Suspender, reactivar o dar de baja clientes',
+    help: 'Alto impacto: suspender reserva dispositivos; la baja definitiva los elimina.',
+  },
+  {
     value: 'cuentas.editar',
     label: 'Editar contraseña, PIN y servicios',
     help: 'Portal de Cliente: cambios sobre cuentas exclusivas.',
