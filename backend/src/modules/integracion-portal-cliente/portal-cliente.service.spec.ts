@@ -1,4 +1,9 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PortalClienteService } from './portal-cliente.service';
 
 describe('PortalClienteService — cambios por ID de cuenta del proveedor', () => {
@@ -20,6 +25,7 @@ describe('PortalClienteService — cambios por ID de cuenta del proveedor', () =
       prisma as never,
       contexto as never,
       cuentas as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -109,5 +115,29 @@ describe('PortalClienteService — cambios por ID de cuenta del proveedor', () =
     await expect(
       service.cambiarPassword('9999999', '87654321', true),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('exige confirmación para la baja definitiva del Cliente', async () => {
+    const { service } = construir(cuentaCompartida);
+
+    await expect(service.darDeBajaCliente('12345678')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+  });
+
+  it('exige confirmación para la baja definitiva del Dispositivo', async () => {
+    const { service } = construir(cuentaCompartida);
+
+    await expect(
+      service.darDeBajaDispositivo('3000002', '40009999'),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('exige DNI o ID de gestión para buscar un Cliente', async () => {
+    const { service } = construir(cuentaCompartida);
+
+    await expect(service.buscarClienteResumen()).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });

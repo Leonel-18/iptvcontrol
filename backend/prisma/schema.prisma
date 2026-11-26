@@ -928,7 +928,7 @@ model IntegracionCredencial {
 
   /// Operaciones habilitadas (clientes.leer, clientes.crear, etc.).
   /// Default: todas.
-  permisos String[] @default(["clientes.leer", "clientes.crear", "cuentas.editar", "dispositivos.leer", "dispositivos.gestionar"])
+  permisos String[] @default(["clientes.leer", "clientes.crear", "clientes.editar", "clientes.estado", "cuentas.editar", "dispositivos.leer", "dispositivos.gestionar"])
 
   activa Boolean @default(true)
 

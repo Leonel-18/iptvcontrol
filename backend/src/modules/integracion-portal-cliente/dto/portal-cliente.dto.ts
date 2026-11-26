@@ -4,10 +4,12 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsEmail,
   IsOptional,
   IsString,
   Length,
   Matches,
+  MaxLength,
 } from 'class-validator';
 
 const booleanoDeTexto = ({ value }: { value: unknown }): unknown => {
@@ -91,4 +93,78 @@ export class ReclamarDispositivoPortalDto {
   @IsString()
   @Length(1, 60)
   proveedor_device_id!: string;
+}
+
+export class BuscarClientePortalQueryDto {
+  @ApiPropertyOptional({ description: 'DNI del Cliente Final.' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 20)
+  dni?: string;
+
+  @ApiPropertyOptional({ description: 'ID del cliente en el CRM de la Empresa.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  id_gestion_externo?: string;
+}
+
+export class ActualizarClientePortalDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nombre?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  apellido?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  telefono?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEmail({}, { message: 'El email del cliente no es válido.' })
+  @MaxLength(160)
+  email?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  direccion?: string;
+
+  @ApiPropertyOptional({ description: 'ID del cliente en el CRM de la Empresa.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  id_gestion_externo?: string;
+}
+
+export class BajaDispositivoPortalDto {
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio para confirmar la baja definitiva en el Proveedor. Sin este campo responde 409.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_baja_definitiva?: boolean;
+}
+
+export class TerminarClientePortalDto {
+  @ApiPropertyOptional({
+    description:
+      'Obligatorio para confirmar la baja definitiva del Cliente. Sin este campo responde 409.',
+  })
+  @Transform(booleanoDeTexto)
+  @IsOptional()
+  @IsBoolean()
+  confirmar_baja_definitiva?: boolean;
 }

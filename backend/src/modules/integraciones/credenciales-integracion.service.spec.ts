@@ -164,6 +164,8 @@ describe('CredencialesIntegracionService — creación', () => {
     expect(resultado.credencial.permisos).toEqual([
       'clientes.leer',
       'clientes.crear',
+      'clientes.editar',
+      'clientes.estado',
       'cuentas.editar',
       'dispositivos.leer',
       'dispositivos.gestionar',

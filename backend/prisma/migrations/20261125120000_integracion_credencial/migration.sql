@@ -16,7 +16,7 @@ CREATE TABLE "integracion_credencial" (
     "nombre" VARCHAR(80) NOT NULL,
     "key_hash" VARCHAR(64) NOT NULL,
     "key_prefix" VARCHAR(16) NOT NULL,
-    "permisos" TEXT[] NOT NULL DEFAULT ARRAY['clientes.leer', 'clientes.crear', 'cuentas.editar', 'dispositivos.leer', 'dispositivos.gestionar']::TEXT[],
+    "permisos" TEXT[] NOT NULL DEFAULT ARRAY['clientes.leer', 'clientes.crear', 'clientes.editar', 'clientes.estado', 'cuentas.editar', 'dispositivos.leer', 'dispositivos.gestionar']::TEXT[],
     "activa" BOOLEAN NOT NULL DEFAULT true,
     "team_member_id" UUID,
     "ultimo_uso_en" TIMESTAMP(3),
